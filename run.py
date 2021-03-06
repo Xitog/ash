@@ -1,0 +1,2 @@
+import ashlang
+ashlang.main()

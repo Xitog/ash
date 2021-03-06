@@ -1,0 +1,4 @@
+a == 5 (if)
+a == 6 (else after if)
+a == 7 (else after elif)
+a == 8 (elif)

@@ -1,0 +1,116 @@
+<html>
+  <body>
+    <h2>Command</h2>
+      <pre>
+a = 6
+
+if a == 6 then 
+    writeln("pipo")
+else
+    writeln("ok")
+end
+    </pre>
+    <h2>Tokens</h2>
+      <table border="1">
+      <tr><td>0</td><td>Identifier</td><td>a</td></tr>
+      <tr><td>1</td><td>Operator</td><td>=</td></tr>
+      <tr><td>2</td><td>Integer</td><td>6</td></tr>
+      <tr><td>3</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>4</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>5</td><td>Keyword</td><td>if</td></tr>
+      <tr><td>6</td><td>Identifier</td><td>a</td></tr>
+      <tr><td>7</td><td>Operator</td><td>==</td></tr>
+      <tr><td>8</td><td>Integer</td><td>6</td></tr>
+      <tr><td>9</td><td>Keyword</td><td>then</td></tr>
+      <tr><td>10</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>11</td><td>Identifier</td><td>writeln</td></tr>
+      <tr><td>12</td><td>Separator</td><td>(</td></tr>
+      <tr><td>13</td><td>String</td><td>pipo</td></tr>
+      <tr><td>14</td><td>Separator</td><td>)</td></tr>
+      <tr><td>15</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>16</td><td>Keyword</td><td>else</td></tr>
+      <tr><td>17</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>18</td><td>Identifier</td><td>writeln</td></tr>
+      <tr><td>19</td><td>Separator</td><td>(</td></tr>
+      <tr><td>20</td><td>String</td><td>ok</td></tr>
+      <tr><td>21</td><td>Separator</td><td>)</td></tr>
+      <tr><td>22</td><td>New Line</td><td>NEWLINE</td></tr>
+      <tr><td>23</td><td>Keyword</td><td>end</td></tr>
+      <tr><td>24</td><td>New Line</td><td>NEWLINE</td></tr>
+    </table>
+    <h2>Abstract syntax tree</h2>
+    <ul>
+      <li>{Block}
+        <ol>
+          <li>{Operation} Binary =
+            <ul>
+              <li>{Terminal} Identifier a (0 +1)
+                <ul>
+                </ul>
+              </li>
+              <li>{Terminal} Integer 6 (0 +1)
+                <ul>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>{Statement} if
+            <ul>
+              <li>{Operation} Binary ==
+                <ul>
+                  <li>{Terminal} Identifier a (0 +1)
+                    <ul>
+                    </ul>
+                  </li>
+                  <li>{Terminal} Integer 6 (0 +1)
+                    <ul>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li>{Block}
+                <ol>
+                  <li>{Operation} Binary call(
+                    <ul>
+                      <li>{Terminal} Identifier writeln (0 +7)
+                        <ul>
+                        </ul>
+                      </li>
+                      <li>{Terminal} String pipo (0 +4)
+                        <ul>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ol>
+              </li>
+              <li>{Block}
+                <ol>
+                  <li>{Operation} Binary call(
+                    <ul>
+                      <li>{Terminal} Identifier writeln (0 +7)
+                        <ul>
+                        </ul>
+                      </li>
+                      <li>{Terminal} String ok (0 +2)
+                        <ul>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ol>
+              </li>
+            </ul>
+          </li>
+        </ol>
+      </li>
+    </ul>
+    <h2>Outputs</h2>
+      <table border="1">
+      <tr><td>pipo</td></tr>
+      <tr><td>= 5</td></tr>
+    </table>
+    <h2>Result</h2>
+    <h1>5</h1>
+  </body>
+</html>
