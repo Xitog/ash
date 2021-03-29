@@ -2,7 +2,7 @@ from setuptools import setup
 from os.path import join
 import ashlang
 
-f = open(join('ashlang', 'readme.md'), mode='r', encoding='utf8')
+f = open('README.md', mode='r', encoding='utf8')
 long_desc = f.read()
 f.close()
 

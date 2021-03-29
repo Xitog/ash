@@ -89,7 +89,7 @@ def run(command, interpreter, mode='full', debug=False, output=None):
     try:
         tokens = tokenizer.tokenize(command)
         if mode == 'tokenize':
-            return (tokens, ast, res)
+            return (tokens, None, None)
         ast = parser.parse(tokens)
         if mode == 'parse':
             return (tokens, ast, None)
@@ -126,6 +126,7 @@ def run(command, interpreter, mode='full', debug=False, output=None):
         f.write('    <h1>' + str(res) + '</h1>\n')
         f.write('  </body>\n</html>')
         f.close()
+    return (tokens, ast, res)
 
 class Mode:
     FULL = 4
