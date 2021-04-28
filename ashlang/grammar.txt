@@ -12,30 +12,43 @@ Ce langage est très inspiré de :
 
 Il se veut simple et pérenne (pas de multiples versions tous les ans).
 
-Lua est une bonne base, par son petit périmète, mais souffre de plusieurs défauts selon moi :
+Lua est une bonne base, par son petit périmète, mais souffre de plusieurs défauts frustrants selon moi :
 1. Types de données
-    o la fusion des listes et des dictionnaires dans les tables est imbitables
+    o la fusion des listes et des dictionnaires dans les tables est imbitable
        o impossible d'avoir un compte fiable d'une table avec l'opérateur # si on mixe index numérique et non numérique
-       o impossible de savoir si une clé est définie ou contient nil
+       o impossible de distinguer entre une clé inexistante et une clé pointant vers nil
+       o impossible de garantir la continuité des index numériques (on peut avoir a[5] mais pas a[4])
     o il faut mettre entre crochets la clé si ce n'est pas un symbole : { ["a"] = 5 }
-2. Opérateurs
-    o l'opérateur de différence est ~= au lieu du standard !=
-    o pas d'opérateurs combinés comme +=
-3. Syntaxe
+    o la fusion des entiers et des réels en un seul type
+2. Variables
+    o Le fait qu'une variable soit globale par défaut : il faut mettre local sinon
+    o L'impossibilité de définir des constantes
+3. Opérateurs
+    o l'utilisation de l'opérateur de différence est ~= au lieu du standard !=
+    o l'absence d'opérateurs combinés comme +=, -=, /=, *=, %=, **=
+4. Syntaxe
+    o l'utilisation du très long elseif plutôt que elif (Python) ou elsif (Ruby)
     o présence de goto, my goodness!
     o pas de continue/next dans les boucles
     o break et return ne peuvent apparaître que comme dernier statement d'un bloc
       https://www.lua.org/pil/4.4.html
     o pas d'orienté objet de base (encapsulation et héritage)
     o un test de if/while ne devrait se faire que sur des booléens
-4. Fonctions
-    o pas de vérification du nombre de paramètres (la valence) des fonctions
-    o bien sûr, aucune vérification possible du type des paramètres (mais Teal, un langage dérivé, le peut)
-5. Exceptions
+    o l'absence de séparateur de ligne,
+    o l'impossibilité d'utiliser in dans le for, il faut utiliser pairs ou ipairs
+5. Fonctions
+    o l'absence de vérification du nombre de paramètres (la valence) des fonctions
+    o l'impossibilité de définir le type des paramètres et encore moins de le contraindre (mais Teal, un langage dérivé, le peut)
+6. Exceptions
     o pas d'exceptions, seulement pcall, error, xpcall, pas de try/catch/raise/throw/finally
-6. Bibliothèque
+7. Bibliothèque
     o la bibliothèque standard est ultralimité, il faudrait penlib directement dedans
-Il y a des points positifs néanmoins :
+Il y a des points positifs néanmoins, repris pour Ash :
+    o L'élégance des commentaires avec --
+    o L'élégance de l'opérateur # pour avoir la longueur
+    o L'élégance d'utiliser directement un symbole comme clé dans les tables
+    o L'élégance d'utiliser = pour associer clés et valeurs dans une table plutôt que : (Python), => (Ruby, PHP)
+    o L'élégance de ne pas avoir à définir avant son appel une fonction
     o les listes vides, le nombre 0 et une liste vide sont vrais seuls false et nil sont faux
       http://t-a-w.blogspot.com/2007/07/truth-falsehood-and-voidness-in-dynamic.html
     o 8 types de base only : nil, boolean, number, string, function, thread, table, and userdata
