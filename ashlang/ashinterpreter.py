@@ -90,15 +90,15 @@ class AshClass(AshObject):
         self.instance_methods = {}
 
 def int_flt(op, res, v1, v2):
-    if v1.cls not in [AshInteger, AshFloat] or v2.cls not in [AshInteger, AshFloat]:
+    if v1.cls not in [AshInteger, AshNumber] or v2.cls not in [AshInteger, AshNumber]:
         raise Exception(f'[ERROR] Interpreter: v1 and v2 must be Integer or Float, not {v1.cls} and {v2.cls}')
     if op not in ['/', '//']:
         if v1.cls == v2.cls:
             return v1.cls
         else:
-            return AshFloat
+            return AshNumber
     elif op == '/':
-        return AshFloat
+        return AshNumber
     elif op == '//':
         return AshInteger
     else:
@@ -191,23 +191,23 @@ AshBoolean.instance_methods['not'] = boo_not
 # Float
 #-------------------------------------------------------------------------------
 
-AshFloat = AshClass('Float')
+AshNumber = AshClass('Number')
 
-AshFloat.instance_methods['+'] = ari_add
-AshFloat.instance_methods['-'] = ari_sub
-AshFloat.instance_methods['*'] = ari_mul
-AshFloat.instance_methods['/'] = ari_div
-AshFloat.instance_methods['//'] = ari_divint
-AshFloat.instance_methods['%'] = ari_mod
-AshFloat.instance_methods['**'] = ari_pow
-AshFloat.instance_methods['<<'] = ari_lshift
-AshFloat.instance_methods['>>'] = ari_rshift
-AshFloat.instance_methods['=='] = ari_cmp_eq
-AshFloat.instance_methods['<'] = ari_cmp_lt
-AshFloat.instance_methods['<='] = ari_cmp_le
-AshFloat.instance_methods['>='] = ari_cmp_ge
-AshFloat.instance_methods['>'] = ari_cmp_gt
-AshFloat.instance_methods['!='] = ari_cmp_dif
+AshNumber.instance_methods['+'] = ari_add
+AshNumber.instance_methods['-'] = ari_sub
+AshNumber.instance_methods['*'] = ari_mul
+AshNumber.instance_methods['/'] = ari_div
+AshNumber.instance_methods['//'] = ari_divint
+AshNumber.instance_methods['%'] = ari_mod
+AshNumber.instance_methods['**'] = ari_pow
+AshNumber.instance_methods['<<'] = ari_lshift
+AshNumber.instance_methods['>>'] = ari_rshift
+AshNumber.instance_methods['=='] = ari_cmp_eq
+AshNumber.instance_methods['<'] = ari_cmp_lt
+AshNumber.instance_methods['<='] = ari_cmp_le
+AshNumber.instance_methods['>='] = ari_cmp_ge
+AshNumber.instance_methods['>'] = ari_cmp_gt
+AshNumber.instance_methods['!='] = ari_cmp_dif
 
 #-------------------------------------------------------------------------------
 # String
@@ -382,12 +382,12 @@ class Interpreter:
         elif type(elem) == Terminal:
             if elem.content.typ == Token.Integer:
                 return AshObject(AshInteger, val=int(elem.content.val))
-            elif elem.content.typ == Token.Float:
-                return AshObject(AshFloat, val=float(elem.content.val))
+            elif elem.content.typ == Token.Number:
+                return AshObject(AshNumber, val=float(elem.content.val))
             elif elem.content.typ == Token.Boolean:
                 return AshObject(AshBoolean, val=elem.content.val == "true")
             elif elem.content.typ == Token.String:
-                return AshObject(AshString, val=elem.content.val)
+                return AshObject(AshString, val=elem.content.val[1:-1])
             elif elem.content.typ == Token.Identifier:
                 if affectation == True:
                     return elem.content.val

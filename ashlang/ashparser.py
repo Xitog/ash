@@ -1,6 +1,16 @@
-
-from ashlang.ashlexer import TokenType, Token, Tokenizer
 import copy # only once for read_expr
+
+class Token:
+    Integer = 'integer'
+    Number = 'number'
+    Identifier = 'identifier'
+    Operator = 'operator'
+    Separator = 'separator'
+    Keyword = 'keyword'
+    NewLine = 'newline'
+    Boolean = 'boolean'
+    String = 'string'
+    Comment = 'comment'
 
 # Model
 
@@ -85,7 +95,7 @@ class Terminal(Node):
         return s
 
     def get_name(self):
-        return "{Terminal} "+ f"{self.content.typ} {self.content.val} ({self.content.start} +{self.content.length})"
+        return "{Terminal} "+ f"{self.content.typ} {self.content.val} ({self.content.first} +{self.content.length})"
 
 
 class Block(Node):
@@ -405,7 +415,7 @@ class Parser:
         if length <= 0:
             raise Exception("[ERROR] Parser: Empty expression of length = " + str(length))
         elif length == 1:
-            if working_list[0].typ in [Token.Boolean, Token.Float, Token.Integer, Token.Identifier, Token.String]:
+            if working_list[0].typ in [Token.Boolean, Token.Number, Token.Integer, Token.Identifier, Token.String]:
                 node = Terminal(working_list[0])
                 results = end_index + 1, node
             else:

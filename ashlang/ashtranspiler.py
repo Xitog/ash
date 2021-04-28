@@ -1,4 +1,3 @@
-from ashlang.ashlexer import Token
 from ashlang.ashparser import Block, Operation, Terminal
 
 class TranspilerDirectPython:
@@ -139,8 +138,8 @@ class TranspilerPython:
         elif type(elem) == Terminal:
             if elem.content.typ == Token.Integer:
                 return f'AshObject(AshInteger, val={elem.content.val})'
-            elif elem.content.typ == Token.Float:
-                return f'AshObject(AshFloat, val={elem.content.val})'
+            elif elem.content.typ == Token.Number:
+                return f'AshObject(AshNumber, val={elem.content.val})'
             elif elem.content.typ == Token.Boolean:
                 return f'AshObject(AshBoolean, val={elem.content.val == "true"})'
             elif elem.content.typ == Token.String:

@@ -39,5 +39,5 @@ setup(
     
     packages=['ashlang'],  #same as name
     python_requires='>=3.5',
-    #install_requires = ['xxx'],
+    install_requires = ['weyland>=0.1.1'],
 )

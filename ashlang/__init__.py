@@ -27,16 +27,13 @@
 """Ash: a simple language transpiling to Python
 """
 
-# Version of the ashlang package
-__version__ = "0.0.1"
-
 # Imports
 import logging
-from ashlang.ash import main
-from ashlang.ashlexer import *
+from ashlang.ash import main, __version__
 from ashlang.ashparser import *
 from ashlang.ashinterpreter import *
 from ashlang.ashtranspiler import *
 
+# Logger
 logging.basicConfig(format='%(levelname)s %(asctime)s %(message)s')
 logging.getLogger().setLevel(logging.DEBUG)

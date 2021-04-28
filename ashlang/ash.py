@@ -19,7 +19,7 @@ import os.path
 import sys # for writing debug info
 import traceback
 
-from ashlang.ashlexer import Tokenizer
+from weyland import Lexer, LANGUAGES, __version__
 from ashlang.ashparser import Parser
 from ashlang.ashtranspiler import TranspilerDirectPython
 from ashlang.ashinterpreter import Interpreter
@@ -27,7 +27,7 @@ from ashlang.ashinterpreter import Interpreter
 #
 # Globals
 #
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __py_version__ = f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'
 
 #
@@ -78,7 +78,7 @@ def read(filepath):
 
 def run(command, interpreter, mode='full', debug=False, output=None):
     global console
-    tokenizer = Tokenizer()
+    lexer = Lexer(LANGUAGES['ash'], discards=['blank'], debug=False)
     parser = Parser()
     transpiler = TranspilerDirectPython()
     console.outputs = []
@@ -87,7 +87,7 @@ def run(command, interpreter, mode='full', debug=False, output=None):
     ast = None
     res = None
     try:
-        tokens = tokenizer.tokenize(command)
+        tokens = lexer.lex(command)
         if mode == 'tokenize':
             return (tokens, None, None)
         ast = parser.parse(tokens)
@@ -111,7 +111,7 @@ def run(command, interpreter, mode='full', debug=False, output=None):
         f.write('    </pre>\n')
         f.write('    <h2>Tokens</h2>\n      <table border="1">\n')
         for i, t in enumerate(tokens):
-            f.write(f'      <tr><td>{i}</td><td>{t.typ.name}</td><td>{t.val}</td></tr>\n')
+            f.write(f'      <tr><td>{i}</td><td>{t.typ}</td><td>{t.val}</td></tr>\n')
         f.write('    </table>\n')
         f.write('    <h2>Abstract syntax tree</h2>\n')
         if ast is not None:
