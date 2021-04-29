@@ -8,9 +8,9 @@ The default implementation of the transpiler and interpreter are written in Pyth
 Introduction
 
 1. First step with Ash
-  1.A Hello World!
-  1.B Comments
-  1.C Keywords
+   1. Hello World!
+   2. Comments
+   3. Keywords
 2. Variables and constants
 3. Types and operators
 4. Functions and procedures
