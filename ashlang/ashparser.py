@@ -11,6 +11,7 @@ class Token:
     Boolean = 'boolean'
     String = 'string'
     Comment = 'comment'
+    Affectation = 'AFFECTATION'
 
 # Model
 
@@ -51,6 +52,7 @@ class Node:
 
     Terminal = "Terminal" # content is Token, right and left None
     Operation = "Operation" # content is Token.Operator, right and left are operands
+    VarDeclaration = "VarDeclaration" # content is Token.Operator, right is list of IDs, left is expr
     
     def __init__(self, content : Token, typ=None, right=None, left=None):
         if typ is None:
@@ -62,8 +64,8 @@ class Node:
         self.content = content
         self.right = right
         self.left = left
-        self.lvl = content.lvl
-    
+        self.lvl = content.lvl if hasattr(content, 'lvl') else 0
+
     def to_s(self, level=1):
         s = "    " * level + "{Terminal}\n"
         s += self.content.to_s(level + 1)
@@ -85,6 +87,19 @@ class Node:
             yield self.right
 
 
+class VarDeclaration(Node):
+
+    def __init__(self, content, right, left):
+        Node.__init__(self, content, Node.VarDeclaration, right, left)
+
+    def to_s(self, level=1):
+        s = "    " * level + self.get_name()
+        return s
+
+    def get_name(self):
+        return f"{self.typ} {self.content.typ} {self.content.val}"
+
+ 
 class Terminal(Node):
     
     def __init__(self, content):
@@ -295,9 +310,22 @@ class Parser:
                 index += 1
             else:
                 end = self.get_keyword_or_nl(tokens, index, max_index, ['else', 'end'])
-                index, node = self.read_expr(tokens, index, end)
+                end = max_index if end is None else end
+                aff = self.get_aff(tokens, index, end)
+                if (end == max_index or tokens[end].typ == Token.NewLine) and aff is not None:
+                    ids = self.read_id_list(tokens, index, aff - 1)
+                    index, node = self.read_expr(tokens, aff + 1, end)
+                    node = VarDeclaration(tokens[aff], ids, node)
+                else:
+                    index, node = self.read_expr(tokens, index, end)
                 block.add(node)
         return index, block
+
+    def get_aff(self, tokens, index, max_index):
+        for t in range(index, max_index):
+            if tokens[t].typ == Token.Affectation and tokens[t].val == '=':
+                return t
+        return None
 
     def get_keyword_or_nl(self, tokens, index, max_index, keywords):
         if type(keywords) == str:
@@ -305,7 +333,16 @@ class Parser:
         for t in range(index, max_index):
             if tokens[t].typ == Token.NewLine or (tokens[t].typ == Token.Keyword and tokens[t].val in keywords):
                 return t
+        return None
     
+    def read_id_list(self, tokens, index, end):
+        if tokens[index].typ == Token.Identifier and index-end == 0:
+            return Terminal(tokens[index])
+        else:
+            print('error read_id_list')
+            print(tokens[index])
+            print(index-end)
+
     def read_if(self, tokens, index, else_index, end_index):
         self.level_of_ana += 1
         #print('    ' * self.level_of_ana, 'read_if from', index, tokens[index], 'to', end_index)
