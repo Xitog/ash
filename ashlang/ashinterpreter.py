@@ -1,17 +1,67 @@
 from ashlang.ashparser import *
 from ashlang.ashlib import *
 
+
+class Reference:
+
+    def __init__(self, name, val, typ='None', const=False):
+        self.name = name
+        self.typ = typ
+        self.const = const
+        self.val = val
+
+
+class Scope:
+
+    def __init__(self, over=None):
+        self.vars = {}
+        self.over = over
+
+    def is_root(self):
+        return self.over is None
+
+    def get_path(self):
+        if self.over is None:
+            return self.name
+        else:
+            return self.over.get_path() + '.' + self.name
+            
+    def __len__(self):
+        return len(self.vars)
+
+    def __contains__(self, key):
+        return key in self.vars
+
+    def set(self, name, val, typ='None', const=False):
+        # affectation
+        if name in self.vars:
+            if self.vars[name].const:
+                raise Exception('Illegal change of a constant reference.')
+            elif typ is not None:
+                raise Exception('Type can be assigned only once at declaration.')
+            elif self.vars[name].typ is not None and self.vars[name].typ != typ:
+                raise Exception(f'Illegal type {typ} instead of {self.vars[name].typ}.')
+        # declaration
+        else:
+            self.vars[name] = Reference(name, val, typ, const)
+
+    def get_val(self, name):
+        if name not in self.vars:
+            raise Exception(f"Identifier not know {name}")
+        return self.vars[name].val
+
+
 class Interpreter:
     
     def __init__(self, io, debug=False):
         global console
         console = io
-        self.vars = {}
-        self.vars['writeln'] = writeln
-        self.vars['write'] = write
-        self.vars['readint'] = readint
-        self.vars['readstr'] = readstr
-        self.vars['sdl'] = AshModuleSDL
+        self.vars = Scope()
+        self.vars.set('writeln', writeln, 'NativeFunction', True)
+        self.vars.set('write', write, 'NativeFunction', True)
+        self.vars.set('readint', readint, 'NativeFunction', True)
+        self.vars.set('readstr', readstr, 'NativeFunction', True)
+        self.vars.set('sdl', AshModuleSDL, const=True)
         self.debug = debug
 
     #def set_debug(self):
@@ -57,7 +107,18 @@ class Interpreter:
             elif elem.operator.content.val == 'call(':
                 method = self.do_elem(elem.left)
                 caller = self.do_elem(elem.left.left)
-                return method.__call__(caller)
+                if elem.right is not None:
+                    parameters = self.do_elem(elem.right)
+                else:
+                    parameters = None
+                if caller is not None and parameters is not None:
+                    return method.__call__(caller, parameters)
+                elif caller is not None:
+                    return method.__call__(caller)
+                elif parameters is not None:
+                    return method.__call__(parameters)
+                else:
+                    return method.__call__()
             # Range create
             elif elem.operator.content.val == '..':
                 a = self.do_elem(elem.left)
@@ -102,7 +163,7 @@ class Interpreter:
         elif type(elem) == VarDeclaration:
             identifier = self.do_elem(elem.right, affectation=True)
             value = self.do_elem(elem.left)
-            self.vars[identifier] = value
+            self.vars.set(identifier, value)
             return value
         elif type(elem) == Statement:
             cond = self.do_elem(elem.cond)
@@ -132,9 +193,7 @@ class Interpreter:
                 if affectation == True:
                     return elem.content.val
                 else:
-                    if elem.content.val not in self.vars:
-                        raise Exception(f"[ERROR] Interpreter: Identifier not know: {elem.content.val}")
-                    return self.vars[elem.content.val]
+                    return self.vars.get_val(elem.content.val)
             else:
                 raise Exception(f"Terminal not known:\nelem.content.typ = {elem.content.typ} and type(elem) = {type(elem)}")
         #elif type(elem) == FunCall:

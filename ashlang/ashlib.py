@@ -1,6 +1,5 @@
 # Basic Library
-
-GLOBAL_DEBUG = False
+import sys
 
 def writeln(arg):
     if isinstance(arg, list):
@@ -10,9 +9,8 @@ def writeln(arg):
         print()
         return res + 1 # for the newline
     else:
-        msg = str(arg)
-        prompt = '          ' if GLOBAL_DEBUG else ''
-        console.puts(prompt + msg)
+        msg = str(arg.val)
+        sys.stdout.write(msg + '\n')
         return AshObject(AshInteger, val=len(msg) + 1) # for the newline
 
 def write(arg, first=True):
@@ -22,9 +20,8 @@ def write(arg, first=True):
             res += write(a, i == 0)
         return res
     else:
-        msg = str(arg)
-        prompt = '          ' if first and GLOBAL_DEBUG else ''
-        console.put(prompt + msg)
+        msg = str(arg.val)
+        sys.stdout.write(msg)
         return AshObject(AshInteger, val=len(msg))
 
 def readint(arg=None):
@@ -74,7 +71,10 @@ class AshObject:
     
     def __repr__(self):
         if self.val is not None:
-            return f'{self.val} : {self.cls.name}'
+            if type(self.val) != str:
+                return f'{self.val} : {self.cls.name}'
+            else:
+                return f'"{self.val}" : {self.cls.name}'
         else:
             return '{AshObject}'
 
