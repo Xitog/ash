@@ -89,8 +89,9 @@ class Node:
 
 class VarDeclaration(Node):
 
-    def __init__(self, content, right, left):
+    def __init__(self, content, right, left, const_ref):
         Node.__init__(self, content, Node.VarDeclaration, right, left)
+        self.const_ref = const_ref
 
     def to_s(self, level=1):
         s = "    " * level + self.get_name()
@@ -313,9 +314,15 @@ class Parser:
                 end = max_index if end is None else end
                 aff = self.get_aff(tokens, index, end)
                 if (end == max_index or tokens[end].typ == Token.NewLine) and aff is not None:
+                    const_ref = False
+                    if tokens[index].typ == Token.Keyword and tokens[index].val == 'var':
+                        index += 1 # skip var
+                    elif tokens[index].typ == Token.Keyword and tokens[index].val == 'const':
+                        index += 1 # skip const
+                        const_ref = True
                     ids = self.read_id_list(tokens, index, aff - 1)
                     index, node = self.read_expr(tokens, aff + 1, end)
-                    node = VarDeclaration(tokens[aff], ids, node)
+                    node = VarDeclaration(tokens[aff], ids, node, const_ref)
                 else:
                     index, node = self.read_expr(tokens, index, end)
                 block.add(node)

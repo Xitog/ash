@@ -4,7 +4,7 @@ from ashlang.ashlib import *
 
 class Reference:
 
-    def __init__(self, name, val, typ='None', const=False):
+    def __init__(self, name, val, typ=None, const=False):
         self.name = name
         self.typ = typ
         self.const = const
@@ -25,14 +25,17 @@ class Scope:
             return self.name
         else:
             return self.over.get_path() + '.' + self.name
-            
+
+    def get_names(self):
+        return sorted(self.vars.keys())
+
     def __len__(self):
         return len(self.vars)
 
     def __contains__(self, key):
         return key in self.vars
 
-    def set(self, name, val, typ='None', const=False):
+    def set(self, name, val, typ=None, const=False):
         # affectation
         if name in self.vars:
             if self.vars[name].const:
@@ -46,9 +49,12 @@ class Scope:
             self.vars[name] = Reference(name, val, typ, const)
 
     def get_val(self, name):
+        return self.get_ref(name).val
+
+    def get_ref(self, name):
         if name not in self.vars:
             raise Exception(f"Identifier not know {name}")
-        return self.vars[name].val
+        return self.vars[name]
 
 
 class Interpreter:
@@ -163,7 +169,7 @@ class Interpreter:
         elif type(elem) == VarDeclaration:
             identifier = self.do_elem(elem.right, affectation=True)
             value = self.do_elem(elem.left)
-            self.vars.set(identifier, value)
+            self.vars.set(identifier, value, const=elem.const_ref)
             return value
         elif type(elem) == Statement:
             cond = self.do_elem(elem.cond)

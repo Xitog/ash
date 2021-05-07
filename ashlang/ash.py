@@ -24,6 +24,8 @@ from ashlang.ashparser import Parser
 from ashlang.ashtranspiler import TranspilerDirectPython
 from ashlang.ashinterpreter import Interpreter
 
+LANGUAGES['ash'].tokens['keyword'].append('const')
+
 #
 # Globals
 #
@@ -183,8 +185,11 @@ def main():
                     debug = True if args[1] == 'true' else False
                 console.info(f'Debug set to {debug}.')
             elif command == 'dump':
-                for k in sorted(interpreter.vars):
-                    print(f"{k:10}", interpreter.vars[k])
+                for k in sorted(interpreter.vars.get_names()):
+                    ref = interpreter.vars.get_ref(k)
+                    cst = 'const' if ref.const else 'var'
+                    typ = 'any' if ref.typ is None else ref.typ
+                    print(f"{k:10}{typ:15}{cst:5}", ref.val)
             elif command.startswith('transXXX'):
                 args = command.split(' ')
                 args = command.split(' ')
