@@ -90,12 +90,12 @@ def run(command, interpreter, mode='full', debug=False, output=None):
     res = None
     try:
         tokens = lexer.lex(command)
-        if mode == 'tokenize':
+        if mode == Mode.TOKENIZE:
             return (tokens, None, None)
         ast = parser.parse(tokens)
-        if mode == 'parse':
+        if mode == Mode.PARSE:
             return (tokens, ast, None)
-        if mode == 'transpile':
+        if mode == Mode.TRANSPILE:
             trans = transpiler.transpile(ast)
             return (tokens, ast, trans)
         res = interpreter.do_ast(ast)
@@ -135,6 +135,7 @@ class Mode:
     TRANS = 3
     PARSE = 2
     TOKENIZE = 1
+    TRANSPILE = 5
 
     @staticmethod
     def str2mode(s):
@@ -247,26 +248,32 @@ def main():
             elif command.startswith('mode'):
                 args = command.split(' ')
                 if len(args) == 1:
-                    print(f'Mode is {mode}')
-                elif args[1] in ['full', 'tokenize', 'transpile']:
+                    print(f'[INFO] Mode is {mode}')
+                elif args[1] in ['full', 'tokenize', 'parse', 'transpile']:
                     mode = Mode.str2mode(args[1])
-                    print(f'Mode set to {mode}')
+                    print(f'[INFO] Mode set to {Mode.mode2str(mode)}')
+                else:
+                    console.error('Mode must be chosen between full, tokenize, parse and transpile.')
             elif not command: # empty string are false
                 continue
             else:
                 try:
                     tokens, ast, result = run(command, interpreter, mode, debug)
-                    if mode in ['tokenize', 'parse']:
-                        print(command)
+                    if mode in [Mode.TOKENIZE, Mode.PARSE]:
+                        print(f'[INFO] Token positions: {command}')
                         start_line = ''
-                        for i, r in enumerate(res):
-                            while len(start_line) < r.start:
+                        for num, tok in enumerate(tokens):
+                            while len(start_line) < tok.first:
                                 start_line += ' '
-                            si = str(i)
-                            start_line += si + '_' * (r.length - len(si))
-                        print(start_line)
-                        for i, r in enumerate(res):
-                            print(i, r)
+                            si = str(num)
+                            start_line += si + '_' * (tok.length - len(si))
+                        print(f'[INFO]                  {start_line}')
+                        print('[INFO] List of tokens:')
+                        for num, tok in enumerate(tokens):
+                            print(f'    {num:3d} {tok}')
+                        if mode == Mode.PARSE:
+                            print('[INFO] Abstract syntax tree:')
+                            print(ast)
                     if mode == 'transpile':
                         print(res)
                 except Exception as e:

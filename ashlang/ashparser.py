@@ -12,6 +12,7 @@ class Token:
     String = 'string'
     Comment = 'comment'
     Affectation = 'AFFECTATION'
+    Type = 'TYPE'
 
 # Model
 
@@ -52,8 +53,10 @@ class Node:
 
     Terminal = "Terminal" # content is Token, right and left None
     Operation = "Operation" # content is Token.Operator, right and left are operands
-    VarDeclaration = "VarDeclaration" # content is Token.Operator, right is list of IDs, left is expr
-    
+    VarDeclaration = "VarDeclaration" # content is Token.Operator, right is ListTypedVar, left is expr
+    TypedVar = "TypedVar" # content is the identifier (Token.Terminal), right is the type (Token.Terminal)
+    ListTypedVar = "ListTypedVar" # list of TypedVar
+
     def __init__(self, content : Token, typ=None, right=None, left=None):
         if typ is None:
             if right is None and left is None:
@@ -87,6 +90,32 @@ class Node:
             yield self.right
 
 
+class TypedVar(Node):
+
+    def __init__(self, identifier, typ):
+        Node.__init__(self, content=identifier, typ=Node.TypedVar, right=typ)
+
+    def to_s(self, level=1):
+        return "    " * level + self.get_name()
+
+    def get_name(self):
+        right = str(self.right) if self.right is not None else 'any'
+        return f"<TypedVar {self.content} of type {right}>"
+
+
+class ListTypedVar(Node):
+
+    def __init__(self, lst):
+        Node.__init__(self, content=lst, typ=Node.ListTypedVar)
+
+    def to_s(self, level=1):
+        s = "    " * level + "<ListTypedVar>\n"
+        for e in self.content:
+            s += e.to_s(level + 1) + "\n"
+        s += "    " * level + "</ListTypedVar>\n"
+        return s
+
+
 class VarDeclaration(Node):
 
     def __init__(self, content, right, left, const_ref):
@@ -94,13 +123,16 @@ class VarDeclaration(Node):
         self.const_ref = const_ref
 
     def to_s(self, level=1):
-        s = "    " * level + self.get_name()
+        s = "    " * level + f"<{self.typ} operator={self.content} const_ref={self.const_ref}>\n"
+        s += self.right.to_s(level + 1)
+        s += self.left.to_s(level + 1) + "\n"
+        s += "    " * level + f"</{self.typ}>\n"
         return s
 
     def get_name(self):
         return f"{self.typ} {self.content.typ} {self.content.val}"
 
- 
+
 class Terminal(Node):
     
     def __init__(self, content):
@@ -111,7 +143,7 @@ class Terminal(Node):
         return s
 
     def get_name(self):
-        return "{Terminal} "+ f"{self.content.typ} {self.content.val} ({self.content.first} +{self.content.length})"
+        return f"<Terminal {self.content.typ} {self.content.val} ({self.content.first} +{self.content.length})/>"
 
 
 class Block(Node):
@@ -123,20 +155,21 @@ class Block(Node):
         self.actions.append(action)
 
     def to_s(self, level=1):
-        output = "    " * level + "{Block}\n"
+        output = "    " * level + "<Block>\n"
         for elem in self.actions:
             if elem is None:
                 raise Exception('None element in Block detected')
             output += elem.to_s(level+1)
             if output[-1] != '\n':
                 output += '\n'
+        output += "    " * level + "</Block>\n"
         return output
     
     def is_terminal(self):
         return len(self.actions) == 0
 
     def get_name(self):
-        return '{Block}'
+        return '<Block>'
     
     def get_children(self):
         for elem in self.actions:
@@ -343,12 +376,34 @@ class Parser:
         return None
     
     def read_id_list(self, tokens, index, end):
+        lst = []
         if tokens[index].typ == Token.Identifier and index-end == 0:
-            return Terminal(tokens[index])
+            lst.append(TypedVar(identifier=Terminal(tokens[index]), typ=None))
         else:
-            print('error read_id_list')
-            print(tokens[index])
-            print(index-end)
+            after_column = False
+            identifier = None
+            typ = None
+            for i in range(index, end + 1):
+                if tokens[i].typ == Token.Identifier:
+                     if not after_column:
+                        if identifier is None:
+                            identifier = Terminal(tokens[i])
+                        else:
+                            raise Exception("[ERROR] Parse (read_id_list) : An identifier cannot follow an identifier.")
+                     else:
+                        if typ is None:
+                            typ = Terminal(tokens[i])
+                        else:
+                            raise Exception("[ERROR] Parse (read_id_list) : An type cannot follow a type.")
+                        lst.append(TypedVar(identifier, typ))
+                elif tokens[i].typ == Token.Type and tokens[i].val == ':':
+                    if identifier is None:
+                        raise Exception("[ERROR] Parse (read_id_list) : Column separator should be after an identifier.")
+                    after_column = True
+                else:
+                    raise Exception(f"[ERROR] Parse (read_id_list) : Syntax is identifier : type, wrong token {tokens[i]}")
+                index += 1
+        return ListTypedVar(lst)
 
     def read_if(self, tokens, index, else_index, end_index):
         self.level_of_ana += 1

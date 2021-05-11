@@ -166,10 +166,18 @@ class Interpreter:
                 return args
             else:
                 raise Exception("Operator not known: " + elem.operator.content.val)
+        elif type(elem) == ListTypedVar:
+            typed_ids = []
+            for e in elem.content:
+                idv = e.content.content.val
+                typ = e.right.content.val if e.right is not None else 'any'
+                typed_ids.append((idv, typ))
+            return typed_ids
         elif type(elem) == VarDeclaration:
-            identifier = self.do_elem(elem.right, affectation=True)
+            typed_ids = self.do_elem(elem.right, affectation=True)
             value = self.do_elem(elem.left)
-            self.vars.set(identifier, value, const=elem.const_ref)
+            for identifier in typed_ids:
+                self.vars.set(identifier[0], value, typ=identifier[1], const=elem.const_ref)
             return value
         elif type(elem) == Statement:
             cond = self.do_elem(elem.cond)
