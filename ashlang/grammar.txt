@@ -1,8 +1,39 @@
-Ce document décrit le langage Ash, une syntaxe alternative pour Python.
+================================================================================
+=                                      Ash                                     =
+================================================================================
 
-Dernière révision du 26 janvier 2021
+Sommaire
+========
 
-Ce document décrit un langage minimaliste de script.
+Introduction
+1. Bases
+    1.A Commentaires
+    1.B Encodage et case-sensitive
+    1.C Séparateur de ligne
+    1.D Mots-clés
+2. Types de base
+    2.A Scalaires
+    2.B Complexes
+    2.C Opérateurs
+3. Variables et constantes
+4. Contrôle du flux
+    4.A Séquence
+    4.B Sélection
+    4.C Répétition
+    4.D Modificateurs
+5. Sous-programmes
+    5.A Déclaration
+    5.B Appel
+6. Classes
+    6.A Définition
+    6.B Sous-programmes membres
+
+Introduction
+============
+
+Ce document décrit un langage minimaliste de script, Ash, qui se veut comme une
+syntaxe alternative pour Python.
+
 On décrit des EXTENSION (EXT) et des ALTERNATIVES (ALT) possibles.
 
 Ce langage est très inspiré de :
@@ -12,50 +43,7 @@ Ce langage est très inspiré de :
 
 Il se veut simple et pérenne (pas de multiples versions tous les ans).
 
-Lua est une bonne base, par son petit périmète, mais souffre de plusieurs défauts frustrants selon moi :
-1. Types de données
-    o la fusion des listes et des dictionnaires dans les tables est imbitable
-       o impossible d'avoir un compte fiable d'une table avec l'opérateur # si on mixe index numérique et non numérique
-       o impossible de distinguer entre une clé inexistante et une clé pointant vers nil
-       o impossible de garantir la continuité des index numériques (on peut avoir a[5] mais pas a[4])
-    o il faut mettre entre crochets la clé si ce n'est pas un symbole : { ["a"] = 5 }
-    o la fusion des entiers et des réels en un seul type
-2. Variables
-    o Le fait qu'une variable soit globale par défaut : il faut mettre local sinon
-    o L'impossibilité de définir des constantes
-3. Opérateurs
-    o l'utilisation de l'opérateur de différence est ~= au lieu du standard !=
-    o l'absence d'opérateurs combinés comme +=, -=, /=, *=, %=, **=
-4. Syntaxe
-    o l'utilisation du très long elseif plutôt que elif (Python) ou elsif (Ruby)
-    o présence de goto, my goodness!
-    o pas de continue/next dans les boucles
-    o break et return ne peuvent apparaître que comme dernier statement d'un bloc
-      https://www.lua.org/pil/4.4.html
-    o pas d'orienté objet de base (encapsulation et héritage)
-    o un test de if/while ne devrait se faire que sur des booléens
-    o l'absence de séparateur de ligne,
-    o l'impossibilité d'utiliser in dans le for, il faut utiliser pairs ou ipairs
-5. Fonctions
-    o l'absence de vérification du nombre de paramètres (la valence) des fonctions
-    o l'impossibilité de définir le type des paramètres et encore moins de le contraindre (mais Teal, un langage dérivé, le peut)
-6. Exceptions
-    o pas d'exceptions, seulement pcall, error, xpcall, pas de try/catch/raise/throw/finally
-7. Bibliothèque
-    o la bibliothèque standard est ultralimité, il faudrait penlib directement dedans
-Il y a des points positifs néanmoins, repris pour Ash :
-    o L'élégance des commentaires avec --
-    o L'élégance de l'opérateur # pour avoir la longueur
-    o L'élégance d'utiliser directement un symbole comme clé dans les tables
-    o L'élégance d'utiliser = pour associer clés et valeurs dans une table plutôt que : (Python), => (Ruby, PHP)
-    o L'élégance de ne pas avoir à définir avant son appel une fonction
-    o les listes vides, le nombre 0 et une liste vide sont vrais seuls false et nil sont faux
-      http://t-a-w.blogspot.com/2007/07/truth-falsehood-and-voidness-in-dynamic.html
-    o 8 types de base only : nil, boolean, number, string, function, thread, table, and userdata
-    o possible de retourner plusieurs valeurs http://www.lua.org/pil/5.1.html
-      mais attention (f()) fait ne retourner qu'une valeur
-    o possibilité de faire des labels bon ça marche avec des goto par contre :(
-      http://lua-users.org/wiki/GotoStatement
+Dernière révision du 11 mai 2021
 
 1. Bases
 ========
@@ -63,13 +51,11 @@ Il y a des points positifs néanmoins, repris pour Ash :
 1.A Commentaires
 ----------------
 
-Les commentaires commençent par "--".
-Cela permet de conserver "//" et "#" comme opérateurs de intdiv et longueur.
-Pas de commentaires multilignes. On fera un "return" pour éviter du code.
+Les commentaires monolignes commençent par --
 
-EXT : "--[[ ]]" pour les multilignes.
-ALT : "/*" et "*/" mais ce n'est plus raccord avec "--".
-ALT : "-*" et "*-" mixe entre le C et --
+Les commentaires multilignes commençent par --[[
+
+Cela permet de conserver "//" et "#" comme opérateurs de intdiv et longueur.
 
 1.B Encodage et case-sensitive
 ------------------------------
@@ -78,9 +64,15 @@ Tout est case-sensitive. Ab != Ba
 Le style est :
     - a_b pour les méthodes, les attributs et les variables.
     - Ab pour les classes et les constantes
-Les fichiers sont encodés en ASCII.
 
-1.C Mots clés
+Les fichiers sont encodés en ASCII ou utf-8.
+
+1.C Séparateur de ligne
+-----------------------
+
+ligne_logique1 ; ligne_logique2
+
+1.D Mots-clés
 -------------
 
 27 en tout.
@@ -88,27 +80,64 @@ const, var, if, then, elif, else, end, while, do, for, in, break, next, and, or,
 
 Délimiteurs : ( ) [ ] { } ; ,
 
-ALT : remove const, var => 25
-
 2. Types de base
 ================
 
-- 1, 0b0101, 0xAF00, 0c10 => int pour les entiers
-- 1.2 => float/flt pour les flottants
-- true/false => bool pour les booléens
-- " ", ' ' => string/str pour les chaînes
-- [1, 2] => list pour les listes/array/tableaux
-- {k = v} => hash pour les dictionnaires/tables de hashage ( = : veut dire associer)
+2.A Scalaires
+-------------
 
-On garde : pour le typage et => pour autre chose.
+- 1, 0b0101, 0xAF00, 0c10    => int  | Integer  pour les entiers
+- 1u, 0b0101u, 0xAF00u, 0c10 => uint | Unsigned pour les naturels
+- 1.2, 2e3                   => num  | Number   pour les flottants
+- true/false                 => bool | Boolean  pour les booléens
+- " ", ' '                   => str  | String   pour les chaînes
+
+nil
+any (tout type, toute valeur)
+
+2.B Complexes
+-------------
+
+- [1, 2]                     => list  | List        pour les listes dynamiques
+- {k = v}                    => dict  | Dictionnary pour les dictionnaires dynamiques
+- [[1, 2]]                   => array | Array       pour les tableaux (taille fixe) 
+- {{k = v}}                  => table | Table       pour les tables de hashage à taille fixe
+- 2..5                       => range | Range       pour un range de 2 à 5 (compris)
+
+L'opérateur = veut dire associer.
 
 Les noms des types doivent être courts car on les écrira souvent.
 
-ALT : => pour les dico
-ALT : number pour les float (num)
-ALT : [ k = v ] pour les dico, on garde { } seulement pour les blocks en rempla de then/do/end
-ALT : on supprime les octaux
-ALT : on autorise \n dans une chaîne et on supprime ' '
+3.C Opérateurs
+--------------
+
+Binaires
+    Mathématiques           + - * / ** // %
+    Booléens et binaires    and or xor
+    Binaires                and or xor << >>
+    Is nil                  ??
+    Comparaison             == != < <= >= >
+    Objet                   is in
+    Range et slice          ..
+    Assignation             = += -= *= /= **= //= %= and= or= xor= not= <<= >>= ??=
+    Indexation              []
+    Accès membre            .
+Unaires
+    Mathématiques           -
+    Booléens et binaires    not
+    Objet                   $ (conv en string/str) # (conv en int length/len/trunc)
+
+Les chaînes d'affilées se concatènent automatiquement, comme en Ruby.
+is teste la classe ou nil
+
+EXT : ~= pour les matchs et <=> pour comparer en -1, 0, 1
+EXT : ..< pour les ranges où le dernier élément n'est pas inclus
+ALT : [deb..fin] ou [deb..fin[
+EXT : &a permet de faire des alias a = &b a et b poitent sur la même valeur
+ALT : Définir l'interrogation de définition : defined? (en méthode) non car on veut savoir si une var existe, il faut un keyword ??? ou ?
+ALT : [X] pour indiquer que c'est un tableau de longueur X ou dyn pour dynamique : int[dyn] ou list(int, dyn)
+ALT : comment gérer le typage des list et des hashs ? int[50] ou [int, 50] ou list(int, 50) ? str=int[50]
+      ou [int=str, 50] raccourci pour Hash(int, str, 50)
 
 3. Variables et constantes
 ==========================
@@ -130,21 +159,21 @@ EXT : := pour une constance de type avec type inféré : a := 5
 ALT : on ne type pas les variables
 EXT : le type "any"
 ALT : ni var, ni const, on ne fait qu'à la majuscule en début d'identifiant
-ALT : type? pour pouvoir dire nullable
-ALT : [X] pour indiquer que c'est un tableau de longueur X ou dyn pour dynamique : int[dyn] ou list(int, dyn)
-ALT : comment gérer le typage des list et des hashs ? int[50] ou [int, 50] ou list(int, 50) ? str=int[50]
-      ou [int=str, 50] raccourci pour Hash(int, str, 50)
+ALT : type? pour pouvoir dire nullable mais clash avec les fonctions bools
 
 4. Contrôle du flux
 ===================
 
-4.A Structures de base
-----------------------
+4.A Séquence
+------------
 
 instruction1
 instruction2
 
 instruction1 ; instruction2
+
+4.B Sélection
+-------------
 
 if CONDITION [then]
     ACTION
@@ -161,6 +190,9 @@ switch EXPRESSION
     case any [do] (ou else ?)
         ACTION
 end
+
+4.C Répétition
+--------------
 
 [<LABEL>] while CONDITION [do]
     ACTION
@@ -203,48 +235,16 @@ ALT : case any instead of default
 ALT : le choix de until c'est SI VRAI on va direct à la suite, comme pour while.
 ALT : on break par défaut d'où le besoin de next
 
-4.B Modificateurs
+4.D Modificateurs
 -----------------
 
 break [<LABEL>]
 next [<LABEL>]
 
-5. Opérateurs
-=============
+5. Sous-programmes
+==================
 
-Binaires
-    Mathématiques           + - * / ** // %
-    Booléens et binaires    and or xor
-    Autres                  << >> ??
-    Comparaison             == != < <= >= >
-    Objet                   is in .
-    Range                   ..
-    Assignation             = += -= *= /= **= //= %= and= or= xor= not= <<= >>= ??=
-Unaires
-    Mathématiques           -
-    Booléens et binaires    not
-    Objet                   $ (conv en string/str) # (conv en int length/len/trunc)
-
-nil
-any (tout type)
-
-Les chaînes d'affilées se concatènent automatiquement, comme en Ruby.
-
-EXT : ~= pour les matchs et <=> pour comparer en -1, 0, 1
-EXT : ..< pour les ranges où le dernier élément n'est pas inclus
-ALT : [deb..fin] ou [deb..fin[
-EXT : &a permet de faire des alias a = &b a et b poitent sur la même valeur
-ALT : tester nil avec ==
-ALT : Définir l'interrogation de définition : defined? (en méthode) non car on veut savoir si une var existe, il faut un keyword ??? ou ?
-INF : On abandonne &, |, ^(xor), ~(not)
-ALT : un ou deux ?
-a ?= b  <=> a = (a is nil) ? b : a
-a ??= b <=> a is not nil and a == b
-
-6. Fonctions
-============
-
-6.A Déclaration
+5.A Déclaration
 ---------------
 
 fun[ction] [CLASS.][NAME] ([VAR : TYP[, VAR : TYP]*] -> TYP[, TYP]*)
@@ -257,14 +257,6 @@ end
 
 sig[nature] [NAME] (VAR : TYP, VAR : TYP -> (TYP[, TYP]*) | nil)
 
-get NAME [-> TYP]
-    ACTION
-end
-
-set NAME (VAR : TYP)
-    ACTION
-end
-
 call without parameter id
 
 return [EXPRi [, EXPRi+1]*]
@@ -276,7 +268,7 @@ PB : fun id ( -> str) c'est laid non ?
 ALT : fun id (...) : typ
 ALT : func et proc et pas sub, def
 
-6.B Appel
+5.B Appel
 ---------
 
 Définition et appel universels
@@ -293,28 +285,43 @@ ALT : forcer le ()
 ALT : doit on avoir des fonctions first class object ? Sans () obligatoire, il faut passer par &f
 ALT : is après ) si on a pas de paramètres et qu'on autorise de ne pas mettre ()
 
-7. Classes
+6. Classes
 ==========
+
+6.A Définition
+--------------
 
 class NAME [< SUPER]
     CODE
 end
 
-
-init : fonction de constructeur (au lieu de constructor, initialize, __init__)
 @attr doivent être déclaré uniquement dans init
 @@cls_attr
 
 self
 super
 
+6.B Sous-programmes membres
+---------------------------
+
+get NAME [-> TYP]
+    ACTION
+end
+
+set NAME (VAR : TYP)
+    ACTION
+end
+
+init : procédure de constructeur (au lieu de constructor, initialize, __init__)
+Dans le constructeur, si on met @p comme paramètre, on déclare directement un paramètre.
+
+ALT : use "new"
 ALT : instead of type, struct, record
-ALT : this
 EXT : enum < type is ... end
 ALT : +id -id #id respectivement une clé publique, privée, et protégée mais-@a c'est laid.
 EXT : type/data ID is ... end
 
-8. Exceptions
+7. Exceptions
 =============
 
 raise EXPR
@@ -346,10 +353,13 @@ Chaque type s'entend comme pouvant accueillir les valeurs nil et error.
 ALT rescure
 ALT except
 
-9. Modules
+8. Modules
 ==========
 
-import FICHIER [include * | ELEM1[, ELEMi]] (instead of require, from)
+import SYMBOL[.SYMBOL] [include ELEM1[, ELEMi]]
+import FILEPATH as SYMBOL [include ELEM1[, ELEMi]]
+
+Accès via symbol.membre
 
 Un fichier = un module
 
@@ -357,14 +367,18 @@ Pour l'importer : require str ex :
     - require "flat.ash"
     - require "../flat.ash"
 
-ALT : module ID/end
-ALT : require or import ID
-ALT : include or use ID
-ALT : import au lieu de require. import STRING ou import :label:
-      pb : import a où a est une variable...
+module ID < SUPER
+    -- pas d'instanciation !
+    -- permet de faire :
+    -- des classes statiques
+    -- des interfaces
+end
 
-10. Bibliothèque standard
-=========================
+ALT : require, include, use ID
+ALT : import module ou include/extend pour importer dans une classe static ou d'instance
+
+9. Bibliothèque standard
+========================
 
 I/O
     writeln
@@ -399,10 +413,10 @@ Hash
     d.keys
     d.values
 
-11. Syntaxe BNF
+10. Syntaxe BNF
 ===============
 
-11.A Légende
+10.A Légende
 ------------
 
     EXPRESSION : règle
@@ -414,7 +428,7 @@ Hash
     # : commentaire
     'x' : littéral (symbole directement)
 
-11.B Syntaxe
+10.B Syntaxe
 ------------
 
 ATTENTION : pas mis à jour avec les dernières modifications
@@ -535,7 +549,7 @@ ATTENTION : pas mis à jour avec les dernières modifications
 
     FUNC_SUB_CALL --> id ( LIST_EXPRESSION )
 
-11.C Définition des tokens
+10.C Définition des tokens
 --------------------------
 
     fun --> 'fun' 'function'
@@ -585,7 +599,7 @@ Not used :
     finally --> 'finally'
     throw --> 'throw'
 
-12. Exemples / Ash en Action
+11. Exemples / Ash en Action
 ----------------------------
 
 ATTENTION : pas mis à jour avec les dernières modifications
@@ -598,7 +612,7 @@ var p = Personne.new() # alias sur clone
 p.birthday
 writeln(p.age) # 6
 
-13. Nodes
+12. Nodes
 ---------
 
 8 octobre 2020 :
