@@ -86,6 +86,13 @@ class AshClass(AshObject):
         self.name = name
         self.instance_attributes = {}
         self.instance_methods = {}
+    
+    def __repr__(self):
+        return self.name
+    
+    def __str__(self):
+        return self.name
+
 
 def int_flt(op, res, v1, v2):
     if v1.cls not in [AshInteger, AshNumber] or v2.cls not in [AshInteger, AshNumber]:
@@ -269,3 +276,16 @@ AshModuleSDL.methods['text'] = SDL_text
 
 console = None
 
+CLASSES = {
+    'int' : AshInteger,
+    'Integer' : AshInteger,
+    'bool' : AshBoolean,
+    'Boolean' : AshBoolean,
+    'num' : AshNumber,
+    'Number' : AshNumber,
+    'str' : AshString,
+    'String' : AshString,
+    'module' : AshModule,
+    'NativeFunction' : 'NativeFunction',
+    'NativeModule' : 'NativeModule'
+}

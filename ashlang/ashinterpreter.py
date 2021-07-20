@@ -2,13 +2,27 @@ from ashlang.ashparser import *
 from ashlang.ashlib import *
 
 
+class Error(Exception):
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+
 class Reference:
 
-    def __init__(self, name, val, typ=None, const=False):
+    def __init__(self, name, val, hint=None, const=False):
         self.name = name
-        self.typ = typ
+        self.typ = CLASSES[hint] # if None = any type
         self.const = const
         self.val = val
+    
+    def change_val(self, val):
+        if self.const:
+            raise Error('Illegal change of a constant reference.')
+        elif self.typ is not None and self.typ != val.cls:
+            raise Error(f'Illegal type {val.cls} instead of {self.typ}.')
+        else:
+            self.val = val
 
 
 class Scope:
@@ -35,25 +49,22 @@ class Scope:
     def __contains__(self, key):
         return key in self.vars
 
-    def set(self, name, val, typ=None, const=False):
+    def set(self, name, val, hint=None, const=False):
         # affectation
         if name in self.vars:
-            if self.vars[name].const:
-                raise Exception('Illegal change of a constant reference.')
-            elif typ is not None:
-                raise Exception('Type can be assigned only once at declaration.')
-            elif self.vars[name].typ is not None and self.vars[name].typ != typ:
-                raise Exception(f'Illegal type {typ} instead of {self.vars[name].typ}.')
+            if hint is not None:
+                raise Error('Type can be assigned only once at declaration.')
+            self.vars[name].change_val(val)
         # declaration
         else:
-            self.vars[name] = Reference(name, val, typ, const)
+            self.vars[name] = Reference(name, val, hint, const)
 
     def get_val(self, name):
         return self.get_ref(name).val
 
     def get_ref(self, name):
         if name not in self.vars:
-            raise Exception(f"Identifier not know {name}")
+            raise Error(f"Identifier not known: '{name}'")
         return self.vars[name]
 
 
@@ -67,7 +78,7 @@ class Interpreter:
         self.vars.set('write', write, 'NativeFunction', True)
         self.vars.set('readint', readint, 'NativeFunction', True)
         self.vars.set('readstr', readstr, 'NativeFunction', True)
-        self.vars.set('sdl', AshModuleSDL, const=True)
+        self.vars.set('sdl', AshModuleSDL, 'NativeModule', const=True)
         self.debug = debug
 
     #def set_debug(self):
@@ -100,8 +111,7 @@ class Interpreter:
             elif elem.operator.content.val == '=':
                 val = self.do_elem(elem.right)
                 ids = self.do_elem(elem.left, affectation=True)
-                self.vars[ids] = val
-                if self.debug: print('[EXEC] =', val, 'to', ids)
+                self.vars.set(ids, val)
                 return self.vars[ids]
             # Boolean
             elif op in ['and', 'or']:
@@ -170,14 +180,14 @@ class Interpreter:
             typed_ids = []
             for e in elem.content:
                 idv = e.content.content.val
-                typ = e.right.content.val if e.right is not None else 'any'
+                typ = e.right.content.val if e.right is not None else None
                 typed_ids.append((idv, typ))
             return typed_ids
         elif type(elem) == VarDeclaration:
             typed_ids = self.do_elem(elem.right, affectation=True)
             value = self.do_elem(elem.left)
             for identifier in typed_ids:
-                self.vars.set(identifier[0], value, typ=identifier[1], const=elem.const_ref)
+                self.vars.set(identifier[0], value, hint=identifier[1], const=elem.const_ref)
             return value
         elif type(elem) == Statement:
             cond = self.do_elem(elem.cond)

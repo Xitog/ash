@@ -11,8 +11,8 @@ class Token:
     Boolean = 'boolean'
     String = 'string'
     Comment = 'comment'
-    Affectation = 'AFFECTATION'
-    Type = 'TYPE'
+    Affectation = 'AFFECTATION' #'affectation'
+    Type = 'TYPE' # 'type'
 
 # Model
 
@@ -99,7 +99,7 @@ class TypedVar(Node):
         return "    " * level + self.get_name()
 
     def get_name(self):
-        right = str(self.right) if self.right is not None else 'any'
+        right = str(self.right)
         return f"<TypedVar {self.content} of type {right}>"
 
 
