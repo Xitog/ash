@@ -63,6 +63,12 @@ class AshObject:
     def get_method(self, name):
         return self.methods[name]
     
+    def __eq__(self, o):
+        if type(o) == AshObject:
+            return self.val == o.val
+        else:
+            raise Exception(f"Unable to compare == {self.val} and {o.val}")
+
     def __gt__(self, o):
         if self.val is not None and type(o) == AshObject and o.val is not None:
             return self.val > o.val
@@ -92,6 +98,12 @@ class AshClass(AshObject):
     
     def __str__(self):
         return self.name
+
+    def __eq__(self, o):
+        if type(o) == AshClass:
+            return self is o
+        else:
+            raise Exception(f"Unable to compare == {self.val} and {o.val}")
 
 
 def int_flt(op, res, v1, v2):
@@ -178,6 +190,12 @@ AshInteger.instance_methods['>'] = ari_cmp_gt
 AshInteger.instance_methods['!='] = ari_cmp_dif
 AshInteger.instance_methods['unary-'] = ari_unary_minus
 AshInteger.instance_methods['to_s'] = int_to_s
+
+#-------------------------------------------------------------------------------
+# Range
+#-------------------------------------------------------------------------------
+
+AshRange = AshClass('Range')
 
 #-------------------------------------------------------------------------------
 # Boolean

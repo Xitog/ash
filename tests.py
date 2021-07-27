@@ -1,100 +1,148 @@
-from ashlang import main, Tokenizer, Token
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
 
-import token as pytoken
-import keyword
-import tokenize
-from io import BytesIO
+from ashlang import Lexer, LANGUAGES, Parser, Interpreter, Console, TranspilerDirectPython
+from ashlang import AshObject, AshInteger, AshNumber, AshBoolean, AshRange
+from weyland import Token
 
-t = Tokenizer()
+import traceback
 
-gen = tokenize.tokenize(BytesIO("2+3 1.3 if ()".encode('utf-8')).readline)
-prow = -1
-for a in gen: # type, exact_type, start, end, line, string
-    srow, scol = a.start
-    if prow == -1 or prow != srow:
-        prow = srow
-        print(f'Row: {prow}')
-    erow, ecol = a.end
-    typ = pytoken.tok_name[a.type]
-    etyp = pytoken.tok_name[a.exact_type]
-    if typ == 'NAME' and keyword.iskeyword(a.string):
-        typ = 'KEYWORD'
-    elif typ == 'NUMBER':
-        if float(a.string).is_integer():
-            typ = 'INTEGER'
-        else:
-            typ = 'FLOAT'
-    elif etyp in ['LPAR', 'RPAR', 'LSQB', 'RSQB', 'COLON', 'COMMA', 'SEMI']:
-        typ = 'SEPARATOR'
-    elif typ == 'OP':
-        typ = 'OPERATOR'
-    # type and line not used
-    print(f'{scol:02d}-{ecol:02d} {typ:10} {a.string}')
+#------------------------------------------------------------------------------
+# Fonctions
+#------------------------------------------------------------------------------
 
+def Integer(v):
+    return AshObject(AshInteger, val=v)
 
-def python_tokenize(string):
-    gen = tokenize.tokenize(BytesIO(string.encode('utf-8')).readline)
-    tokens = []
-    for token in gen:
-        typ = pytoken.tok_name[token.type]
-        if typ == 'ENCODING':
-            continue
-        elif typ == 'NAME':
-            if keyword.iskeyword(token.string):
-                typ = Token.Keyword
-            else:
-                typ = Token.Identifier
-        elif typ == 'NUMBER':
-            if float(token.string).is_integer():
-                typ = Token.Integer
-            else:
-                typ = Token.Float
-        elif typ == 'OP':
-            etyp = pytoken.tok_name[token.exact_type]
-            if etyp in ['LPAR', 'RPAR', 'LSQB', 'RSQB', 'COLON', 'COMMA', 'SEMI']:
-                typ = Token.Separator
-            else:
-                typ = Token.Operator
-        elif typ == 'NEWLINE':
-            typ = Token.NewLine
-        elif typ == 'ENDMARKER':
-            continue
-        else:
-            raise Exception(f"Python token type not handled yet: {typ}")
-        tokens.append(Token(typ, token.string, token.start[0]))
-    return tokens[:-1] # remove last NEWLINE
+def Number(v):
+    return AshObject(AshNumber, val=v)
 
+def Boolean(v):
+    return AshObject(AshBoolean, val=v)
+
+def Range(v):
+    return AshObject(AshRange, val=v)
+
+#------------------------------------------------------------------------------
+# Classes
+#------------------------------------------------------------------------------
 
 class Test:
 
-    nb = 0
-    nb_good = 0
+    mode = 'full'
+    debug = False
+    good = 0
+    skipped = 0
+    failed = 0
+    all = []
 
-    def __init__(self, s, expected=None):
-        Test.nb += 1
-        process = t.tokenize(s, to_s = True)
-        vs_python = False
-        if expected is None:
-            expected = t.format(python_tokenize(s))
-            vs_python = True
-        if process == expected:
-            info = ' ' * 11 if not vs_python else '(vs python)'
-            print(f'Test {Test.nb} ok     {s:20} {info} {process}')
-            Test.nb_good += 1
-        else:
-            print(f'Test {Test.nb} failed {s:}:')
-            print(f'1. Processed: {process}')
-            print(f'2. Expected:  {expected}')
-            if vs_python:
-                print('Expected obtained from Python tokenizer.')
+    KO = 0
+    OK = 1
+    SKIP = 2
 
-Test('2+3', '(TokenList, [(Integer, "2"), (Operator, "+"), (Integer, "3")])')
-Test('2+3') # 14h26 plus besoin de spécifier le résultat, on utilise le tokenizer de base de Python :-) !
-Test('2..3', '(TokenList, [(Integer, "2"), (Operator, ".."), (Integer, "3")])')
-Test('2.3..4', '(TokenList, [(Float, "2.3"), (Operator, ".."), (Integer, "4")])')
-Test('2 + 3 * 2')
-Test('(2 + 3) * 2')
-Test('a = 5')
-Test('if a == 5 then writeln("a equals 5") end', '(TokenList, [(Keyword, "if"), (Identifier, "a"), (Operator, "=="), (Integer, "5"), (Keyword, "then"), (Identifier, "writeln"), (Separator, "("), (String, "a equals 5"), (Separator, ")"), (Keyword, "end")])')
-print(f"Test passed: {Test.nb_good} / {Test.nb}")
+    @classmethod
+    def run(cls):
+        cls.console = Console()
+        cls.lexer = Lexer(LANGUAGES['ash'], discards=['blank'], debug=cls.debug)
+        cls.parser = Parser()
+        cls.interpreter = Interpreter(cls.console)
+        cls.transpiler = TranspilerDirectPython()
+        cls.console.info("--------------------------------------------------------------------------------")
+        cls.console.info(f"Running all tests ({len(cls.all)})")
+        cls.console.info("--------------------------------------------------------------------------------")
+        for i, t in enumerate(cls.all):
+            try:
+                r = t.execute(i+1)
+                if r == cls.OK:
+                    cls.good += 1
+                elif r == cls.KO:
+                    cls.failed += 1
+                elif r == cls.SKIP:
+                    cls.skipped += 1
+            except Exception as e:
+                cls.failed += 1
+                cls.console.error(f"{i+1:03d} Test   : {t.code:45} error: {e}")
+                traceback.print_exc()
+        cls.console.info("--------------------------------------------------------------------------------")
+        cls.console.info(f"All tests ({len(cls.all)}) executed:")
+        cls.console.info(f"    {cls.good:03d} passed  / {len(cls.all)}")
+        cls.console.info(f"    {cls.skipped:03d} skipped / {len(cls.all)}")
+        cls.console.info(f"    {cls.failed:03d} failed  / {len(cls.all)}")
+        cls.console.info("--------------------------------------------------------------------------------")
 
+    def __init__(self, code, tokens=None, result=None):
+        Test.all.append(self)
+        self.code = code
+        self.tokens = tokens # expected tokens
+        self.result = result # expected result
+
+    def execute(self, nb=0):
+        tokens = Test.lexer.lex(self.code)
+        if self.tokens is not None:
+            max_len = max(len(tokens), len(self.tokens))
+            error = len(tokens) == len(self.tokens)
+            l1 = "expected:"
+            l2 = "got:     "
+            for i in range(0, max_len):
+                if i < len(self.tokens):
+                    t1 = self.tokens[i]
+                    l1 += f"{str(t1):5}"
+                else:
+                    t1 = None
+                    l1 += ' ' * 5
+                if i < len(tokens):
+                    t2 = tokens[i]
+                    l2 += f"{str(t2):5}"
+                else:
+                    t2 = None
+                    l2 += ' ' * 5
+                if t1 is None or t2 is None or t1.typ != t2.typ or t1.val != t2.val: # replace by != when new version of weyland is out
+                    error = True
+                    break
+            if error:
+                Test.console.error(f"{nb:03d} Test   : {self.code:45} Error at lexing stage. Aborting.")
+                Test.console.error(' ' * 13 + l1)
+                Test.console.error(' ' * 13 + l2)
+                return Test.KO
+        if self.result is not None:
+            ast = Test.parser.parse(tokens)
+            result = Test.interpreter.do_ast(ast)
+            if result != self.result:
+                Test.console.error(f"{nb:03d} Error at parsing or interpreting: expected {self.result} got {result}. Aborting.")
+                return Test.KO
+            Test.console.info(f"{nb:03d} Test OK: {self.code:45} = {result}")
+        if self.tokens is None and self.result is None:
+            Test.console.info(f"{nb:03d} Test   : {self.code:45} skipped")
+            return Test.SKIP
+        return Test.OK
+
+#------------------------------------------------------------------------------
+# Main
+#------------------------------------------------------------------------------
+
+def main():
+    # Littéraux
+    Test('4', result=Integer(4))
+    Test('2.0', result=Number(2.0))
+    Test('true', result=Boolean(True))
+    # Littéraux range et problème du point
+    Test('2..3', tokens=[Token('integer', '2', 0)])
+    Test('2.3..4')
+    # Les espaces sont neutres
+    Test('2+3', result=Integer(5))
+    Test('2 +3', result=Integer(5))
+    Test('2+ 3', result=Integer(5))
+    Test('2 + 3', result=Integer(5))
+    # Les parenthèses
+    Test('2 + 3 * 2', result=Integer(8))
+    Test('(2 + 3) * 2', result=Integer(10))
+    # Affectation
+    Test('a = 5')
+    # Code
+    Test('if a == 5 then writeln("a equals 5") end')
+    # Exécution
+    Test.run()
+
+if __name__ == '__main__':
+    main()

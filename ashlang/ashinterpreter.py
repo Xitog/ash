@@ -1,5 +1,42 @@
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
 from ashlang.ashparser import *
 from ashlang.ashlib import *
+
+#------------------------------------------------------------------------------
+# Console
+#------------------------------------------------------------------------------
+
+class FallBack:
+    def write(self, msg, color):
+        sys.stdout.write(msg)
+
+
+class Console:
+
+    def __init__(self):
+        try:
+            # Works only in IDLE
+            self.out = sys.stdout.shell
+        except AttributeError:
+            self.out = FallBack()
+        self.outputs = []
+    
+    def error(self, msg):
+        self.out.write('[ERROR] ' + str(msg) + '\n', 'COMMENT')
+
+    def info(self, msg):
+        self.out.write('[INFO]  ' + str(msg) + '\n', 'DEFINITION')
+    
+    def put(self, msg):
+        self.outputs.append(msg)
+        self.out.write(str(msg), 'TODO')
+
+    def puts(self, msg):
+        self.outputs.append(msg)
+        self.out.write(str(msg) + '\n', 'TODO')
 
 
 class Error(Exception):
@@ -7,6 +44,9 @@ class Error(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
 
+#------------------------------------------------------------------------------
+# Noyau interne
+#------------------------------------------------------------------------------
 
 class Reference:
 
@@ -70,9 +110,8 @@ class Scope:
 
 class Interpreter:
     
-    def __init__(self, io, debug=False):
-        global console
-        console = io
+    def __init__(self, io=None, debug=False):
+        self.console = io if io is not None else Console()
         self.vars = Scope()
         self.vars.set('writeln', writeln, 'NativeFunction', True)
         self.vars.set('write', write, 'NativeFunction', True)
