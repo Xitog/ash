@@ -4,6 +4,7 @@
 
 from ashlang.ashparser import *
 from ashlang.ashlib import *
+from weyland import Lexer, LANGUAGES
 
 #------------------------------------------------------------------------------
 # Console
@@ -278,7 +279,7 @@ class Interpreter:
 
     def do(self, data):
         parser = Parser()
-        res = Tokenizer().tokenize(data)
+        res = Lexer(LANGUAGES['ash'], discards=['blank'], debug=False).lex(data)
         ast = parser.parse(res)
         res = self.do_ast(ast)
     

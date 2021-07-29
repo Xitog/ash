@@ -130,7 +130,7 @@ class REPL:
                     f = open(arg, mode='r', encoding='utf8')
                     c = f.read()
                     f.close()
-                    tokenizer = Lexer()
+                    tokenizer = Lexer(LANGUAGES['ash'], discards=['blank'], debug=self.debug)
                     parser = Parser()
                     self.console.outputs = []
                     tokens = tokenizer.tokenize(c)
