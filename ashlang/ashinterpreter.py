@@ -131,7 +131,7 @@ class Interpreter:
             else:
                 print(type(elem), '::\n', elem)
         if type(elem) == Operation:
-            op = elem.operator.content.val
+            op = elem.operator.content.value
             # Arithmetic
             if op in ['+', '-', '*', '/', '//', '%', '**', '<<', '>>']:
                 if elem.left is None:
@@ -246,18 +246,18 @@ class Interpreter:
                 return result
         elif type(elem) == Terminal:
             if elem.content.typ == Token.Integer:
-                return AshObject(AshInteger, val=int(elem.content.val))
+                return AshObject(AshInteger, val=int(elem.content.value))
             elif elem.content.typ == Token.Number:
-                return AshObject(AshNumber, val=float(elem.content.val))
+                return AshObject(AshNumber, val=float(elem.content.value))
             elif elem.content.typ == Token.Boolean:
-                return AshObject(AshBoolean, val=elem.content.val == "true")
+                return AshObject(AshBoolean, val=elem.content.value == "true")
             elif elem.content.typ == Token.String:
-                return AshObject(AshString, val=elem.content.val[1:-1])
+                return AshObject(AshString, val=elem.content.value[1:-1])
             elif elem.content.typ == Token.Identifier:
                 if affectation == True:
-                    return elem.content.val
+                    return elem.content.value
                 else:
-                    return self.vars.get_val(elem.content.val)
+                    return self.vars.get_val(elem.content.value)
             else:
                 raise Exception(f"Terminal not known:\nelem.content.typ = {elem.content.typ} and type(elem) = {type(elem)}")
         #elif type(elem) == FunCall:

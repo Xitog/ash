@@ -51,16 +51,14 @@ from ashlang.ashinterpreter import *    # TranspilerDirectPython
 from ashlang.ashtranspiler import *     # Interpreter, Console, Error
 
 import weyland
-from weyland import Lexer, LANGUAGES
+from weyland import Lexer, Language, PATTERNS, LANGUAGES
 
 #------------------------------------------------------------------------------
 # Globals
 #------------------------------------------------------------------------------
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __py_version__ = f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}'
-
-LANGUAGES['ash'].tokens['keyword'].append('const')
 
 #------------------------------------------------------------------------------
 # Logger

@@ -469,16 +469,16 @@ class Parser:
                 print(f"    working_list {str(index)}. {token} lvl={token.lvl}")
             if token.typ in [Token.Operator, Token.Separator]:
                 # Handling of ( )
-                if token.val == '(':
+                if token.value == '(':
                     if index >= 1 and working_list[index - 1].typ != Token.Operator: # not the first and not after an Operator
-                        token.val = 'call('
+                        token.value = 'call('
                         token.typ = Token.Operator
                         after_aug = True
                     else:
                         lvl *= 100
                         del working_list[index]
                         continue
-                elif token.val == ')':
+                elif token.value == ')':
                     lvl /= 100
                     del working_list[index]
                     continue
@@ -488,11 +488,11 @@ class Parser:
                         if self.debug_expression:
                             print('        => adding the first operator')
                         sorted_operators.append(index)
-                        prio_values.append(Parser.PRIORITIES[token.val] * lvl)
+                        prio_values.append(Parser.PRIORITIES[token.value] * lvl)
                     else:
                         if self.debug_expression:
                             print('        => adding another operator')
-                        computed_prio = Parser.PRIORITIES[token.val] * lvl
+                        computed_prio = Parser.PRIORITIES[token.value] * lvl
                         ok = False
                         for i in range(0, len(sorted_operators)):
                             if prio_values[i] < computed_prio:
