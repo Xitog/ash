@@ -24,13 +24,13 @@ class Console:
         except AttributeError:
             self.out = FallBack()
         self.outputs = []
-    
+
     def error(self, msg):
         self.out.write('[ERROR] ' + str(msg) + '\n', 'COMMENT')
 
     def info(self, msg):
         self.out.write('[INFO]  ' + str(msg) + '\n', 'DEFINITION')
-    
+
     def put(self, msg):
         self.outputs.append(msg)
         self.out.write(str(msg), 'TODO')
@@ -53,10 +53,10 @@ class Reference:
 
     def __init__(self, name, val, hint=None, const=False):
         self.name = name
-        self.typ = CLASSES[hint] # if None = any type
+        self.typ = CLASSES[hint] if hint is not None else None
         self.const = const
         self.val = val
-    
+
     def change_val(self, val):
         if self.const:
             raise Error('Illegal change of a constant reference.')
@@ -110,7 +110,7 @@ class Scope:
 
 
 class Interpreter:
-    
+
     def __init__(self, io=None, debug=False):
         self.console = io if io is not None else Console()
         self.vars = Scope()
@@ -123,7 +123,7 @@ class Interpreter:
 
     #def set_debug(self):
     #    self.debug = not self.debug
-    
+
     def do_elem(self, elem, affectation=False, Scope=None):
         if self.debug:
             if type(elem) == Terminal:
@@ -148,11 +148,11 @@ class Interpreter:
                 self.vars[ids] = self.vars[ids].send(true_op, val)
                 return self.vars[ids]
             # Affectation
-            elif elem.operator.content.val == '=':
+            elif elem.operator.content.value == '=':
                 val = self.do_elem(elem.right)
                 ids = self.do_elem(elem.left, affectation=True)
                 self.vars.set(ids, val)
-                return self.vars[ids]
+                return self.vars.get_val(ids)
             # Boolean
             elif op in ['and', 'or']:
                 return self.do_elem(elem.left).send(op, self.do_elem(elem.right))
@@ -282,7 +282,7 @@ class Interpreter:
         res = Lexer(LANGUAGES['ash'], discards=['blank'], debug=False).lex(data)
         ast = parser.parse(res)
         res = self.do_ast(ast)
-    
+
     def do_ast(self, ast):
         last = None
         for elem in ast.root.actions:

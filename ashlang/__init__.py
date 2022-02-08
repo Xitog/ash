@@ -2,17 +2,17 @@
 # MIT Licence (Expat License Wording)
 # -----------------------------------------------------------
 # Copyright © 2020, Damien Gouteux
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -75,7 +75,7 @@ class REPL:
 
     def __init__(self, debug=False):
         self.console = Console()
-        self.lexer = Lexer(LANGUAGES['ash'], discards=['blank'], debug=debug)
+        self.lexer = Lexer(LANGUAGES['ash'], discards=['blank']) #, debug=debug)
         self.parser = Parser()
         self.interpreter = Interpreter(self.console)
         self.transpiler = TranspilerDirectPython()
@@ -133,7 +133,7 @@ class REPL:
                     self.console.outputs = []
                     tokens = tokenizer.tokenize(c)
                     ast = parser.parse(tokens)
-                    TranspilerPython().transpile(ast.root, 'last.py') 
+                    TranspilerPython().transpile(ast.root, 'last.py')
         elif command.startswith('exec') or command == 'tests':
             if command == 'tests': # hack
                 command = 'exec tests'
@@ -219,7 +219,7 @@ class REPL:
         tokens = []
         ast = None
         res = None
-    
+
         tokens = self.lexer.lex(command)
         if self.mode in [Mode.TOKENIZE, Mode.LEX]:
             return (tokens, None, None)
@@ -284,6 +284,21 @@ def main():
         res = True
         while res:
             command = input('ash> ')
+            if command.split(' ')[-1] in ['then', 'do']:
+                level = 1
+                command += '\n'
+                while level > 0:
+                    sub = input('...> ' + '    ' * level)
+                    if sub.split(' ')[-1] == 'end':
+                        level -= 1
+                        command += '    ' * level + sub + '\n'
+                    elif sub.split(' ')[-1] in ['then', 'do']:
+                        command += '    ' * level + sub + '\n'
+                        level += 1
+                    else:
+                        command += '    ' * level + sub + '\n'
+                print('Executing block:')
+                print(command)
             res = repl.exec(command)
 
 if __name__ == '__main__':

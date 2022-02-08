@@ -41,7 +41,7 @@ class AST:
         level -= 1
         s += '  ' * level + '</li>\n'
         return s
-    
+
     def to_html(self):
         s = '    <ul>\n'
         s = self.to_html_list(s, 3, self.root)
@@ -73,7 +73,7 @@ class Node:
         s = "    " * level + "{Terminal}\n"
         s += self.content.to_s(level + 1)
         return s
-    
+
     def __str__(self):
          return self.to_s()
 
@@ -134,7 +134,7 @@ class VarDeclaration(Node):
 
 
 class Terminal(Node):
-    
+
     def __init__(self, content):
         Node.__init__(self, content, Node.Terminal)
 
@@ -164,13 +164,13 @@ class Block(Node):
                 output += '\n'
         output += "    " * level + "</Block>\n"
         return output
-    
+
     def is_terminal(self):
         return len(self.actions) == 0
 
     def get_name(self):
         return '<Block>'
-    
+
     def get_children(self):
         for elem in self.actions:
             yield elem
@@ -182,7 +182,7 @@ class Operation(Node):
         Node.__init__(self, operator, Node.Operation, right, left)
         self.operator = self.content
         assert self.operator.is_terminal() and self.operator.content.typ == Token.Operator, "Operator should be of type Token.Operator and is " + self.operator.content.typ
-    
+
     def to_s(self, level=1):
         name = self.get_name()
         s = "    " * level + f"{name}\n" # {self.content.content.val}
@@ -210,7 +210,7 @@ class FunCall(Node):
     def to_s(self, level=1):
         typ = "{Function Call}"
         return "    " * level + f"{typ} {self.name} {self.arg.to_s()} \n"
-    
+
     def is_terminal(self):
         return True
 
@@ -235,7 +235,7 @@ class Statement(Node):
             return '{Statement} until'
         else:
             raise Exception('Statement is not in a valid state')
-    
+
     def to_s(self, level=1):
         start = "    " * level
         block = "    " * (level + 1)
@@ -257,12 +257,12 @@ class Statement(Node):
 
 
 class Parser:
-    
-    PRIORITIES = { 
+
+    PRIORITIES = {
         '=' : 1, '+=' : 1, '-=' : 1, '*=' : 1, '/=' : 1, '//=' : 1, '**=' : 1, '%=' : 1,
         ',' : 2,
-        'and' : 5, 'or' : 5, 'xor' : 5, 
-        '>' : 8, '<' : 8, '>=' : 8, '<=' : 8, '==' : 8, '!=' : 8, '<=>' : 8, 
+        'and' : 5, 'or' : 5, 'xor' : 5,
+        '>' : 8, '<' : 8, '>=' : 8, '<=' : 8, '==' : 8, '!=' : 8, '<=>' : 8,
         '<<': 9, '>>' : 9, '..' : 9, '..<' : 9,
         '+' : 10, '-' : 10,
         '*' : 20, '/' : 20, '//' : 20,
@@ -274,12 +274,12 @@ class Parser:
         'unary-' : 52,
         'expr(' : 60,
     }
-    
+
     def __init__(self, debug = False):
         self.level_of_ana = 0
         self.debug = debug
         self.debug_expression = False # expression are too verbose, we must try to segregate
-    
+
     def set_debug(self):
         self.debug = not self.debug
 
@@ -289,22 +289,22 @@ class Parser:
         if tokens is None:
             raise Exception("tokens is None!")
         # clean tokens
-        cleaned = [tok for tok in tokens if tok.typ not in [Token.Comment]] # Token.NewLine, 
+        cleaned = [tok for tok in tokens if tok.typ not in [Token.Comment]] # Token.NewLine,
         tokens = cleaned
         index = 0
         ast = AST()
         ast.root = self.read_block(tokens, 0)[1] # index is discared
         return ast
-    
+
     def get_end(self, tokens, index):
         level = 0
         for t in range(index + 1, len(tokens)):
             tok = tokens[t]
-            if tok.typ == Token.Keyword and tok.val in ['if', 'while', 'for']:
+            if tok.typ == Token.Keyword and tok.value in ['if', 'while', 'for']:
                 level += 1
-            elif tok.typ == Token.Keyword and tok.val == 'end' and level == 0:
+            elif tok.typ == Token.Keyword and tok.value == 'end' and level == 0:
                 return t
-            elif tok.typ == Token.Keyword and tok.val == 'end' and level > 0:
+            elif tok.typ == Token.Keyword and tok.value == 'end' and level > 0:
                 level -= 1
         # should have an "end" keyword at the end
         raise Exception("[ERROR] Parser: malformed expression")
@@ -314,28 +314,28 @@ class Parser:
         t = index + 1
         for t in range(index + 1, end):
             tok = tokens[t]
-            if tok.typ == Token.Keyword and tok.val in ['if', 'while', 'for']:
+            if tok.typ == Token.Keyword and tok.value in ['if', 'while', 'for']:
                 level += 1
-            elif tok.typ == Token.Keyword and tok.val in ['else', 'elif'] and level == 0:
+            elif tok.typ == Token.Keyword and tok.value in ['else', 'elif'] and level == 0:
                 return t
-            elif tok.typ == Token.Keyword and tok.val == 'end' and level > 0:
+            elif tok.typ == Token.Keyword and tok.value == 'end' and level > 0:
                 level -= 1
         return None
-    
+
     def read_block(self, tokens, index, max_index=None):
         if max_index is None: max_index = len(tokens)
         #print('    ' * self.level_of_ana, 'read_block from', index, 'to', max_index)
         block = Block()
         while index < max_index:
             tok = tokens[index]
-            if tok.typ == Token.Keyword and tok.val == 'if':
+            if tok.typ == Token.Keyword and tok.value == 'if':
                 end = self.get_end(tokens, index)
                 els = self.get_else(tokens, index, end)
                 index, node = self.read_if(tokens, index + 1, els, end)
                 block.add(node)
-            elif tok.typ == Token.Keyword and tok.val in ['while', 'for']:
+            elif tok.typ == Token.Keyword and tok.value in ['while', 'for']:
                 end = self.get_end(tokens, index)
-                if tok.val == 'while':
+                if tok.value == 'while':
                     index, node = self.read_while(tokens, index + 1, end)
                 else:
                     index, node = self.read_for(tokens, index + 1, end)
@@ -363,7 +363,7 @@ class Parser:
 
     def get_aff(self, tokens, index, max_index):
         for t in range(index, max_index):
-            if tokens[t].typ == Token.Affectation and tokens[t].val == '=':
+            if tokens[t].typ == Token.Affectation and tokens[t].value == '=':
                 return t
         return None
 
@@ -371,10 +371,10 @@ class Parser:
         if type(keywords) == str:
             keywords = [keywords]
         for t in range(index, max_index):
-            if tokens[t].typ == Token.NewLine or (tokens[t].typ == Token.Keyword and tokens[t].val in keywords):
+            if tokens[t].typ == Token.NewLine or (tokens[t].typ == Token.Keyword and tokens[t].value in keywords):
                 return t
         return None
-    
+
     def read_id_list(self, tokens, index, end):
         lst = []
         if tokens[index].typ == Token.Identifier and index-end == 0:
@@ -396,7 +396,7 @@ class Parser:
                         else:
                             raise Exception("[ERROR] Parse (read_id_list) : An type cannot follow a type.")
                         lst.append(TypedVar(identifier, typ))
-                elif tokens[i].typ == Token.Type and tokens[i].val == ':':
+                elif tokens[i].typ == Token.Type and tokens[i].value == ':':
                     if identifier is None:
                         raise Exception("[ERROR] Parse (read_id_list) : Column separator should be after an identifier.")
                     after_column = True
@@ -421,7 +421,7 @@ class Parser:
         # read else action
         else_action = None
         if else_index is not None:
-            if tokens[else_index].val == 'else':
+            if tokens[else_index].value == 'else':
                 _, else_action = self.read_block(tokens, else_index + 1, end_index)
             else: # elif
                 elif_else = self.get_else(tokens, else_index + 1, end_index)
@@ -429,21 +429,21 @@ class Parser:
         node = Statement(cond, action, else_action)
         self.level_of_ana -= 1
         return end_index + 1, node
-    
+
     def read_while(self, tokens, index, end_index):
         # read condition
         cond = None
         t = self.get_keyword_or_nl(tokens, index, end_index, 'do')
-        index, cond = self.read_expr(tokens, index, t)        
+        index, cond = self.read_expr(tokens, index, t)
         # read action
         action = None
         _, action = self.read_block(tokens, index, end_index)
         node = Statement(cond, action, loop=True)
         return end_index + 1, node
-    
+
     def read_for(self, tokens, index, end_index):
         return 99
-    
+
     def read_expr(self, tokens, index, end_index):
         #self.debug_expression = True
         if end_index is None: end_index = len(tokens)
@@ -553,9 +553,9 @@ class Parser:
                     print('    Resolving 0. in sorted_operators: ' + str(working_list[operator_index]))
                 # Left parameter, None for Unary Operator
                 op = working_list[operator_index]
-                if (type(op) == Token and op.val == 'not') or (type(op) == Operation and op.operator.content.val == 'not'):
+                if (type(op) == Token and op.value == 'not') or (type(op) == Operation and op.operator.content.value == 'not'):
                     left = None
-                elif ((type(op) == Token and op.val == '-') or (type(op) == Operation and op.operator.content.val == '-')) and operator_index - 1 < 0:
+                elif ((type(op) == Token and op.value == '-') or (type(op) == Operation and op.operator.content.value == '-')) and operator_index - 1 < 0:
                     left = None
                 else:
                     left = working_list[operator_index - 1]
@@ -564,7 +564,7 @@ class Parser:
                 # Right parameter
                 right = None
                 # We must have a parameter and its priority/lvl must be superior : ( "abc" ) abc is lvl = 100 vs () "abc" abc is lvl = 1
-                if (type(op) == Token and op.val == 'call(') or (type(op) == Operation and op.operator.content.val == 'call('):
+                if (type(op) == Token and op.value == 'call(') or (type(op) == Operation and op.operator.content.value == 'call('):
                     if len(working_list) > operator_index + 1 and working_list[operator_index + 1].lvl > working_list[operator_index].lvl:
                         right = working_list[operator_index + 1]
                 # We must have always a right parameter (there is no unary op with left operand)
