@@ -1,0 +1,72 @@
+<html>
+    <head>
+        <title>Ash REPL</title>
+        <meta charset="utf8">
+        <script type="module" src="./weyland.mjs"></script>
+        <script type="module">
+            import { Lexer } from "./weyland.mjs";
+
+            function react(event)
+            {
+                if (event.key === 'Enter') {
+                    console.log('do validate')
+                    let tx = document.getElementById("code");
+                    tx.value = tx.value + '\n    ';
+                    event.preventDefault();
+                }
+            }
+
+            function reset()
+            {
+                let code = document.getElementById("code");
+                code.innerText = "";
+            }
+
+            function analyse()
+            {
+                let code = document.getElementById("code");
+                let lex = new Lexer('ash', ['blank']);
+                console.log(lex);
+                //let res = lex.lex(code.innerText);
+                let output = document.getElementById("output");
+                output.innerHTML = lex.to_html(code.innerText, null, ['blank']);
+            }
+
+            document.querySelector('[class$="_reset"]').addEventListener('click', reset);
+            document.querySelector('[class$="_analyse"]').addEventListener('click', analyse);
+        </script>
+        <link href="https://xitog.github.io/dgx/css/flashy.css" rel="stylesheet">
+        <style>
+            #code {
+                width: 95%;
+                height: 90%;
+                margin-top: 10px;
+                margin-bottom: 10px;
+                border: 1px black solid;
+                padding: 12px;
+                overflow: auto;
+                font-family: 'Courier New', Courier, monospace;
+            }
+            .grid-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-gap: 5px;
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body width="100%">
+        <div class="grid-container">
+            <div class="grid-child">
+                <button class="_reset">Reset</button>
+                <button class="_analyse">Parse</button>
+                <div id="code" contenteditable="true"></div>
+                <button class="_reset">Reset</button>
+                <button class="_analyse">Parse</button>
+            </div>
+            <div class="grid-child">
+                <div id="output"></div>
+            </div>
+        </div>
+    </body>
+</html>
