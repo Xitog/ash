@@ -27,9 +27,9 @@
                 let code = document.getElementById("code");
                 let lex = new Lexer('ash', ['blank']);
                 console.log(lex);
-                //let res = lex.lex(code.innerText);
-                let output = document.getElementById("output");
-                output.innerHTML = lex.to_html(code.innerText, null, ['blank']);
+                console.log(lex.lex(code.innerText));
+                //let output = document.getElementById("output");
+                code.innerHTML = lex.to_html(code.innerText, null, ['blank']).replaceAll('\n', '<br>');
             }
 
             document.querySelector('[class$="_reset"]').addEventListener('click', reset);
