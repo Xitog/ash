@@ -22,14 +22,44 @@
                 code.innerText = "";
             }
 
+            function read_if(level)
+            {
+            }
+            
+            function read_while(level)
+            {
+            }
+            
+            function read_for(level)
+            {
+            }
+            
             function analyse()
             {
                 let code = document.getElementById("code");
                 let lex = new Lexer('ash', ['blank']);
                 console.log(lex);
-                console.log(lex.lex(code.innerText));
+                let tokens = lex.lex(code.innerText);
+                console.log(tokens);
                 //let output = document.getElementById("output");
                 code.innerHTML = lex.to_html(code.innerText, null, ['blank']).replaceAll('\n', '<br>');
+                let level = 0;
+                let i = 0;
+                while (i < tokens.length)
+                {
+                    let tok = tokens[i];
+                    if (tok.is('if'))
+                    {
+                        read_if(level);
+                    } else if (tok.is('while'))
+                    {
+                        read_while(level);
+                    } else if (tok.is('for'))
+                    {
+                        read_for(level);
+                    }
+                    i++;
+                }
             }
 
             document.querySelector('[class$="_reset"]').addEventListener('click', reset);
