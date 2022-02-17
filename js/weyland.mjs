@@ -271,7 +271,7 @@ class Lexer
             old = matched;
             matched = [];
         }
-        if (old.length > 0)
+        if (old !== null && old.length > 0)
         {
             let content =  word;
             if (debug)
@@ -299,7 +299,7 @@ class Lexer
         return tokens;
     }
 
-    to_html(text=null, tokens=null, raws=[])
+    to_html(text=null, tokens=null, raws=[], enumerate=false)
     {
         if (text === null && tokens === null)
         {
@@ -312,6 +312,7 @@ class Lexer
             tokens = this.lex(text, []) // don't discard anything, we will produce raws instead
         }
         let output = '';
+        let nb = 0;
         for (const tok of tokens)
         {
             if (raws.includes(tok.getType()))
@@ -323,7 +324,12 @@ class Lexer
                 val = val.replace('>', '&gt;');
                 val = val.replace('<', '&lt;');
                 output += `<span class="${this.lang.getName()}-${tok.getType()}">${val}</span>`;
+                if (enumerate)
+                {
+                    output += `<sup>${nb}</sup>`;
+                }
             }
+            nb += 1;
         }
         return output;
     }
