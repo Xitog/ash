@@ -136,15 +136,10 @@ class Token
 
     is(value, type=null, start=null)
     {
-        if (type == null && start == null)
-        {
-            return this.value === value;
-        } else if (start == null)
-        {
-            return this.value === value && this.type === type;
-        } else { // nothing is null
-            return this.value === value && this.type === type && this.start === start;
-        }
+        let ok_value = (value === null ? true : this.value === value);
+        let ok_type  = (type  === null ? true : this.type  === type);
+        let ok_start = (start === null ? true : this.start === start);
+        return ok_value && ok_type && ok_start;
     }
 
     getType()
@@ -324,9 +319,9 @@ class Lexer
                 val = val.replace('>', '&gt;');
                 val = val.replace('<', '&lt;');
                 output += `<span class="${this.lang.getName()}-${tok.getType()}">${val}</span>`;
-                if (enumerate)
+                if (enumerate && val != '\n')
                 {
-                    output += `<sup>${nb}</sup>`;
+                    output += `<sup class='info'>${nb}</sup><span> </span>`;
                 }
             }
             nb += 1;
