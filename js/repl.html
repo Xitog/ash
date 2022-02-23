@@ -7,7 +7,7 @@
             import { Lexer } from "./weyland.mjs";
 
             var scope = {};
-            
+
             function react(event)
             {
                 if (event.key === 'Enter') {
@@ -42,7 +42,7 @@
                 // should have an "end" keyword at the end
                 throw new Error(`[ERROR] Parser: non-terminated block found at ${index} : ${tokens[index]}.`);
             }
-            
+
             function get_else(level, tokens, index, end)
             {
                 let start_level = level
@@ -60,7 +60,7 @@
                 }
                 return null;
             }
-            
+
             function find(tokens, start, value, type, before_end_of_line=false)
             {
                 const NOT_FOUND = -1;
@@ -77,7 +77,7 @@
                 }
                 return NOT_FOUND;
             }
-            
+
             function read_if(level, tokens, index)
             {
                 console.log('if detected');
@@ -90,15 +90,15 @@
                     alert(error);
                 }
             }
-            
+
             function read_while(level)
             {
             }
-            
+
             function read_for(level)
             {
             }
-            
+
             function read_aff(level, tokens, start, i_aff)
             {
                 console.log('affectation detected');
@@ -106,7 +106,7 @@
                 let value = read_right_aff(level, tokens, i_aff);
                 scope[name] = value;
             }
-            
+
             function read_left_aff(level, tokens, start, i_aff)
             {
                 console.log(`reading left part of affectation from ${start} to ${i_aff}`);
@@ -117,7 +117,7 @@
                     throw new Error("Multiple element left affectation part unsupported.");
                 }
             }
-            
+
             function read_right_aff(level, tokens, start)
             {
                 // si on ne trouve pas de newline, on retourne toute la fin
@@ -153,7 +153,81 @@
                     throw new Error("Multiple element right affectation part unsupported.");
                 }
             }
-            
+
+            function split(tokens)
+            {
+                let lines = [];
+                let current = [];
+                for(const tok of tokens)
+                {
+                    current.push(tok);
+                    console.log(tok, tok.is(null, 'newline'));
+                    if (tok.is(null, 'newline'))
+                    {
+                        lines.push(current);
+                        current = [];
+                        console.log('newline', lines.length, current.length);
+                    }
+                }
+                if (current.length > 0)
+                {
+                    lines.push(current);
+                    console.log('endline', lines.length)
+                }
+                return lines;
+            }
+
+            function line_has(line, value, type='keyword')
+            {
+                let index = 0;
+                for (const tok of line)
+                {
+                    if (tok.is(value, type))
+                    {
+                        return index;
+                    }
+                    index++;
+                }
+                return -1;
+            }
+
+            function determine(line)
+            {
+                if (line_has(line, '=', 'affectation') != -1)
+                {
+                    return "AFFECTATION";
+                } else if (line_has(line, 'if') == 0) {
+                    if (line_has(line, 'end') != -1)
+                    {
+                        return "SELECTION:LONG_ONELINER";
+                    } else if (line_has(line, 'then') != -1)
+                    {
+                        return "SELECTION:START_BLOCK";
+                    } else {
+                        return "SELECTION:START_CONDITION";
+                    }
+                } else if (line_has(line, 'if') > 0) {
+                    return "SELECTION:SHORT_ONELINER";
+                } else if (line_has(line, 'while') != -1) {
+                    if (line_has(line, 'loop') != -1)
+                    {
+                        return "ITERATION:LONG_ONELINER";
+                    } else if (line_has(line, 'do') != -1) {
+                        return "ITERATION:START_BLOCK";
+                    } else {
+                        return "ITERATION:START_CONDITION";
+                    }
+                } else if (line_has(line, 'end') != -1) {
+                    return "SELECTION:END";
+                } else if (line_has(line, 'loop') != -1) {
+                    return "ITERATION:END";
+                } else if (line_has(line, 'then') != -1) {
+                    return "SELECTION:START_BLOCK";
+                } else {
+                    return "EXPRESSION";
+                }
+            }
+
             function analyse()
             {
                 console.clear();
@@ -164,34 +238,36 @@
                 try
                 {
                     let output = document.getElementById("output");
+                    // Get the code as HTML
                     let text = code.innerHTML;
-                    console.log('innerHTML            |' + text + '|');
-                    // Replace br from copy paste by '\n'
-                    text = text.replaceAll('<br>', '\n');
-                    console.log('Replace <br> by \\n   |' + text + '|');
                     // Removing all <sup>X</sup>
                     text = text.replace(/<sup class="info">\d+<\/sup>/gi, "");
-                    console.log('Remove all <sup>     |' + text + '|');
-                    // Replacing ending </div> by \n
-                    text = text.replace(/(<\/div>)/g, '\n');
-                    console.log('Replace </div> by \n |' + text + '|');
-                    // Replacing all other html markup by nothing
-                    text = text.replace(/<[^>]+>/gi, "");
-                    console.log('Remove all markups   |' + text + '|');
-                    // Trim
-                    text = text.trim();
-                    console.log('Trimmed text (final) |' + text + '|');
+                    // Put back the HTML inside the code
+                    code.innerHTML = text;
+                    // Get again the code but as text (delete all html markup)
+                    text = code.innerText.trim();
+                    console.log('Input text   |' + text + '|');
                     // Tokenizing
                     tokens = lex.lex(text);
                     let html = '<div>' + lex.to_html(null, tokens, ['blank', 'newline'], true).replaceAll('\n', '</div><div>')  + '</div>';
-                    code.innerHTML =  html;
-                    console.log('HTML                 |' + html + '|');
+                    code.innerHTML = html;
+                    console.log('HTML         |' + html + '|');
                     //output.innerHTML = lex.to_html(code.innerText, null, ['blank'], true).replaceAll('\n', '<br>');
-                    console.log(tokens);
+                    console.log('Tokens       :');
+                    for (let tok of tokens)
+                    {
+                        console.log('    ' + tok.info());
+                    }
                 } catch (error) {
                     alert(error);
                     return;
                 }
+                let lines = split(tokens);
+                for (let line of lines)
+                {
+                    console.log('Line : ' + determine(line).padEnd(30) + ' : '+ line);
+                }
+                return;
                 let level = 0;
                 let i = 0;
                 while (i < tokens.length)
@@ -227,8 +303,8 @@
                 console.log(scope);
             }
 
-            document.querySelector('[class$="_reset"]').addEventListener('click', reset);
-            document.querySelector('[class$="_analyse"]').addEventListener('click', analyse);
+            document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
+            document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
         </script>
         <link href="https://xitog.github.io/dgx/css/flashy.css" rel="stylesheet">
         <style>

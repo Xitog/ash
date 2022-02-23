@@ -157,9 +157,14 @@ class Token
         return this.start;
     }
 
+    info()
+    {
+        return `Token ${this.type.padEnd(20)}  |${(ln(this.value) + '|').padEnd(10)}  #${this.value.length} @${this.getStart()}`;
+    }
+
     toString()
     {
-        return `Token ${this.type.padEnd(20)}  |${(ln(this.value) + '|').padEnd(10)}  #${this.value.length}} @${this.getStart()}`;
+        return `{Token ${this.type}  |${ln(this.value)}|  #${this.value.length} @${this.getStart()}}`;
     }
 }
 
@@ -404,7 +409,7 @@ const LANGUAGES = {
     'ash': new Language('ash',
         {
             'keyword' : ['if', 'then', 'elif', 'else', 'end',
-                'while', 'do', 'for',
+                'while', 'do', 'for', 'loop',
                 'break', 'next', 'return',
                 'var', 'fun', 'sub', 'get', 'set', 'class',
                 'import', 'from', 'as',
