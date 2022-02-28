@@ -415,6 +415,7 @@ const LANGUAGES = {
                 'import', 'from', 'as',
                 'try', 'catch', 'finally', 'raise', 'const'],
             'special': ['writeln', 'write'],
+            'boolean' : ['false', 'true'],
             'identifier' : PATTERNS["IDENTIFIER"],
             // Old
             'affectation' : ['='],
@@ -426,7 +427,6 @@ const LANGUAGES = {
             // New
             'integer' : PATTERNS["INTEGER"].concat(PATTERNS["INTEGER_BIN"]).concat(PATTERNS["INTEGER_HEXA"]),
             'number' : PATTERNS["FLOAT"],
-            'boolean' : ['false', 'true'],
             'nil': ['nil'],
             // 'binary_operator' : ['and', 'or', # boolean
             'operator' : ['-', 'not', '#', '~', 'and', 'or', // boolean

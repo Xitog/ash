@@ -78,17 +78,139 @@
                 return NOT_FOUND;
             }
 
-            function read_if(level, tokens, index)
+            class Parser
             {
-                console.log('if detected');
-                try
+                constructor()
                 {
-                    let t_end = get_end(level, tokens, index);
-                    let t_else = get_else(level, tokens, index, t_end);
-                    console.log(t_end, tokens[t_end], t_else);
-                } catch (error) {
-                    alert(error);
+                    this.index = 0;
+                    this.level = 0;
+                    this.tokens = [];
                 }
+
+                parse(tokens)
+                {
+                    this.tokens = tokens;
+                    this.parse_block();
+                }
+
+                parse_block()
+                {
+                    this.level += 1;
+                    console.log('    '.repeat(this.level) + `parse block level ${this.level}`);
+                    while (this.index < this.tokens.length)
+                    {
+                        let tok = this.tokens[this.index];
+                        if (this.read('if', 'keyword', true))
+                        {
+                            this.parse_if();
+                        } /*else if (tok.is('while'))
+                        {
+                            read_while(level);
+                        } else if (tok.is('for'))
+                        {
+                            read_for(level);
+                        } else {
+                            let i_aff = find(tokens, i, '=', 'affectation', true);
+                            if (i_aff !== find.NOT_FOUND)
+                            {
+                                i = read_aff(level, tokens, i, i_aff);
+                                i -= 1;
+                            } else {
+                                let i_end = find(tokens, i, null, 'newline');
+                                if (i_end === find.NOT_FOUND)
+                                {
+                                    i_end = tokens.length - 1;
+                                }
+                                console.log(`Expression from ${i} to ${i_end}`);
+                            }
+                        }*/
+                        else if (tok.is('end', 'keyword'))
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            console.log(`Unhandled token ${tok}`);
+                            this.index += 1;
+                        }
+                    }
+                    this.level -= 1;
+                }
+
+                next(value, type='keyword')
+                {
+                    if (this.index + 1 >= this.tokens.length)
+                    {
+                        print('nothing after ' + this.index)
+                        return false;
+                    }
+                    print(this.tokens[this.index + 1].is(value, type));
+                    return this.tokens[this.index + 1].is(value, type);
+                }
+
+                read(value, type='keyword', optional=false)
+                {
+                    // Length check
+                    if (this.index >= this.tokens.length)
+                    {
+                        if (!optional)
+                        {
+                            throw new Error(`Parse error, unexpected end of stream of tokens, expected ${value}, ${type} @${this.index}.`);
+                        }
+                        return false;
+                    }
+                    // Token check on value and/or type
+                    const tok = this.tokens[this.index];
+                    if (!tok.is(value, type))
+                    {
+                        if (!optional)
+                        {
+                            throw new Error(`Parse error, expected ${value}, ${type} @${this.index} got ${tok}`);
+                        } else {
+                            return false;
+                        }
+                    }
+                    // Display for debug
+                    if (value !== null)
+                    {
+                        console.log('    '.repeat(this.level) + `read ${value} @${this.index}`);
+                    } else {
+                        console.log('    '.repeat(this.level) + `read ${type} @${this.index}`);
+                    }
+                    // Forward
+                    this.index += 1;
+                    return true;
+                }
+
+                parse_expr()
+                {
+                    this.level += 1;
+                    console.log('    '.repeat(this.level) + `parse expr at ${this.index}, level ${this.level}`);
+                    this.parse_lit();
+                    this.level -= 1;
+                }
+
+                parse_lit()
+                {
+                    console.log('    '.repeat(this.level) + `parse literal`)
+                    this.read(null, 'boolean');
+                }
+
+                parse_if()
+                {
+                    this.level += 1;
+                    console.log('    '.repeat(this.level) + `parse if at ${this.index - 1}, level ${this.level}`);
+                    this.parse_expr();
+                    this.read('then');
+                    this.parse_block();
+                    if (this.read('else', 'keyword', true))
+                    {
+                        this.parse_block();
+                    }
+                    this.level -= 1;
+                    this.read('end');
+                }
+
             }
 
             function read_while(level)
@@ -154,80 +276,6 @@
                 }
             }
 
-            function split(tokens)
-            {
-                let lines = [];
-                let current = [];
-                for(const tok of tokens)
-                {
-                    current.push(tok);
-                    console.log(tok, tok.is(null, 'newline'));
-                    if (tok.is(null, 'newline'))
-                    {
-                        lines.push(current);
-                        current = [];
-                        console.log('newline', lines.length, current.length);
-                    }
-                }
-                if (current.length > 0)
-                {
-                    lines.push(current);
-                    console.log('endline', lines.length)
-                }
-                return lines;
-            }
-
-            function line_has(line, value, type='keyword')
-            {
-                let index = 0;
-                for (const tok of line)
-                {
-                    if (tok.is(value, type))
-                    {
-                        return index;
-                    }
-                    index++;
-                }
-                return -1;
-            }
-
-            function determine(line)
-            {
-                if (line_has(line, '=', 'affectation') != -1)
-                {
-                    return "AFFECTATION";
-                } else if (line_has(line, 'if') == 0) {
-                    if (line_has(line, 'end') != -1)
-                    {
-                        return "SELECTION:LONG_ONELINER";
-                    } else if (line_has(line, 'then') != -1)
-                    {
-                        return "SELECTION:START_BLOCK";
-                    } else {
-                        return "SELECTION:START_CONDITION";
-                    }
-                } else if (line_has(line, 'if') > 0) {
-                    return "SELECTION:SHORT_ONELINER";
-                } else if (line_has(line, 'while') != -1) {
-                    if (line_has(line, 'loop') != -1)
-                    {
-                        return "ITERATION:LONG_ONELINER";
-                    } else if (line_has(line, 'do') != -1) {
-                        return "ITERATION:START_BLOCK";
-                    } else {
-                        return "ITERATION:START_CONDITION";
-                    }
-                } else if (line_has(line, 'end') != -1) {
-                    return "SELECTION:END";
-                } else if (line_has(line, 'loop') != -1) {
-                    return "ITERATION:END";
-                } else if (line_has(line, 'then') != -1) {
-                    return "SELECTION:START_BLOCK";
-                } else {
-                    return "EXPRESSION";
-                }
-            }
-
             function analyse()
             {
                 console.clear();
@@ -262,43 +310,9 @@
                     alert(error);
                     return;
                 }
-                let lines = split(tokens);
-                for (let line of lines)
-                {
-                    console.log('Line : ' + determine(line).padEnd(30) + ' : '+ line);
-                }
-                return;
-                let level = 0;
-                let i = 0;
-                while (i < tokens.length)
-                {
-                    let tok = tokens[i];
-                    if (tok.is('if'))
-                    {
-                        read_if(level, tokens, i);
-                    } else if (tok.is('while'))
-                    {
-                        read_while(level);
-                    } else if (tok.is('for'))
-                    {
-                        read_for(level);
-                    } else {
-                        let i_aff = find(tokens, i, '=', 'affectation', true);
-                        if (i_aff !== find.NOT_FOUND)
-                        {
-                            i = read_aff(level, tokens, i, i_aff);
-                            i -= 1;
-                        } else {
-                            let i_end = find(tokens, i, null, 'newline');
-                            if (i_end === find.NOT_FOUND)
-                            {
-                                i_end = tokens.length - 1;
-                            }
-                            console.log(`Expression from ${i} to ${i_end}`);
-                        }
-                    }
-                    i++;
-                }
+                console.log('Parsing :');
+                let p = new Parser();
+                p.parse(tokens);
                 console.log('End of execution');
                 console.log(scope);
             }
