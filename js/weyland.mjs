@@ -405,11 +405,28 @@ const PATTERNS = {
     'SEPARATORS'    : ['\\(', '\\)']
 };
 
+const SHORTCUTS = {
+    'keyword': 'kw',
+    'special': 'spe',
+    'identifier': 'id',
+    'affectation': 'aff',
+    'combined_affectation': 'aff',
+    'separator': 'sep',
+    'operator': 'op',
+    'comment': 'com',
+
+    'boolean': 'bool',
+    'integer': 'int',
+    'number': 'num',
+    'float': 'flt',
+    'string': 'str',
+}
+
 const LANGUAGES = {
     'ash': new Language('ash',
         {
             'keyword' : ['if', 'then', 'elif', 'else', 'end',
-                'while', 'do', 'for', 'loop',
+                'while', 'do', 'for',
                 'break', 'next', 'return',
                 'var', 'fun', 'sub', 'get', 'set', 'class',
                 'import', 'from', 'as',
@@ -439,7 +456,7 @@ const LANGUAGES = {
             'wrong_int' : PATTERNS["WRONG_INTEGER"],
             'blank': PATTERNS["BLANKS"],
             'newline' : PATTERNS["NEWLINES"],
-            'comment': ['--[^\n]*(\n|$)'],
+            'comment': ['--[^\n]*'],
             'string' : PATTERNS["STRINGS"],
         },
         ['wrong_int'],

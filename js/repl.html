@@ -78,6 +78,54 @@
                 return NOT_FOUND;
             }
 
+            class Node
+            {
+
+            }
+
+            class Block extends Node
+            {
+                constructor()
+                {
+                    this.statements = [];
+                }
+
+                add(node)
+                {
+                    this.statements.push(node);
+                }
+            }
+
+            class If extends Node
+            {
+
+            }
+
+            class While extends Node
+            {
+
+            }
+
+            class For extends Node
+            {
+
+            }
+
+            class Break extends Node
+            {
+
+            }
+
+            class Next extends Node
+            {
+
+            }
+
+            class Expression extends Node
+            {
+
+            }
+
             class Parser
             {
                 constructor()
@@ -91,61 +139,81 @@
                 {
                     this.tokens = tokens;
                     this.parse_block();
+                    while (this.index < this.tokens.length)
+                    {
+                        console.log(`Unhandled token ${tok}`);
+                        this.index += 1;
+                    }
+                }
+
+                parse_scope()
+                {
+                    // function
+                    // procedure
                 }
 
                 parse_block()
                 {
+                    // if
+                    // while
+                    // for
+                    // break
+                    // next
+                    // expression
+                    // affectation
+                    // comment
+                    // newline
+                    let b = new Block();
                     this.level += 1;
                     console.log('    '.repeat(this.level) + `parse block level ${this.level}`);
                     while (this.index < this.tokens.length)
                     {
                         let tok = this.tokens[this.index];
-                        if (this.read('if', 'keyword', true))
+                        if (tok.is('if'))
                         {
-                            this.parse_if();
-                        } /*else if (tok.is('while'))
+                            b.add(this.parse_if());
+                        }
+                        else if (tok.is(null, 'comment') || tok.is(null, 'newline'))
                         {
-                            read_while(level);
-                        } else if (tok.is('for'))
+                            this.index += 1;
+                        }
+                        else if (tok.is('break'))
                         {
-                            read_for(level);
-                        } else {
-                            let i_aff = find(tokens, i, '=', 'affectation', true);
-                            if (i_aff !== find.NOT_FOUND)
-                            {
-                                i = read_aff(level, tokens, i, i_aff);
-                                i -= 1;
-                            } else {
-                                let i_end = find(tokens, i, null, 'newline');
-                                if (i_end === find.NOT_FOUND)
-                                {
-                                    i_end = tokens.length - 1;
-                                }
-                                console.log(`Expression from ${i} to ${i_end}`);
-                            }
-                        }*/
-                        else if (tok.is('end', 'keyword'))
+                            this.index += 1;
+                            b.add(new Break());
+                        }
+                        else if (tok.is('next'))
                         {
-                            return;
+                            this.index += 1;
+                            b.add(new Next());
+                        }
+                        else if (tok.is('while'))
+                        {
+                            b.add(this.parse_while());
+                        }
+                        else if (tok.is('for'))
+                        {
+                            b.add(this.parse_for());
+                        }
+                        else if (tok.is(null, 'identifier') ||
+                                 tok.is(null, 'string')     ||
+                                 tok.is(null, 'integer')    ||
+                                 tok.is(null, 'number')     ||
+                                 tok.is(null, 'boolean'))
+                        {
+                            b.add(this.parse_expr());
+                        }
+                        else if (tok.is(null, 'newline'))
+                        {
+                            index += 1;
                         }
                         else
                         {
-                            console.log(`Unhandled token ${tok}`);
-                            this.index += 1;
+                            break;
                         }
                     }
                     this.level -= 1;
-                }
-
-                next(value, type='keyword')
-                {
-                    if (this.index + 1 >= this.tokens.length)
-                    {
-                        print('nothing after ' + this.index)
-                        return false;
-                    }
-                    print(this.tokens[this.index + 1].is(value, type));
-                    return this.tokens[this.index + 1].is(value, type);
+                    return b;
                 }
 
                 read(value, type='keyword', optional=false)
@@ -289,7 +357,7 @@
                     // Get the code as HTML
                     let text = code.innerHTML;
                     // Removing all <sup>X</sup>
-                    text = text.replace(/<sup class="info">\d+<\/sup>/gi, "");
+                    text = text.replace(/<sup class="info">[^<]+<\/sup>/gi, "");
                     // Put back the HTML inside the code
                     code.innerHTML = text;
                     // Get again the code but as text (delete all html markup)
@@ -343,6 +411,12 @@
                 margin-top: 30px;
                 padding: 12px;
                 font-family: 'Courier New', Courier, monospace;
+            }
+            span[class$=identifier] {
+                color: rgb(2,155,238); /*rgb(156, 220, 254);*/
+            }
+            span[class$=separator] {
+                color: rgb(255, 201, 17); /* 197 121 145 */
             }
         </style>
     </head>
