@@ -6,6 +6,7 @@
         <script type="module" src="./parser.mjs"></script>
         <script type="module">
             import { Lexer } from "./weyland.mjs";
+            import { Parser } from "./parser.mjs";
 
             var scope = {};
 
@@ -178,9 +179,10 @@
                 }
                 console.log('Parsing :');
                 let p = new Parser();
-                p.parse(tokens);
+                let ast = p.parse(tokens);
                 console.log('End of execution');
-                console.log(scope);
+                console.log('AST: ', ast);
+                console.log('Scope: ', scope);
             }
 
             document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));

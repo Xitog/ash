@@ -11,12 +11,27 @@ class Block extends Node
 {
     constructor()
     {
+        super();
         this.statements = [];
     }
 
     add(node)
     {
         this.statements.push(node);
+    }
+
+    toString()
+    {
+        return 'Block';
+    }
+}
+
+class Literal extends Node
+{
+    constructor(tok)
+    {
+        super();
+        this.token = tok;
     }
 }
 
@@ -47,7 +62,13 @@ class Next extends Node
 
 class Expression extends Node
 {
-
+    constructor(left, operator, right)
+    {
+        super();
+        this.left = left;
+        this.operator = operator;
+        this.right = right;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -67,12 +88,13 @@ class Parser
     parse(tokens)
     {
         this.tokens = tokens;
-        this.parse_block();
+        let res = this.parse_block();
         while (this.index < this.tokens.length)
         {
             console.log(`Unhandled token ${tok}`);
             this.index += 1;
         }
+        return res;
     }
 
     parse_scope()
@@ -94,7 +116,7 @@ class Parser
         // newline
         let b = new Block();
         this.level += 1;
-        console.log('    '.repeat(this.level) + `parse block level ${this.level}`);
+        console.log('    '.repeat(this.level) + `${this.level}. parse block level`);
         while (this.index < this.tokens.length)
         {
             let tok = this.tokens[this.index];
@@ -182,15 +204,22 @@ class Parser
     parse_expr()
     {
         this.level += 1;
-        console.log('    '.repeat(this.level) + `parse expr at ${this.index}, level ${this.level}`);
-        this.parse_lit();
+        console.log('    '.repeat(this.level) + `${this.level}. parse expr at ${this.index}`);
+        let left = this.parse_lit();
+        let operator = this.parse_lit();
+        let right = this.parse_lit();
         this.level -= 1;
+        return new Expression(left, operator, right);
     }
 
     parse_lit()
     {
-        console.log('    '.repeat(this.level) + `parse literal`)
-        this.read(null, 'boolean');
+        this.level += 1;
+        const tok = this.tokens[this.index];
+        console.log('    '.repeat(this.level) + `${this.level}. parse literal : ${tok}`);
+        this.index += 1;
+        this.level -= 1;
+        return new Literal(tok);
     }
 
     parse_if()
