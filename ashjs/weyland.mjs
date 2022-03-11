@@ -168,6 +168,17 @@ class Token
     }
 }
 
+class Match
+{
+    constructor(type, elem, start)
+    {
+        console.log(`Creating {Match} type=${type} elem=${elem} start=${start}`);
+        this.type = type;
+        this.elem = elem;
+        this.start = start;
+    }
+}
+
 class Lexer
 {
     constructor(lang, discards=[])
@@ -199,7 +210,7 @@ class Lexer
                 if (elem.test(word))
                 {
                     if (debug) console.log('    Match: ' + type + ' : ' + variants + ' => ' + elem.test(word));
-                    matches.push([type, elem, start]);
+                    matches.push(new Match(type, elem, start));
                 }
             }
         }
@@ -219,7 +230,7 @@ class Lexer
             word += text[i];
             if (debug)
             {
-                console.log(i, `|${ln(word)}|`);
+                console.log(start, `${i}. @start |${ln(word)}|`);
             }
             matched = this.match(start, word, debug);
             if (debug && matched.length === 0)
@@ -249,23 +260,23 @@ class Lexer
                     let content =  word.substring(0, word.length-1);
                     if (debug)
                     {
-                        console.log('pour le mot ' + content + ' nous avons :');
+                        console.log(`pour le mot |${content}| nous avons :`);
                         for (let res of old)
                         {
-                            console.log('    ' + res[0] + ' : ' + res[1]);
+                            console.log('    ' + res.type + ' : ' + res.elem + ' @' + res.start);
                         }
                     }
-                    if (this.lang.isWrong(old[0][0]))
+                    if (this.lang.isWrong(old[0].type))
                     {
-                        throw new Error(`A wrong token definition ${old[0][0]} : ${old[0][1]} has been validated by the lexer: ${content}`);
+                        throw new Error(`A wrong token definition ${old[0].type} : ${old[0].elem} has been validated by the lexer: ${content}`);
                     }
-                    if (!discards.includes(old[0][0]))
+                    if (!discards.includes(old[0].type))
                     {
-                        tokens.push(new Token(old[0][0], content, old[0][2]));
+                        tokens.push(new Token(old[0].type, content, old[0].start));
                     }
                     word = '';
                     i -= 1;
-                    start = i;
+                    start = old[0].start + content.length;
                 }
             }
             old = matched;
@@ -279,16 +290,16 @@ class Lexer
                 console.log('pour le mot ' + content + ' nous avons :');
                 for (let res of old)
                 {
-                    console.log('    ' + res[0] + ' : ' + res[1]);
+                    console.log('    ' + res.type + ' : ' + res.start);
                 }
             }
-            if (this.lang.isWrong(old[0][0]))
+            if (this.lang.isWrong(old[0].type))
             {
-                throw new Error(`A wrong token definition ${old[0][0]} : ${old[0][1]} has been validated by the lexer: ${content}`);
+                throw new Error(`A wrong token definition ${old[0].type} : ${old[0].elem} has been validated by the lexer: ${content}`);
             }
-            if (!discards.includes(old[0][0]))
+            if (!discards.includes(old[0].type))
             {
-                tokens.push(new Token(old[0][0], content, old[0][2]));
+                tokens.push(new Token(old[0].type, content, old[0].start));
             }
         } else if (word.length > 0)
         {
@@ -310,6 +321,10 @@ class Lexer
         if (text !== null)
         {
             tokens = this.lex(text, []) // don't discard anything, we will produce raws instead
+        }
+        for (const tok of tokens)
+        {
+            console.log('>>>', tok);
         }
         let output = '';
         let nb = 0;

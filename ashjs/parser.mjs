@@ -91,6 +91,7 @@ class Parser
         let res = this.parse_block();
         while (this.index < this.tokens.length)
         {
+            const tok = this.tokens[this.index];
             console.log(`Unhandled token ${tok}`);
             this.index += 1;
         }
@@ -116,7 +117,7 @@ class Parser
         // newline
         let b = new Block();
         this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse block level`);
+        console.log('    '.repeat(this.level) + `${this.level}. parse block at ${this.index}`);
         while (this.index < this.tokens.length)
         {
             let tok = this.tokens[this.index];
@@ -203,20 +204,39 @@ class Parser
 
     parse_expr()
     {
+        return this.parse_test();
+    }
+
+    parse_test()
+    {
         this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse expr at ${this.index}`);
-        let left = this.parse_lit();
-        let operator = this.parse_lit();
-        let right = this.parse_lit();
+        console.log('    '.repeat(this.level) + `${this.level}. parse test at ${this.index}`); // with operator at ${this.index} : ${tok}`);
+        let expr = this.parse_shift();
+        const tok = this.tokens[this.index];
+        if (['==', '!=', '<', '<=', '>=', '>'].includes(tok.getValue()))
+        {
+            let operator = this.parse_lit();
+            let right = this.parse_shift();
+            expr = new Expression(expr, operator, right);
+        }
         this.level -= 1;
-        return new Expression(left, operator, right);
+        return expr;
+    }
+
+    parse_shift()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse shift at ${this.index}`);
+        let res = this.parse_lit();
+        this.level -= 1;
+        return res;
     }
 
     parse_lit()
     {
         this.level += 1;
         const tok = this.tokens[this.index];
-        console.log('    '.repeat(this.level) + `${this.level}. parse literal : ${tok}`);
+        console.log('    '.repeat(this.level) + `${this.level}. parse literal at ${this.index} : ${tok}`);
         this.index += 1;
         this.level -= 1;
         return new Literal(tok);

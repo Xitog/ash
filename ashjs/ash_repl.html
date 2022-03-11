@@ -80,14 +80,6 @@
                 return NOT_FOUND;
             }
 
-            function read_while(level)
-            {
-            }
-
-            function read_for(level)
-            {
-            }
-
             function read_aff(level, tokens, start, i_aff)
             {
                 console.log('affectation detected');
@@ -169,9 +161,10 @@
                     console.log('HTML         |' + html + '|');
                     //output.innerHTML = lex.to_html(code.innerText, null, ['blank'], true).replaceAll('\n', '<br>');
                     console.log('Tokens       :');
-                    for (let tok of tokens)
+                    //for (let tok of tokens)
+                    for (const [index, tok] of tokens.entries())
                     {
-                        console.log('    ' + tok.info());
+                        console.log('    ' + index.toString().padStart(3) + ". " + tok.info());
                     }
                 } catch (error) {
                     alert(error);
