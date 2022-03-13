@@ -173,6 +173,8 @@
                 console.log('Parsing :');
                 let p = new Parser();
                 let ast = p.parse(tokens);
+                console.log('AST :');
+                console.log(ast.display());
                 console.log('End of execution');
                 console.log('AST: ', ast);
                 console.log('Scope: ', scope);

@@ -4,7 +4,10 @@
 
 class Node
 {
-
+    display(level=0)
+    {
+        return '    '.repeat(level) + "Node";
+    }
 }
 
 class Block extends Node
@@ -24,6 +27,16 @@ class Block extends Node
     {
         return 'Block';
     }
+
+    display(level=0)
+    {
+        let out = "";
+        for (let sta of this.statements)
+        {
+            out += '    '.repeat(level) + sta.display(level + 1) + "\n";
+        }
+        return out;
+    }
 }
 
 class Literal extends Node
@@ -33,11 +46,38 @@ class Literal extends Node
         super();
         this.token = tok;
     }
+
+    display(level)
+    {
+        return '    '.repeat(level) + this.token.toString() + "\n";
+    }
 }
 
 class If extends Node
 {
+    constructor(cond, block, elseblock)
+    {
+        super();
+        this.cond = cond;
+        this.block = block;
+        this.elseblock = elseblock;
+    }
 
+    display(level=0)
+    {
+        let out = "";
+        out += '    '.repeat(level) + 'if\n';
+        out += this.cond.display(level + 1);
+        out += '    '.repeat(level) + 'then\n';
+        out += this.block.display(level + 1) + '\n';
+        if (this.elseblock != null)
+        {
+            out += '    '.repeat(level) + 'else\n';
+            out += this.elseblock.display(level + 1) + '\n';
+        }
+        out += '    '.repeat(level) + 'end\n'
+        return out;
+    }
 }
 
 class While extends Node
@@ -68,6 +108,14 @@ class Expression extends Node
         this.left = left;
         this.operator = operator;
         this.right = right;
+    }
+
+    display(level)
+    {
+        let out = '    '.repeat(level) + this.left.display(level);
+        out += '    '.repeat(level) + this.operator.display(level);
+        out += '    '.repeat(level) + this.right.display(level);
+        return out;
     }
 }
 
@@ -245,16 +293,19 @@ class Parser
     parse_if()
     {
         this.level += 1;
-        console.log('    '.repeat(this.level) + `parse if at ${this.index - 1}, level ${this.level}`);
-        this.parse_expr();
+        console.log('    '.repeat(this.level) + `${this.level}. parse if at ${this.index}`);
+        this.index += 1; // Read if
+        let cond = this.parse_expr();
         this.read('then');
-        this.parse_block();
+        let block = this.parse_block();
+        let else_block = null;
         if (this.read('else', 'keyword', true))
         {
-            this.parse_block();
+            else_block = this.parse_block();
         }
-        this.level -= 1;
         this.read('end');
+        this.level -= 1;
+        return new If(cond, block, else_block);
     }
 
 }
