@@ -30,7 +30,7 @@ class Block extends Node
 
     display(level=0)
     {
-        let out = "";
+        let out = '    '.repeat(level) + "Block\n";
         for (let sta of this.statements)
         {
             out += '    '.repeat(level) + sta.display(level + 1) + "\n";
@@ -112,9 +112,10 @@ class Expression extends Node
 
     display(level)
     {
-        let out = '    '.repeat(level) + this.left.display(level);
-        out += '    '.repeat(level) + this.operator.display(level);
-        out += '    '.repeat(level) + this.right.display(level);
+        let out = '    '.repeat(level) + "Expression\n";
+        out += '    '.repeat(level + 1) + 'left:  ' + this.left.display(level + 1);
+        out += '    '.repeat(level + 1) + 'op:    ' + this.operator.display(level + 1);
+        out += '    '.repeat(level + 1) + 'right: ' + this.right.display(level + 1);
         return out;
     }
 }
@@ -169,6 +170,7 @@ class Parser
         while (this.index < this.tokens.length)
         {
             let tok = this.tokens[this.index];
+            let next = (this.index + 1) < this.tokens.length ? this.tokens[this.index+1] : null;
             if (tok.is('if'))
             {
                 b.add(this.parse_if());
@@ -194,6 +196,12 @@ class Parser
             else if (tok.is('for'))
             {
                 b.add(this.parse_for());
+            }
+            else if (tok.is(null, 'identifier')
+                     && next !== null
+                     && (next.is(null, 'affectation') || next.is(null, 'combined_affectation')))
+            {
+                b.add(this.parse_affectation());
             }
             else if (tok.is(null, 'identifier') ||
                      tok.is(null, 'string')     ||
@@ -252,7 +260,11 @@ class Parser
 
     parse_expr()
     {
-        return this.parse_test();
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse expr at ${this.index}`);
+        let node = this.parse_test();
+        this.level -= 1;
+        return node;
     }
 
     parse_test()
@@ -260,12 +272,15 @@ class Parser
         this.level += 1;
         console.log('    '.repeat(this.level) + `${this.level}. parse test at ${this.index}`); // with operator at ${this.index} : ${tok}`);
         let expr = this.parse_shift();
-        const tok = this.tokens[this.index];
-        if (['==', '!=', '<', '<=', '>=', '>'].includes(tok.getValue()))
+        if (this.index < this.tokens.length)
         {
-            let operator = this.parse_lit();
-            let right = this.parse_shift();
-            expr = new Expression(expr, operator, right);
+            const tok = this.tokens[this.index];
+            if (['==', '!=', '<', '<=', '>=', '>'].includes(tok.getValue()))
+            {
+                let operator = this.parse_lit();
+                let right = this.parse_shift();
+                expr = new Expression(expr, operator, right);
+            }
         }
         this.level -= 1;
         return expr;
@@ -308,10 +323,20 @@ class Parser
         return new If(cond, block, else_block);
     }
 
+    parse_affectation()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse affectation at ${this.index}`);
+        let id = this.parse_lit();
+        let op = this.parse_lit(); // Read = += -=  *= /= //= **= %=
+        let expr = this.parse_expr();
+        return new Expression(id, op, expr);
+    }
+
 }
 
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node, Block, If, While, For, Break, Next, Expression};
+export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal};
