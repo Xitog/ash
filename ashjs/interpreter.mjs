@@ -26,7 +26,7 @@ class Interpreter
                 let definition = false;
                 if (identifier in this.root)
                 {
-                    console.log(`Setting ${identifier} to ${value}`);
+                    console.log(`Setting ${identifier} ${node.operator.token.getValue()} ${value}`);
                 } else {
                     console.log(`Definition of ${identifier} to ${value}`);
                 }
@@ -42,10 +42,52 @@ class Interpreter
                         }
                         this.root[identifier] += value;
                         break;
+                    case '-=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] -= value;
+                        break;
+                    case '*=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] *= value;
+                        break;
+                    case '/=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] /= value;
+                        break;
+                    case '//=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] = Math.floor(this.root[identifier] / value);
+                        break;
+                    case '**=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] = Math.pow(this.root[identifier], value);
+                        break;
+                    case '%=':
+                        if (!(identifier in this.root))
+                        {
+                            throw new Error("Unknown variable : " + identifier);
+                        }
+                        this.root[identifier] %= value;
+                        break;
                     default:
                         throw new Error("Not handled affectation operator : " + node.operator.token.getValue());
                 }
-                return value;
+                return this.root[identifier];
             } else {
                 throw new Error("Expression not handled");
             }
@@ -65,7 +107,6 @@ class Interpreter
         } else if (node instanceof Block) {
             let last = null;
             for (const statement of node.statements) {
-                //console.log("blk");
                 last = this.do(statement);
             }
             return last;
