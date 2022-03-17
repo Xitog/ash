@@ -23,7 +23,6 @@ class Interpreter
             {
                 let identifier = node.left.token.getValue();
                 let value = this.do(node.right);
-                let definition = false;
                 if (identifier in this.root)
                 {
                     console.log(`Setting ${identifier} ${node.operator.token.getValue()} ${value}`);
@@ -88,6 +87,18 @@ class Interpreter
                         throw new Error("Not handled affectation operator : " + node.operator.token.getValue());
                 }
                 return this.root[identifier];
+            } else if (node.operator.token.is(null, 'operator')) {
+                let left = this.do(node.left);
+                let right = this.do(node.right);
+                switch (node.operator.token.getValue())
+                {
+                    case '+':
+                        return left + right;
+                    case '*':
+                        return left * right;
+                    default:
+                        throw new Error("Not handled operator : " + node.operator.token.getValue());
+                }
             } else {
                 throw new Error("Expression not handled");
             }

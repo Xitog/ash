@@ -290,6 +290,59 @@ class Parser
     {
         this.level += 1;
         console.log('    '.repeat(this.level) + `${this.level}. parse shift at ${this.index}`);
+        let res = this.parse_add_sub();
+        this.level -= 1;
+        return res;
+    }
+
+    parse_add_sub()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse add or sub at ${this.index}`);
+        let expr = this.parse_mul_div_mod();
+        let tok = this.tokens[this.index];
+        while (tok != null && (tok.is('+') || tok.is('-')))
+        {
+            let operator = this.parse_lit();
+            let right = this.parse_mul_div_mod();
+            expr = new Expression(expr, operator, right);
+            if (this.index < this.tokens.length)
+            {
+                tok = this.tokens[this.index];
+            } else {
+                tok = null;
+            }
+        }
+        this.level -= 1;
+        return expr;
+    }
+
+    parse_mul_div_mod()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse mul, div, intdiv or mod at ${this.index}`);
+        let expr = this.parse_pow();
+        let tok = this.tokens[this.index];
+        while (tok != null && (tok.is('*') || tok.is('/') || tok.is('//') || tok.is('%')))
+        {
+            let operator = this.parse_lit();
+            let right = this.parse_pow();
+            expr = new Expression(expr, operator, right);
+            if (this.index < this.tokens.length)
+            {
+                tok = this.tokens[this.index];
+            } else {
+                tok = null;
+            }
+        }
+        this.level -= 1;
+        return expr;
+    }
+
+    parse_pow()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse pow at ${this.index}`);
         let res = this.parse_lit();
         this.level -= 1;
         return res;
