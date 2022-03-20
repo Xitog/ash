@@ -96,6 +96,8 @@ class Interpreter
                         return left + right;
                     case '*':
                         return left * right;
+                    case '**':
+                        return Math.pow(left, right);
                     default:
                         throw new Error("Not handled operator : " + node.operator.token.getValue());
                 }

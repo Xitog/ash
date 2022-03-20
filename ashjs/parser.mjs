@@ -339,13 +339,27 @@ class Parser
         return expr;
     }
 
+    // /!\ Right to left associative
     parse_pow()
     {
         this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse pow at ${this.index}`);
-        let res = this.parse_lit();
+        console.log('    '.repeat(this.level) + `${this.level}. parse pow ${this.index}`);
+        let expr = this.parse_lit();
+        let tok = this.tokens[this.index];
+        while (tok != null && tok.is('**'))
+        {
+            let operator = this.parse_lit();
+            let right = this.parse_pow();
+            expr = new Expression(expr, operator, right);
+            if (this.index < this.tokens.length)
+            {
+                tok = this.tokens[this.index];
+            } else {
+                tok = null;
+            }
+        }
         this.level -= 1;
-        return res;
+        return expr;
     }
 
     parse_lit()
