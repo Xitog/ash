@@ -2,7 +2,7 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { Expression, Literal, Block } from "./parser.mjs"
+import { Expression, Literal, Block, Call } from "./parser.mjs"
 
 //-----------------------------------------------------------------------------
 // Classes
@@ -10,9 +10,10 @@ import { Expression, Literal, Block } from "./parser.mjs"
 
 class Interpreter
 {
-    constructor()
+    constructor(output_function=null)
     {
         this.root = {};
+        this.output_function = output_function == null ? console.log : output_function;
     }
 
     do(node)
@@ -104,6 +105,20 @@ class Interpreter
             } else {
                 throw new Error("Expression not handled");
             }
+        } else if (node instanceof Call) {
+            const id = node.identifier.token.getValue();
+            switch(id)
+            {
+                case 'writeln':
+                    const p = this.do(node.params[0]);//hack: only 1 param for now
+                    this.output_function(p);
+                    return p.toString().length;
+                case 'exit':
+                    alert("End of script");
+                    return null;
+                default:
+                    throw new Error("Function unknown: " + id);
+            }
         } else if (node instanceof Literal) {
             let tok = node.token;
             switch(tok.getType())
@@ -124,7 +139,7 @@ class Interpreter
             }
             return last;
         } else {
-            throw new Error("Not handled Node type : " + typeof(node));
+            throw new Error("Not handled Node type : " + node.constructor.name);
         }
     }
 }

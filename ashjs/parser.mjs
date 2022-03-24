@@ -23,11 +23,6 @@ class Block extends Node
         this.statements.push(node);
     }
 
-    toString()
-    {
-        return 'Block';
-    }
-
     display(level=0)
     {
         let out = '    '.repeat(level) + "Block\n";
@@ -36,6 +31,62 @@ class Block extends Node
             out += '    '.repeat(level) + sta.display(level + 1) + "\n";
         }
         return out;
+    }
+}
+
+class Call extends Node
+{
+    constructor(identifier, params)
+    {
+        super();
+        this.identifier = identifier;
+        this.params = [params]; //hack
+    }
+
+    display(level=0)
+    {
+        let out = '    '.repeat(level) + "Call\n";
+        if (this.params[0] != null) //hack
+        {
+            for (let exp of this.params)
+            {
+                out += '    '.repeat(level) + exp.display(level + 1) + "\n";
+            }
+        }
+        return out;
+    }
+}
+
+class ExpressionList extends Node
+{
+    constructor()
+    {
+        super();
+        this.expressions = [];
+    }
+
+    add(node)
+    {
+        this.expressions.push(node);
+    }
+
+    display(level=0)
+    {
+        let out = '    '.repeat(level) + "Block\n";
+        for (let exp of this.expressions)
+        {
+            out += '    '.repeat(level) + exp.display(level + 1) + "\n";
+        }
+        return out;
+    }
+}
+
+class Parameter extends Node
+{
+    constructor(param, next)
+    {
+        this.param = param;
+        this.next = next;
     }
 }
 
@@ -207,6 +258,7 @@ class Parser
                      tok.is(null, 'string')     ||
                      tok.is(null, 'integer')    ||
                      tok.is(null, 'number')     ||
+                     tok.is(null, 'special')    ||
                      tok.is(null, 'boolean'))
             {
                 b.add(this.parse_expr());
@@ -344,18 +396,43 @@ class Parser
     {
         this.level += 1;
         console.log('    '.repeat(this.level) + `${this.level}. parse pow ${this.index}`);
-        let expr = this.parse_lit();
+        let expr = this.parse_call();
         let tok = this.tokens[this.index];
         while (tok != null && tok.is('**'))
         {
             let operator = this.parse_lit();
-            let right = this.parse_pow();
+            let right = this.parse_call();
             expr = new Expression(expr, operator, right);
             if (this.index < this.tokens.length)
             {
                 tok = this.tokens[this.index];
             } else {
                 tok = null;
+            }
+        }
+        this.level -= 1;
+        return expr;
+    }
+
+    parse_call()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse call ${this.index}`);
+        let expr = this.parse_lit();
+        if (this.index < this.tokens.length)
+        {
+            let tok = this.tokens[this.index];
+            if (tok.is("("))
+            {
+                this.read("(", "separator");
+                let param = null;
+                tok = this.tokens[this.index];
+                if (!tok.is(")")) // function call without parameter
+                {
+                    param = this.parse_expr();
+                }
+                this.read(")", "separator");
+                expr = new Call(expr, param); // expr is an identifier in this case
             }
         }
         this.level -= 1;
@@ -406,4 +483,4 @@ class Parser
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal};
+export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call};

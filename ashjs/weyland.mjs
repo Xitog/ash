@@ -338,10 +338,11 @@ class Lexer
                 val = val.replace('&', '&amp;');
                 val = val.replace('>', '&gt;');
                 val = val.replace('<', '&lt;');
-                output += `<span class="${this.lang.getName()}-${tok.getType()}">${val}</span>`;
+                output += `<span class="${this.lang.getName()}-${tok.getType()}" title="token n°${nb} : ${tok.getType()}">${val}</span>`;
                 if (enumerate && val != '\n')
                 {
-                    output += `<sup class='info'>${nb}</sup><span> </span>`;
+                    output += ' ';
+                //    output += `<sup class='info'>${nb}</sup><span> </span>`;
                 }
             }
             nb += 1;
