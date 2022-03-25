@@ -2,7 +2,7 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { Expression, Literal, Block, Call } from "./parser.mjs"
+import { Expression, Literal, Block, Call, ExpressionList } from "./parser.mjs"
 
 //-----------------------------------------------------------------------------
 // Classes
@@ -18,6 +18,7 @@ class Interpreter
 
     do(node)
     {
+        console.log("    do for node : " + node.constructor.name);
         if (node instanceof Expression)
         {
             if (node.operator.token.is(null, 'affectation') || node.operator.token.is(null, 'combined_affectation'))
@@ -107,10 +108,15 @@ class Interpreter
             }
         } else if (node instanceof Call) {
             const id = node.identifier.token.getValue();
+            let p = null;
             switch(id)
             {
                 case 'writeln':
-                    const p = this.do(node.params[0]);//hack: only 1 param for now
+                    p = this.do(node.parameters);
+                    this.output_function(p.concat(["\n"]));
+                    return p.toString().length;
+                case 'write':
+                    p = this.do(node.parameters);
                     this.output_function(p);
                     return p.toString().length;
                 case 'exit':
@@ -119,6 +125,14 @@ class Interpreter
                 default:
                     throw new Error("Function unknown: " + id);
             }
+        } else if (node instanceof ExpressionList) {
+            let res = [];
+            let nodes = node.get();
+            for (let i = 0; i < nodes.length; i++)
+            {
+                res.push(this.do(nodes[i]));
+            }
+            return res;
         } else if (node instanceof Literal) {
             let tok = node.token;
             switch(tok.getType())
@@ -139,7 +153,14 @@ class Interpreter
             }
             return last;
         } else {
-            throw new Error("Not handled Node type : " + node.constructor.name);
+            if (node === undefined || node === null)
+            {
+                throw new Error("Node is null");
+            }
+            else
+            {
+                throw new Error("Not handled Node type : " + node.constructor.name);
+            }
         }
     }
 }

@@ -324,12 +324,14 @@ class Lexer
         }
         for (const tok of tokens)
         {
-            console.log('>>>', tok);
+            console.log('to_html', tok);
         }
         let output = '';
         let nb = 0;
-        for (const tok of tokens)
+        for (let i = 0; i < tokens.length; i++)
         {
+            const tok = tokens[i];
+            const next = (i + 1 < tokens.length) ? tokens[i+1] : null;
             if (raws.includes(tok.getType()))
             {
                 output += tok.getValue();
@@ -339,10 +341,36 @@ class Lexer
                 val = val.replace('>', '&gt;');
                 val = val.replace('<', '&lt;');
                 output += `<span class="${this.lang.getName()}-${tok.getType()}" title="token n°${nb} : ${tok.getType()}">${val}</span>`;
-                if (enumerate && val != '\n')
+                if (enumerate)
                 {
-                    output += ' ';
-                //    output += `<sup class='info'>${nb}</sup><span> </span>`;
+                    console.log(tok);
+                    if (['integer', 'number', 'identifier', 'boolean'].includes(tok.getType()))
+                    {
+                        if (next != null && ['operator'].includes(next.getType()))
+                        {
+                            output += ' ';
+                        }
+                    }
+                    else if (['keyword'].includes(tok.getType()))
+                    {
+                        if (!(['next', 'break', 'return'].includes(tok.getValue())))
+                        {
+                            output += ' ';
+                        }
+                    }
+                    else if (next != null && ['affectation', 'combined_affectation'].includes(next.getType()))
+                    {
+                            output = ' '  + output + ' ';
+                    }
+                    else if (tok.is(',', 'separator'))
+                    {
+                        output += ' ';
+                    }
+                    else if (tok.is(null, 'operator'))
+                    {
+                        output += ' ';
+                    }
+                    // output += `<sup class='info'>${nb}</sup><span> </span>`;
                 }
             }
             nb += 1;
@@ -417,7 +445,7 @@ const PATTERNS = {
     'BLANKS'        : ['[ \u00A0\\t]+'],
     'NEWLINES'      : ['\n', '\n\r', '\r\n'],
     'OPERATORS'     : ['==', '=', '\\.'],
-    'STRINGS'       : ["'([^\\\\]|\\\\['nt])*'", '"([^\\\\]|\\\\["nt])*"'],
+    'STRINGS'       : ["'([^\\\\']|\\\\['nt])*'", '"([^\\\\"]|\\\\["nt])*"'],
     'SEPARATORS'    : ['\\(', '\\)']
 };
 

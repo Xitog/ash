@@ -36,23 +36,21 @@ class Block extends Node
 
 class Call extends Node
 {
-    constructor(identifier, params)
+    constructor(identifier, parameters)
     {
         super();
         this.identifier = identifier;
-        this.params = [params]; //hack
+        if (parameters == null || !(parameters instanceof ExpressionList))
+        {
+            throw new Error("Params should be instanceof ExpressionList");
+        }
+        this.parameters = parameters;
     }
 
     display(level=0)
     {
         let out = '    '.repeat(level) + "Call\n";
-        if (this.params[0] != null) //hack
-        {
-            for (let exp of this.params)
-            {
-                out += '    '.repeat(level) + exp.display(level + 1) + "\n";
-            }
-        }
+        out += this.parameters.display(level + 1);
         return out;
     }
 }
@@ -65,6 +63,11 @@ class ExpressionList extends Node
         this.expressions = [];
     }
 
+    get()
+    {
+        return this.expressions;
+    }
+
     add(node)
     {
         this.expressions.push(node);
@@ -72,11 +75,16 @@ class ExpressionList extends Node
 
     display(level=0)
     {
-        let out = '    '.repeat(level) + "Block\n";
+        let out = '    '.repeat(level) + "ExpressionList\n";
+        if (this.expressions.length === 0)
+        {
+            out += '    '.repeat(level) + "Empty\n";
+        }
         for (let exp of this.expressions)
         {
-            out += '    '.repeat(level) + exp.display(level + 1) + "\n";
+            out += '    '.repeat(level) + exp.display(level + 1);
         }
+        out += "\n";
         return out;
     }
 }
@@ -424,15 +432,24 @@ class Parser
             let tok = this.tokens[this.index];
             if (tok.is("("))
             {
+                let parameters = new ExpressionList();
                 this.read("(", "separator");
-                let param = null;
                 tok = this.tokens[this.index];
-                if (!tok.is(")")) // function call without parameter
+                while (!tok.is(")")) // function call without parameter
                 {
-                    param = this.parse_expr();
+                    let param = this.parse_expr();
+                    parameters.add(param);
+                    tok = this.tokens[this.index];
+                    if (tok.is(","))
+                    {
+                        this.read(",", "separator");
+                        tok = this.tokens[this.index];
+                    } else if (!tok.is(")")) {
+                        throw new Error("Syntax error in parameters");
+                    }
                 }
                 this.read(")", "separator");
-                expr = new Call(expr, param); // expr is an identifier in this case
+                expr = new Call(expr, parameters); // expr is the function identifier in this case
             }
         }
         this.level -= 1;
@@ -483,4 +500,4 @@ class Parser
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call};
+export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList};

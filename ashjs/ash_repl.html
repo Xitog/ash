@@ -61,12 +61,19 @@
                 return NOT_FOUND;
             }
 
-            function write(s)
+            function write(params)
             {
+                if (!Array.isArray(params))
+                {
+                    throw new Error("Params should be an array and is: " + typeof(params));
+                }
                 let output_console = $("console");
-                let neo = document.createElement("span");
-                neo.innerText = s;
-                output_console.appendChild(neo);
+                for (let param of params)
+                {
+                    let neo = document.createElement("span");
+                    neo.innerText = param;
+                    output_console.appendChild(neo);
+                }
             }
 
             function analyse()
@@ -109,12 +116,12 @@
                     alert(error);
                     return;
                 }
-                //console.log('Parsing :');
+                console.log('Parsing :');
                 let p = new Parser();
                 let ast = p.parse(tokens);
                 //console.log('AST :');
                 let tree = ast.display();
-                //console.log('Interpreter :');
+                console.log('Interpreter :');
                 let interpreter = new Interpreter(write);
                 let result = interpreter.do(ast);
                 console.log('End of execution');
