@@ -89,6 +89,9 @@
                 output_ast.innerHTML = '';
                 output_console.innerHTML = '';
                 output_result.innerHTML = '';
+                let screen = $("screen");
+                let ctx = screen.getContext("2d");
+                ctx.clearRect(0, 0, screen.width, screen.height);
                 try
                 {
                     // Get the code as HTML
@@ -122,8 +125,12 @@
                 //console.log('AST :');
                 let tree = ast.display();
                 console.log('Interpreter :');
-                let interpreter = new Interpreter(write);
+                let interpreter = new Interpreter(write, screen);
                 let result = interpreter.do(ast);
+                if (result === null)
+                {
+                    result = 'nil';
+                }
                 console.log('End of execution');
                 console.log('AST: ', ast);
                 console.log('Scope: ', interpreter.root);
@@ -131,6 +138,22 @@
                 output_ast.innerHTML = tree;
                 output_result.innerHTML = result;
             }
+
+            function open_or_close(elem_id)
+            {
+                let elem = $(elem_id);
+                if (elem.style.display === "none")
+                {
+                    elem.style.display = "block";
+                } else {
+                    elem.style.display = "none";
+                }
+            }
+
+            document.getElementById("ast").parentNode.addEventListener('click', ()=>{open_or_close('ast')});
+            document.getElementById("screen").parentNode.addEventListener('click', ()=>{open_or_close('screen')});
+            document.getElementById("console").parentNode.addEventListener('click', ()=>{open_or_close('console')});
+            document.getElementById("result").parentNode.addEventListener('click', ()=>{open_or_close('result')});
 
             document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
             document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
@@ -193,6 +216,9 @@
                 <div>
                     <div class="title">Abstract Syntax tree</div>
                     <pre id="ast"></pre>
+                </div>
+                <div><div class="title">Screen</div>
+                    <canvas id="screen" width="640px" height="480px"></canvas>
                 </div>
                 <div><div class="title">Console</div>
                     <pre id="console"></pre>

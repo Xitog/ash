@@ -10,10 +10,11 @@ import { Expression, Literal, Block, Call, ExpressionList } from "./parser.mjs"
 
 class Interpreter
 {
-    constructor(output_function=null)
+    constructor(output_function=null, output_screen=null)
     {
         this.root = {};
         this.output_function = output_function == null ? console.log : output_function;
+        this.output_screen = output_screen;
     }
 
     do(node)
@@ -109,6 +110,7 @@ class Interpreter
         } else if (node instanceof Call) {
             const id = node.identifier.token.getValue();
             let p = null;
+            let ctx = this.output_screen.getContext("2d");
             switch(id)
             {
                 case 'writeln':
@@ -119,6 +121,19 @@ class Interpreter
                     p = this.do(node.parameters);
                     this.output_function(p);
                     return p.toString().length;
+                case 'line':
+                    p = this.do(node.parameters);
+                    ctx.beginPath();
+                    ctx.moveTo(p[0], p[1]);
+                    ctx.lineTo(p[2], p[3]);
+                    ctx.stroke();
+                    return null;
+                case 'rect':
+                    p = this.do(node.parameters);
+                    ctx.beginPath();
+                    ctx.rect(p[0], p[1], p[2], p[3]);
+                    ctx.stroke();
+                    return null;
                 case 'exit':
                     alert("End of script");
                     return null;

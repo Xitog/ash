@@ -409,7 +409,7 @@ class Parser
         while (tok != null && tok.is('**'))
         {
             let operator = this.parse_lit();
-            let right = this.parse_call();
+            let right = this.parse_pow();
             expr = new Expression(expr, operator, right);
             if (this.index < this.tokens.length)
             {
