@@ -113,6 +113,7 @@ class Interpreter
             let ctx = this.output_screen.getContext("2d");
             switch(id)
             {
+                // Console output
                 case 'writeln':
                     p = this.do(node.parameters);
                     this.output_function(p.concat(["\n"]));
@@ -121,19 +122,46 @@ class Interpreter
                     p = this.do(node.parameters);
                     this.output_function(p);
                     return p.toString().length;
-                case 'line':
+                // Screen output
+                case 'line': // x1, y1, x2, y2
                     p = this.do(node.parameters);
                     ctx.beginPath();
                     ctx.moveTo(p[0], p[1]);
                     ctx.lineTo(p[2], p[3]);
                     ctx.stroke();
                     return null;
-                case 'rect':
+                case 'rect': // x, y, w, h
                     p = this.do(node.parameters);
                     ctx.beginPath();
                     ctx.rect(p[0], p[1], p[2], p[3]);
                     ctx.stroke();
                     return null;
+                case 'fill': // x, y, w, h
+                    p = this.do(node.parameters);
+                    ctx.fillRect(p[0], p[1], p[2], p[3]);
+                    return null;
+                case 'circle': // x, y, rayon
+                    p = this.do(node.parameters);
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], p[2], 0, 2 * Math.PI, false);
+                    ctx.stroke();
+                    return null;
+                case 'text': // x, y, text
+                    p = this.do(node.parameters);
+                    ctx.fillText(p[2], p[0], p[1]);
+                    return null;
+                case 'set_fill':
+                    p = this.do(node.parameters);
+                    ctx.fillStyle = p[0];
+                    return null;
+                case 'set_stroke':
+                    p = this.do(node.parameters);
+                    ctx.strokeStyle = p[0];
+                    return null;
+                case 'clear':
+                    ctx.clearRect(0, 0, screen.width, screen.height);
+                    return null;
+                // System
                 case 'exit':
                     alert("End of script");
                     return null;
