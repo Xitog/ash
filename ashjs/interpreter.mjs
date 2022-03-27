@@ -2,7 +2,7 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { Expression, Literal, Block, Call, ExpressionList } from "./parser.mjs"
+import { Expression, Literal, Block, Call, ExpressionList, If, While } from "./parser.mjs"
 
 //-----------------------------------------------------------------------------
 // Classes
@@ -97,10 +97,24 @@ class Interpreter
                 {
                     case '+':
                         return left + right;
+                    case '-':
+                        return left - right;
                     case '*':
                         return left * right;
                     case '**':
                         return Math.pow(left, right);
+                    case '==':
+                        return left === right;
+                    case '!=':
+                        return left !== right;
+                    case '>':
+                        return left > right;
+                    case '<':
+                        return left < right;
+                    case '>=':
+                        return left >= right;
+                    case '<=':
+                        return left <= right;
                     default:
                         throw new Error("Not handled operator : " + node.operator.token.getValue());
                 }
@@ -186,9 +200,34 @@ class Interpreter
                     return parseFloat(tok.getValue());
                 case 'string':
                     return tok.getValue().slice(1, tok.getValue().length - 1); // Remove the "
+                case 'identifier':
+                    return this.root[tok.getValue()];
                 default:
                     throw new Error("Not handled type : " + tok.getType());
             }
+        } else if (node instanceof If) {
+            let cond = this.do(node.cond);
+            if (cond === true)
+            {
+                return this.do(node.block);
+            } else if (node.elseblock !== null) {
+                return this.do(node.elseblock);
+            } else {
+                return null;
+            }
+        } else if (node instanceof While) {
+            let cond = this.do(node.cond);
+            let res = null;
+            let nb = 0; // debug
+            while (cond === true)
+            {
+                res = this.do(node.block);
+                cond = this.do(node.cond);
+                console.log(nb, cond);
+                nb+=1;
+                if (nb > 1000) break;
+            }
+            return res;
         } else if (node instanceof Block) {
             let last = null;
             for (const statement of node.statements) {

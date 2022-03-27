@@ -346,7 +346,7 @@ class Lexer
                     console.log(tok);
                     if (['integer', 'number', 'identifier', 'boolean'].includes(tok.getType()))
                     {
-                        if (next != null && ['operator'].includes(next.getType()))
+                        if (next != null && ['operator', 'keyword'].includes(next.getType()))
                         {
                             output += ' ';
                         }

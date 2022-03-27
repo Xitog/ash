@@ -28,7 +28,7 @@ class Block extends Node
         let out = '    '.repeat(level) + "Block\n";
         for (let sta of this.statements)
         {
-            out += '    '.repeat(level) + sta.display(level + 1) + "\n";
+            out += sta.display(level + 1) + "\n";
         }
         return out;
     }
@@ -141,7 +141,23 @@ class If extends Node
 
 class While extends Node
 {
+    constructor(cond, block)
+    {
+        super();
+        this.cond = cond;
+        this.block = block;
+    }
 
+    display(level=0)
+    {
+        let out = "";
+        out += '    '.repeat(level) + 'while\n';
+        out += this.cond.display(level + 1);
+        out += '    '.repeat(level) + 'do\n';
+        out += this.block.display(level + 1) + '\n';
+        out += '    '.repeat(level) + 'end\n'
+        return out;
+    }
 }
 
 class For extends Node
@@ -466,11 +482,24 @@ class Parser
         return new Literal(tok);
     }
 
+    parse_while()
+    {
+        this.level += 1;
+        console.log('    '.repeat(this.level) + `${this.level}. parse while at ${this.index}`);
+        this.read('while');
+        let cond = this.parse_expr();
+        this.read('do');
+        let block = this.parse_block();
+        this.index += 1;
+        this.level -= 1;
+        return new While(cond, block);
+    }
+
     parse_if()
     {
         this.level += 1;
         console.log('    '.repeat(this.level) + `${this.level}. parse if at ${this.index}`);
-        this.index += 1; // Read if
+        this.read('if');
         let cond = this.parse_expr();
         this.read('then');
         let block = this.parse_block();
@@ -500,4 +529,4 @@ class Parser
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList};
+export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList, If, While};
