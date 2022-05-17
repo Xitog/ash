@@ -68,12 +68,15 @@
                     throw new Error("Params should be an array and is: " + typeof(params));
                 }
                 let output_console = $("console");
+                let ret = null;
                 for (let param of params)
                 {
                     let neo = document.createElement("span");
                     neo.innerText = param;
                     output_console.appendChild(neo);
+                    ret = param.length;
                 }
+                return ret;
             }
 
             function analyse()

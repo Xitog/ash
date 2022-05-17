@@ -130,12 +130,10 @@ class Interpreter
                 // Console output
                 case 'writeln':
                     p = this.do(node.parameters);
-                    this.output_function(p.concat(["\n"]));
-                    return p.toString().length;
+                    return this.output_function(p.concat(["\n"]));
                 case 'write':
                     p = this.do(node.parameters);
-                    this.output_function(p);
-                    return p.toString().length;
+                    return this.output_function(p);
                 // Screen output
                 case 'line': // x1, y1, x2, y2
                     p = this.do(node.parameters);
