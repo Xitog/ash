@@ -7,6 +7,103 @@
 #include <stdbool.h>
 
 //-----------------------------------------------------------------------------
+// Types
+//-----------------------------------------------------------------------------
+
+typedef enum
+{
+    TYPE_INTEGER = 1,
+    TYPE_FLOAT   = 2,
+    TYPE_BOOLEAN = 3,
+    TYPE_STRING  = 4,
+    TYPE_ARRAY   = 5,
+    TYPE_LIST    = 6,
+    TYPE_TABLE   = 7,
+    TYPE_RECORD  = 8
+} AshType;
+
+typedef union
+{
+    long   i;   // 32
+    float  d;   // 32
+    bool   b;
+    void * p;
+} AshValue;
+
+typedef struct
+{
+    AshType type;
+    AshValue value;
+} AshObject;
+
+typedef struct
+{
+    long size;
+    char * content;
+} AshString;
+
+void print(AshObject * o)
+{
+    if (o != NULL)
+    {
+        if (o->type == TYPE_STRING)
+        {
+            printf("%s (%d)\n", ((AshString *)o->value.p)->content, ((AshString *)o->value.p)->size);
+        }
+        else if (o->type == TYPE_INTEGER)
+        {
+            printf("%d\n", o->value.i);
+        }
+        else if (o->type == TYPE_BOOLEAN)
+        {
+            if (o->value.b == true)
+            {
+                printf("true\n");
+            }
+            else
+            {
+                printf("false\n");
+            }
+        }
+        else
+        {
+            printf("ERREUR : TYPE INCONNU\n");
+        }
+    }
+}
+
+AshObject * create_string(char * source, long source_size)
+{
+    AshString * s = malloc(sizeof(AshString));
+    s->size = source_size;
+    s->content = malloc(sizeof(char) * source_size);
+    for (int i = 0; i < source_size; i++)
+    {
+        s->content[i] = source[i];
+    }
+
+    AshObject * o = malloc(sizeof(AshObject));
+    o->value.p = (void *) s;
+    o->type = TYPE_STRING;
+
+    return o;
+}
+
+AshObject * create_integer(long i)
+{
+    AshObject * o = malloc(sizeof(AshObject));
+    o->value.i = i;
+    o->type = TYPE_INTEGER;
+}
+
+AshObject * create_boolean(bool b)
+{
+    AshObject * o = malloc(sizeof(AshObject));
+    o->value.b = b;
+    o->type = TYPE_BOOLEAN;
+}
+
+//-----------------------------------------------------------------------------
 // Node
 //-----------------------------------------------------------------------------
 
@@ -37,7 +134,7 @@ Node * node_alloc_n(int nb)
 // Liste
 //-----------------------------------------------------------------------------
 
-typedef struct 
+typedef struct
 {
 	int size;
     int allocated_size;
@@ -87,6 +184,7 @@ void list_append(List * ls, char v)
 
 char list_get(List * ls, int i)
 {
+    // On divise par deux la taille pour savoir si commence par le début ou la fin
     if (i < (ls->size >> 1))
     {
         // on parcourt depuis le début
@@ -101,7 +199,6 @@ char list_get(List * ls, int i)
             start = start->next;
             cpt += 1;
         }
-        // ERROR
     }
     else
     {
@@ -117,7 +214,6 @@ char list_get(List * ls, int i)
             start = start->prev;
             cpt -= 1;
         }
-        // ERROR
     }
     return '\0';
 }
@@ -194,5 +290,14 @@ int main(void)
     }
 	printf("Hello World\n");
 	//free(myList);
+
+    printf("Test object:\n");
+    AshObject * o1 = create_string("Bonjour le monde", 17);
+    print(o1);
+    AshObject * o2 = create_integer(23);
+    print(o2);
+    AshObject * o3 = create_boolean(true);
+    print(o3);
+
 	return 0;
 }
