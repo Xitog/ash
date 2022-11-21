@@ -485,6 +485,12 @@ const LANGUAGES = {
                 'try', 'catch', 'finally', 'raise', 'const'],
             'special': ['writeln', 'write'],
             'boolean' : ['false', 'true'],
+            'operator' : ['-', 'not', '#', '~', 'and', 'or', // boolean
+                'in', // belongs to
+                '\\+', '-', '\\*', '/', '//', '\\*\\*', '%', // mathematical
+                '&', '\\|', '~', '>>', '<<', // bitwise
+                '<', '<=', '>', '>=', '==', '!=', // comparison
+                '\\.'], // call
             'identifier' : PATTERNS["IDENTIFIER"],
             // Old
             'affectation' : ['='],
@@ -498,12 +504,6 @@ const LANGUAGES = {
             'number' : PATTERNS["FLOAT"],
             'nil': ['nil'],
             // 'binary_operator' : ['and', 'or', # boolean
-            'operator' : ['-', 'not', '#', '~', 'and', 'or', // boolean
-                'in', // belongs to
-                '\\+', '-', '\\*', '/', '//', '\\*\\*', '%', // mathematical
-                '&', '\\|', '~', '>>', '<<', // bitwise
-                '<', '<=', '>', '>=', '==', '!=', // comparison
-                '\\.'], // call
             'separator': ['\\{', '\\}', '\\(', '\\)', '\\[', '\\]', ',', ';'],
             'wrong_int' : PATTERNS["WRONG_INTEGER"],
             'blank': PATTERNS["BLANKS"],

@@ -5,6 +5,7 @@
         <script type="module" src="./weyland.mjs"></script>
         <script type="module" src="./parser.mjs"></script>
         <script type="module" src="./interpreter.mjs"></script>
+        <script type="module" stc="./translator.mjs"></script>
         <script type="module">
             //-----------------------------------------------------------------
             // Imports
@@ -12,6 +13,7 @@
             import { Lexer } from "./weyland.mjs";
             import { Parser } from "./parser.mjs";
             import { Interpreter } from "./interpreter.mjs";
+            import { Translator} from "./translator.mjs";
 
             //-----------------------------------------------------------------
             // Functions
@@ -138,8 +140,12 @@
                 console.log('AST: ', ast);
                 console.log('Scope: ', interpreter.root);
 
+                let translator = new Translator();
+                let output = translator.do(ast);
+                let res_translated = eval(output);
+
                 output_ast.innerHTML = tree;
-                output_result.innerHTML = result;
+                output_result.innerHTML = result + "<hr><h1>Translation</h1>" + output + "<hr><h1>Result Translation</h1>" + res_translated;
             }
 
             function open_or_close(elem_id)
