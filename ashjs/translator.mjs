@@ -91,7 +91,6 @@ class Translator
             }
             else
             {
-                //return "ERROR";
                 throw new Error("Not handled Node type : " + node.constructor.name);
             }
         }
