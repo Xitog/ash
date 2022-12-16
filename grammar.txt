@@ -1,0 +1,69 @@
+[var] ID [TYPE] = EXPR
+const ID [TYPE] = EXPR
+
+--
+
+if CONDITION then
+    ACTION
+elsif CONDITION then
+    ACTION
+else
+    ACTION
+end
+
+if CONDITION => ACTION
+
+--
+
+while CONDITION do
+    ACTION
+loop
+
+for ID1[, ID2] in ITERABLE [while CONDITION] [do
+    ACTION]
+loop
+
+do
+    ACTION
+until CONDITION loop
+
+do
+    ACTION
+loop
+
+break [break]
+next
+
+--
+
+fun[ction] ID (P1 [T1], P2 [T2]) TYPE
+    ACTION
+end
+
+pro[cedure] ID (P1 [T1], P2 [T2])
+    ACTION
+end
+
+return [EXPR]
+
+--
+
+class ID [< SUPER]
+    [static const, static var, var] ID = EXPR
+end
+
+--
+
+import (FILEPATH | ID) [ > ID1, ID2 ]
+
+module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
+
+--
+
+exception
+
+catch ID [TYPE]
+end
+
+14/12/2022
+25/10/2022
