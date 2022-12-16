@@ -1,0 +1,636 @@
+================================================================================
+=                                      Ash                                     =
+================================================================================
+
+Sommaire
+========
+
+Introduction
+1. Bases
+    1.A Commentaires
+    1.B Encodage et case-sensitive
+    1.C Séparateur de ligne
+    1.D Mots-clés
+2. Types de base
+    2.A Scalaires
+    2.B Complexes
+    2.C Opérateurs
+3. Variables et constantes
+4. Contrôle du flux
+    4.A Séquence
+    4.B Sélection
+    4.C Répétition
+    4.D Modificateurs
+5. Sous-programmes
+    5.A Déclaration
+    5.B Appel
+6. Classes
+    6.A Définition
+    6.B Sous-programmes membres
+
+Introduction
+============
+
+Ce document décrit un langage minimaliste de script, Ash, qui se veut comme une
+syntaxe alternative pour Python.
+
+On décrit des EXTENSION (EXT) et des ALTERNATIVES (ALT) possibles.
+
+Ce langage est très inspiré de :
+    1) Lua
+    2) Ruby
+    3) Pascal
+
+Il se veut simple et pérenne (pas de multiples versions tous les ans).
+
+Dernière révision du 11 mai 2021
+
+1. Bases
+========
+
+1.A Commentaires
+----------------
+
+Les commentaires monolignes commençent par --
+
+Les commentaires multilignes commençent par --[[
+
+Cela permet de conserver "//" et "#" comme opérateurs de intdiv et longueur.
+
+1.B Encodage et case-sensitive
+------------------------------
+
+Tout est case-sensitive. Ab != Ba
+Le style est :
+    - a_b pour les méthodes, les attributs et les variables.
+    - Ab pour les classes et les constantes
+
+Les fichiers sont encodés en ASCII ou utf-8.
+
+1.C Séparateur de ligne
+-----------------------
+
+ligne_logique1 ; ligne_logique2
+
+1.D Mots-clés
+-------------
+
+27 en tout.
+const, var, if, then, elif, else, end, while, do, for, in, break, next, and, or, not, fun, pro, function, procedure, return, self, super, nil, false, true, require
+
+Délimiteurs : ( ) [ ] { } ; ,
+
+2. Types de base
+================
+
+2.A Scalaires
+-------------
+
+- 1, 0b0101, 0xAF00, 0c10    => int  | Integer  pour les entiers
+- 1u, 0b0101u, 0xAF00u, 0c10 => uint | Unsigned pour les naturels
+- 1.2, 2e3                   => num  | Number   pour les flottants
+- true/false                 => bool | Boolean  pour les booléens
+- " ", ' '                   => str  | String   pour les chaînes
+
+nil
+any (tout type, toute valeur)
+
+2.B Complexes
+-------------
+
+- [1, 2]                     => list  | List        pour les listes dynamiques
+- {k = v}                    => dict  | Dictionnary pour les dictionnaires dynamiques
+- [[1, 2]]                   => array | Array       pour les tableaux (taille fixe) 
+- {{k = v}}                  => table | Table       pour les tables de hashage à taille fixe
+- 2..5                       => range | Range       pour un range de 2 à 5 (compris)
+
+L'opérateur = veut dire associer.
+
+Les noms des types doivent être courts car on les écrira souvent.
+
+3.C Opérateurs
+--------------
+
+Binaires
+    Mathématiques           + - * / ** // %
+    Booléens et binaires    and or xor
+    Binaires                and or xor << >>
+    Is nil                  ??
+    Comparaison             == != < <= >= >
+    Objet                   is in
+    Range et slice          ..
+    Assignation             = += -= *= /= **= //= %= and= or= xor= not= <<= >>= ??=
+    Indexation              []
+    Accès membre            .
+Unaires
+    Mathématiques           -
+    Booléens et binaires    not
+    Objet                   $ (conv en string/str) # (conv en int length/len/trunc)
+
+Les chaînes d'affilées se concatènent automatiquement, comme en Ruby.
+is teste la classe ou nil
+
+EXT : ~= pour les matchs et <=> pour comparer en -1, 0, 1
+EXT : ..< pour les ranges où le dernier élément n'est pas inclus
+ALT : [deb..fin] ou [deb..fin[
+EXT : &a permet de faire des alias a = &b a et b poitent sur la même valeur
+ALT : Définir l'interrogation de définition : defined? (en méthode) non car on veut savoir si une var existe, il faut un keyword ??? ou ?
+ALT : [X] pour indiquer que c'est un tableau de longueur X ou dyn pour dynamique : int[dyn] ou list(int, dyn)
+ALT : comment gérer le typage des list et des hashs ? int[50] ou [int, 50] ou list(int, 50) ? str=int[50]
+      ou [int=str, 50] raccourci pour Hash(int, str, 50)
+
+3. Variables et constantes
+==========================
+
+[const | var] ID [: TYPE] = EXPRESSION
+const A = 5
+a : int = 5
+
+: TYPE disent que c'est une constance de type.
+const dit que c'est une constance de valeur.
+nil permet de mettre une variable à "non initialisée".
+Tous les types s'entendent comme int ou nil (non initialisée).
+Une variable à nil ne peut être testée que pour is nil/is not nil
+
+EXT : := pour une constance de type avec type inféré : a := 5
+    Finalement, je ne mets pas cette façon car :
+    1) cela créé un pb avec const : const A = 5 n'a pas de sens, il faudrait toujours écrire const A := 5
+    2) si EXPR n'est pas évident (= f()) il faut chercher le type de retour de f
+ALT : on ne type pas les variables
+EXT : le type "any"
+ALT : ni var, ni const, on ne fait qu'à la majuscule en début d'identifiant
+ALT : type? pour pouvoir dire nullable mais clash avec les fonctions bools
+
+4. Contrôle du flux
+===================
+
+4.A Séquence
+------------
+
+instruction1
+instruction2
+
+instruction1 ; instruction2
+
+4.B Sélection
+-------------
+
+if CONDITION [then]
+    ACTION
+elif CONDITION [then]
+    ACTION
+else
+    ACTION
+end
+
+switch EXPRESSION
+    case EXPRESSION [do]
+        ACTION
+        [next]
+    case any [do] (ou else ?)
+        ACTION
+end
+
+4.C Répétition
+--------------
+
+[<LABEL>] while CONDITION [do]
+    ACTION
+    [break]
+    [next]
+end
+
+[<LABEL>] for ID[: typ1][, ID2[: typ2]] in ID3 [do]
+    ACTION
+    [break]
+    [next]
+end
+
+[<LABEL>] loop [do]
+    ACTION
+    [break]
+    [next]
+until CONDITION [end]
+
+On n'oblige pas dans le for à mettre var.
+
+On peut "étiquetter" une boucle pour ensuite breaké ou nexté celle-ci.
+Un label est défini ainsi :label:
+:innerloop: for x in l do (comme Lua, JavaScript et C utilisent innerloop:)
+ou ainsi <label>
+
+EXT :   repeat
+            ACT
+        until COND
+ALT : begin/end
+ALT : else if, elseif, elsif
+EXT : switch : switch / case / default / break ou case / when / others / break
+EXT : redo, retry dans les boucles
+EXT : one liner : ... if COND ou if COND => ... avec else possible et while COND =>
+EXT : case expr when expr [then] ... else ... end
+EXT : do ... next cond
+ALT : switch instead of case
+ALT : case instead of when
+ALT : case any instead of default
+ALT : le choix de until c'est SI VRAI on va direct à la suite, comme pour while.
+ALT : on break par défaut d'où le besoin de next
+
+4.D Modificateurs
+-----------------
+
+break [<LABEL>]
+next [<LABEL>]
+
+5. Sous-programmes
+==================
+
+5.A Déclaration
+---------------
+
+fun[ction] [CLASS.][NAME] ([VAR : TYP[, VAR : TYP]*] -> TYP[, TYP]*)
+    ACTION
+end
+
+pro[cedure] [CLASS.][NAME] ([VAR : TYP[, VAR : TYP]*])
+    ACTION
+end
+
+sig[nature] [NAME] (VAR : TYP, VAR : TYP -> (TYP[, TYP]*) | nil)
+
+call without parameter id
+
+return [EXPRi [, EXPRi+1]*]
+
+Autoriser ? (pour -> bool) et ! (pour modif internes) dans les id de fun/pro.
+
+PB : fun id ( -> str) c'est laid non ?
+
+ALT : fun id (...) : typ
+ALT : func et proc et pas sub, def
+
+5.B Appel
+---------
+
+Définition et appel universels
+universal function call : f(a, b) est équivalent à a.f(b)
+
+Un appel de fonction peut se passer de paramètre et de parenthèses, mais dans ce cas-là, au niveau du parser, c'est juste un appel à un id. C'est au niveau de l'analyzer qu'il réinterprétera cette id en fonction du contexte déclaré.
+
+Mouais, le non parenthésage obligatoire est élégant (pour les DSL) mais compliqué.
+
+Il y a aussi les *id (liste de param) **id (hash de param)
+Ce qu'on peut faire avec les id n'est pas spécifié dans cette grammaire : $id (globale, les const le sont auto), , .
+
+ALT : forcer le ()
+ALT : doit on avoir des fonctions first class object ? Sans () obligatoire, il faut passer par &f
+ALT : is après ) si on a pas de paramètres et qu'on autorise de ne pas mettre ()
+
+6. Classes
+==========
+
+6.A Définition
+--------------
+
+class NAME [< SUPER]
+    CODE
+end
+
+@attr doivent être déclaré uniquement dans init
+@@cls_attr
+
+self
+super
+
+6.B Sous-programmes membres
+---------------------------
+
+get NAME [-> TYP]
+    ACTION
+end
+
+set NAME (VAR : TYP)
+    ACTION
+end
+
+init : procédure de constructeur (au lieu de constructor, initialize, __init__)
+Dans le constructeur, si on met @p comme paramètre, on déclare directement un paramètre.
+
+ALT : use "new"
+ALT : instead of type, struct, record
+EXT : enum < type is ... end
+ALT : +id -id #id respectivement une clé publique, privée, et protégée mais-@a c'est laid.
+EXT : type/data ID is ... end
+
+7. Exceptions
+=============
+
+raise EXPR
+
+try
+    ACTION
+catch [VAR :] TYP [do]
+    ACTION
+catch any [do] (ou else ?)
+    ACTION
+finally
+    ACTION
+end
+raise expr
+
+No redo nor retry
+
+a = f()
+if a is not nil and a is not error then
+elif a is nil
+elif a is error
+end
+
+ALT : when au lieu de catch (pratique car on réutilise le when du switch)
+ALT : throw au lieu de raise
+ALT : else s'il n'y a pas eu d'exception
+ALT : pas de gestion d'exceptions, on fait "à la C".
+Chaque type s'entend comme pouvant accueillir les valeurs nil et error.
+ALT rescure
+ALT except
+
+8. Modules
+==========
+
+import SYMBOL[.SYMBOL] [include ELEM1[, ELEMi]]
+import FILEPATH as SYMBOL [include ELEM1[, ELEMi]]
+
+Accès via symbol.membre
+
+Un fichier = un module
+
+Pour l'importer : require str ex :
+    - require "flat.ash"
+    - require "../flat.ash"
+
+module ID < SUPER
+    -- pas d'instanciation !
+    -- permet de faire :
+    -- des classes statiques
+    -- des interfaces
+end
+
+ALT : require, include, use ID
+ALT : import module ou include/extend pour importer dans une classe static ou d'instance
+
+9. Bibliothèque standard
+========================
+
+I/O
+    writeln
+    write
+    ALT : print, println, puts
+Object
+    o.clone
+    o.methods
+    o.respond_to?
+    o.dump
+    o.load
+List
+    l.flatten
+    l.pop/shift
+    l.push_front/back
+    l.insert
+    l.add / append
+    l.first
+    l.last a[-1]
+    l.find
+    l.find_all
+    l.include?
+    l.min
+    l.max
+    l.length/count
+    l.sort
+    l.reverse
+    l.uniq
+Hash
+    d.delete
+    d.find
+    d.keys
+    d.values
+
+10. Syntaxe BNF
+===============
+
+10.A Légende
+------------
+
+    EXPRESSION : règle
+    fun : token
+    --> : transcription de règle
+    { ... } : 0 à n
+    [ ... ] : 0 ou 1
+    | : ou
+    # : commentaire
+    'x' : littéral (symbole directement)
+
+10.B Syntaxe
+------------
+
+ATTENTION : pas mis à jour avec les dernières modifications
+
+    PROGRAM --> STATEMENT { ';' STATEMENT }
+
+    STATEMENT -->
+        | BLOCK_STATEMENT
+        # Declaration (first level statement)
+        | module id is MOD_BODY end
+        | require string
+        # Declaration (common to 1st level and module)
+        | FUN_CONST_ENUM
+
+    FUN_CONST_ENUM -->
+        | fun id [ '(' [ LIST_PARAM ] ')' ] [ : id ] ( is | \n ) FUNC_BODY end
+        | sub id [ '(' [ LIST_PARAM ] ')' ] ( is | \n ) SUB_BODY end
+        | const id '=' EXPRESSION # var are defined in BLOCK_STATEMENT
+        | enum id [ : id ] ( is | \n ) LIST_VAL_ENUM end
+
+    LIST_EXPRESSION --> EXPRESSION { ',' LIST_EXPRESSION }
+
+    LIST_ID --> id { ',' LIST_ID }
+
+    LIST_ID_TYP --> id [ : id ]  { ',' LIST_ID }
+
+    LIST_VAL_ENUM --> id [ = expression ] { ( ',' | \n ) LIST_VAL_ENUM }
+
+    LIST_PARAM --> id [ : id ] { ',' LIST_PARAM }
+
+    EXPRESSION -->
+        | nil
+        | byte
+        | true
+        | false
+        | integer / int
+        | float   / num
+        | string  / str
+        | LIST
+        | HASH
+        | LAMBDA
+        | id
+        | EXPRESSION BIN_OP EXPRESSION
+        | UNA_OP EXPRESSION
+        | FUNC_SUB_CALL
+        | '(' EXPRESSION ')'
+
+    BLOCK --> BLOCK_STATEMENT { ';' BLOCK_STATEMENT }
+
+    BLOCK_STATEMENT --> ';'
+        # Base
+        | EXPRESSION
+        # Declaration
+        | [ var | final ] LIST_ID_TYP = LIST_EXPRESSION # final pour not override et no subclass plutôt que const
+        # Selection
+        | if EXPRESSION ( then | \n ) BLOCK { elseif EXPRESSION then BLOCK } [ else BLOCK ] end[if]
+        # Loop
+        | [<label>] while EXPRESSION ( do | \n ) BLOCK end
+        | [<label>] loop ( do | \n ) BLOCK until EXPRESSION [ end[loop] | \n ]
+        | [<label>] for id = EXPRESSION ',' EXPRESSION [ ',' EXPRESSION ] ( do | \n ) BLOCK end
+        | [<label>] for LIST_ID in LIST_EXPRESSION ( do | \n ) BLOCK end
+        # Loop special
+        | break [<label>]
+        | next [<label>]
+        # Exception
+        | try [\n] BLOCK { catch [id : ] id BLOCK } [ finally BLOCK ] end
+        | throw expression
+
+    FUNC_BODY --> FUNC_STATEMENT { ';' FUNC_STATEMENT }
+
+    FUNC_STATEMENT -->
+        BLOCK_STATEMENT
+        # Function special
+        | return [ LIST_EXPRESSION ]
+
+    SUB_BODY --> SUB_STATEMENT { ';' SUB_STATEMENT }
+
+    SUB_STATEMENT -->
+        BLOCK_STATEMENT
+        # Subprogram special
+        | return
+
+    MOD_BODY --> MOD_STATEMENT { ';' MOD_STATEMENT }
+
+    MOD_STATEMENT -->
+        | BLOCK_STATEMENT
+        | FUN_CONST_ENUM
+
+    LAMBDA -->
+        | fun [ '(' LIST_PARAM ')' ] [ : id ] ( is | \n ) FUNC_STATEMENT end
+        | sub [ '(' LIST_PARAM ')' ] ( is | \n ) SUB_STATEMENT end
+
+    LIST --> '[' [ LIST_EXPRESSION ] [ ',' ] ']'
+
+    HASH --> '{' [ LIST_KEY_VALUE ] [ ',' ] '}'
+
+    LIST_KEY_VALUE --> KEY ':' EXPRESSION { ',' LIST_KEY_VALUE }
+
+    KEY -->
+        | byte
+        | true
+        | false
+        | integer
+        | float
+        | string
+        | id
+
+    BIN_OP -->
+        | '+' | '-' | '*' | '/' | '//' | '**' | '%'
+        | '>>' | '<<'
+        | '<' | '<=' | '>' | '>=' | '==' | '!='
+        | and | or | xor
+        | in | not in
+
+    UNA_OP -->
+        | '-'
+        | not
+
+    FUNC_SUB_CALL --> id ( LIST_EXPRESSION )
+
+10.C Définition des tokens
+--------------------------
+
+    fun --> 'fun' 'function'
+    pro --> 'pro' 'procedure'
+    is --> 'is'
+    end --> 'end'
+    var --> 'var'
+    const --> 'const'
+
+Not used :
+    enum --> 'enum'
+
+    id --> ($ | + | # | - | @)?[a-zA-Z][a-zA-Z0-9_]*
+    true --> 'true'
+    false --> 'false'
+    integer --> ( [0-9][0-9]* | [0-9][0-9]?[0-9]?( [0-9][0-9][0-9])*
+    float --> [0-9][0-9]*.[0-9]*
+    string --> "*" '*'
+    if --> 'if'
+    then --> 'then'
+    elif --> 'elif'
+    else --> 'else'
+    while --> 'while'
+    do --> 'do'
+
+Not used :
+    repeat --> 'repeat'
+    until --> 'until'
+
+    for --> 'for'
+    break --> 'break'
+    next --> 'next'
+    return --> 'return'
+    and --> 'and'
+    or --> 'or'
+    not --> 'not'
+
+Not used :
+    module --> 'module'
+
+    require --> 'require'
+
+Not used :
+    sub --> 'sub'
+    try --> 'try'
+    catch --> 'catch'
+    finally --> 'finally'
+    throw --> 'throw'
+
+11. Exemples / Ash en Action
+----------------------------
+
+ATTENTION : pas mis à jour avec les dernières modifications
+
+const Personne = {
+    age = 5,
+    birthday = fun is @age = @age + 1 end,
+}
+var p = Personne.new() # alias sur clone
+p.birthday
+writeln(p.age) # 6
+
+12. Nodes
+---------
+
+8 octobre 2020 :
+
+binop (Operand, Operator, Operand)
+unaop (Node, Operand)
+list (Node*)
+if (Condition, Action, Else)
+while (Condition, Action)
+for (VarList, ExprList, Action)
+break (label)
+next (label)
+return (ExprList)
+fun (ParList, OutList, Action)
+pro (ParList, Action)
+assign (IdList, Operator, ExprList)
+parameter (identifier, type, litt)
+raise (Expr)
+try (Action, whenList, finalAction)
+whenList (identifier, type, action)
+
