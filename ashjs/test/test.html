@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Test</title>
+        <style>
+            /* Original tree view css from Ross Angus */
+
+            body {
+                font-family: "Courier New", Courier, monospace;
+            }
+
+            /* It's supposed to look like a tree diagram */
+            .tree,
+            .tree ul,
+            .tree li {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                position: relative;
+            }
+
+            .tree {
+                margin: 0 0 1em;
+                text-align: center;
+            }
+            .tree,
+            .tree ul {
+                display: table;
+            }
+            .tree ul {
+                width: 100%;
+            }
+            .tree li {
+                display: table-cell;
+                padding: 0.5em 0;
+                vertical-align: top;
+            }
+            /* _________ */
+            .tree li:before {
+                outline: solid 1px #666;
+                content: "";
+                left: 0;
+                position: absolute;
+                right: 0;
+                top: 0;
+            }
+            .tree li:first-child:before {
+                left: 50%;
+            }
+            .tree li:last-child:before {
+                right: 50%;
+            }
+
+            .tree code,
+            .tree span {
+                border: solid 0.1em #666;
+                border-radius: 0.2em;
+                display: inline-block;
+                margin: 0 0.2em 0.5em;
+                padding: 0.2em 0.5em;
+                position: relative;
+            }
+            /* If the tree represents DOM structure */
+            .tree code {
+                font-family: monaco, Consolas, "Lucida Console", monospace;
+            }
+
+            /* | */
+            .tree ul:before,
+            .tree code:before,
+            .tree span:before {
+                outline: solid 1px #666;
+                content: "";
+                height: 0.5em;
+                left: 50%;
+                position: absolute;
+            }
+            .tree ul:before {
+                top: -0.5em;
+            }
+            .tree code:before,
+            .tree span:before {
+                top: -0.55em;
+            }
+
+            /* The root node doesn't connect upwards */
+            .tree > li {
+                margin-top: 0;
+            }
+            .tree > li:before,
+            .tree > li:after,
+            .tree > li > code:before,
+            .tree > li > span:before {
+                outline: none;
+            }
+        </style>
+        <script>
+            window.onload = test;
+
+            class Node {
+                constructor(type, value, left = null, right = null) {
+                    this.type = type;
+                    this.value = value;
+                    this.left = left;
+                    this.right = right;
+                }
+
+                toString() {
+                    return `(${this.type}, ${this.value})`;
+                }
+
+                toHTML() {
+                    let type = this.type.startsWith("lit:")
+                        ? this.type.slice(4, 7)
+                        : this.type;
+                    return `${this.value}<sub>${type}</sub>`;
+                }
+
+                toHTMLTree(isRoot = false) {
+                    if (this.type.startsWith("lit:")) {
+                        return `<code>${this.value}</code>`;
+                    } else {
+                        let cls = "";
+                        if (isRoot) {
+                            cls = ' class="tree"';
+                        }
+                        let s = `<ul ${cls}><li><code>${this.value.value}</code><ul>`;
+                        s += "<li>" + this.left.toHTMLTree() + "</li>";
+                        if (this.right !== null) {
+                            s += "<li>" + this.right.toHTMLTree() + "</li>";
+                        }
+                        s += "</ul></li></ul>";
+                        return s;
+                    }
+                }
+            }
+
+            function test() {
+                let tests = {
+                    "test-1": [
+                        new Node("lit:number", 2),
+                        new Node("lit:binop", "+"),
+                        new Node("lit:number", 3),
+                        new Node("lit:binop", "*"),
+                        new Node("lit:number", 5),
+                    ],
+                    "test-2": [
+                        new Node("lit:sep", "("),
+                        new Node("lit:number", 2),
+                        new Node("lit:binop", "+"),
+                        new Node("lit:number", 3),
+                        new Node("lit:sep", ")"),
+                        new Node("lit:binop", "*"),
+                        new Node("lit:number", 5),
+                    ],
+                };
+                let output = document.getElementById("output");
+                for (const [name, nodes] of Object.entries(tests)) {
+                    // Title
+                    let title = document.createElement("h1");
+                    title.innerText = name;
+                    output.appendChild(title);
+                    // Input nodes
+                    let input = document.createElement("pre");
+                    input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
+                    output.appendChild(input);
+                    // Parsed nodes
+                    let ns = process(nodes);
+                    let root = document.createElement("div");
+                    output.appendChild(root);
+                    root.innerHTML = ns[0].toHTMLTree(true);
+                }
+            }
+
+            function process(nodes) {
+                let precedences = {
+                    "*": 5,
+                    "+": 2,
+                };
+                // We don't count ( and ) nodes
+                while (nodes.length > 1) {
+                    let max = 0;
+                    let index = null;
+                    let current_level = 1;
+                    for (const [i, n] of nodes.entries()) {
+                        if (n.value in precedences) {
+                            console.log(
+                                `Test on ${n} with lvl=${current_level} got ${
+                                    precedences[n.value] * current_level
+                                } and max=${max}`
+                            );
+                            if (precedences[n.value] * current_level > max) {
+                                console.log("Taken");
+                                index = i;
+                                max = precedences[n.value] * current_level;
+                            }
+                        } else if (n.value === "(") {
+                            current_level *= 10;
+                        } else if (n.value === ")") {
+                            current_level /= 10;
+                        }
+                    }
+                    console.log(`Index node chosen: ${index} with max=${max}`);
+                    if (max !== 0) {
+                        console.log(`Node chosen: ${nodes[index]})`);
+                    }
+                    if (max === 0) {
+                        console.log("ERROR");
+                        console.log(nodes.join(", "));
+                        throw new Error(`No operator found`);
+                    }
+                    let current = nodes[index];
+                    if (["lit:binop", "expr:bin"].includes(current.type)) {
+                        let left = nodes[index - 1];
+                        let right = nodes[index + 1];
+                        let startDeleteAt = index - 1;
+                        let deleteLength = 3;
+                        if (
+                            index - 2 >= 0 &&
+                            nodes[index - 2].value === "(" &&
+                            index + 2 < nodes.length &&
+                            nodes[index + 2].value === ")"
+                        ) {
+                            startDeleteAt = index - 2;
+                            deleteLength = 5;
+                        }
+                        nodes.splice(
+                            startDeleteAt,
+                            deleteLength,
+                            new Node("expr:bin", current, left, right)
+                        );
+                    } else {
+                        throw new Error(`Unexpected type: ${current.type}`);
+                    }
+                    console.log(nodes);
+                }
+                return nodes;
+            }
+        </script>
+    </head>
+    <body>
+        <div id="output"></div>
+    </body>
+</html>
