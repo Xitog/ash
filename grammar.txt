@@ -1,3 +1,7 @@
+-- comment
+--[[ multiline
+--]]
+
 [var] ID [TYPE] = EXPR
 const ID [TYPE] = EXPR
 
@@ -54,7 +58,7 @@ end
 
 --
 
-import (FILEPATH | ID) [ > ID1, ID2 ]
+import (FILEPATH | ID) [ > ID1, ID2 ] ou require ?
 
 module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
 
@@ -64,6 +68,17 @@ exception
 
 catch ID [TYPE]
 end
+
+--
+
++  -  *  /  //  **  %
++= -= *= /= //= **= %=
+=
+# (length)
+$ (string)
+and or not
+== != <= >= < >
+${x} interpolation dans chaînes
 
 14/12/2022
 25/10/2022

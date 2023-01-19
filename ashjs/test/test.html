@@ -95,7 +95,7 @@
             }
         </style>
         <script>
-            window.onload = test;
+            window.onload = tests;
 
             class Node {
                 constructor(type, value, left = null, right = null) {
@@ -135,7 +135,29 @@
                 }
             }
 
-            function test() {
+            function test(name, nodes) {
+                let container = document.createElement("div");
+                // Title
+                let title = document.createElement("h1");
+                title.innerText = name;
+                container.appendChild(title);
+                // Input nodes
+                let input = document.createElement("pre");
+                input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
+                container.appendChild(input);
+                // Parsed nodes
+                let ns = parse(nodes)[0];
+                let root = document.createElement("div");
+                container.appendChild(root);
+                root.innerHTML = ns.toHTMLTree(true);
+                // Result
+                let res = document.createElement("pre");
+                container.appendChild(res);
+                res.innerHTML = "Result = " + execute(ns);
+                return container;
+            }
+
+            function tests() {
                 let tests = {
                     "test-1": [
                         new Node("lit:number", 2),
@@ -153,29 +175,45 @@
                         new Node("lit:binop", "*"),
                         new Node("lit:number", 5),
                     ],
+                    "test-3": [
+                        new Node("lit:number", 2),
+                        new Node("lit:binop", "-"),
+                        new Node("lit:number", 5),
+                    ],
                 };
                 let output = document.getElementById("output");
                 for (const [name, nodes] of Object.entries(tests)) {
-                    // Title
-                    let title = document.createElement("h1");
-                    title.innerText = name;
-                    output.appendChild(title);
-                    // Input nodes
-                    let input = document.createElement("pre");
-                    input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
-                    output.appendChild(input);
-                    // Parsed nodes
-                    let ns = process(nodes);
-                    let root = document.createElement("div");
-                    output.appendChild(root);
-                    root.innerHTML = ns[0].toHTMLTree(true);
+                    let res = test(name, nodes);
+                    output.appendChild(res);
                 }
             }
 
-            function process(nodes) {
+            function execute(node) {
+                if (node.type === "lit:number") {
+                    return node.value;
+                } else if (node.type === "expr:bin") {
+                    if (node.value.value === "+") {
+                        return execute(node.left) + execute(node.right);
+                    } else if (node.value.value === "-") {
+                        return execute(node.left) - execute(node.right);
+                    } else if (node.value.value === "*") {
+                        return execute(node.left) * execute(node.right);
+                    } else if (node.value.value === "/") {
+                        return execute(node.left) / execute(node.right);
+                    }
+                } else {
+                    throw new Error(
+                        `Unknown node type |${node.type}| for node ${node}`
+                    );
+                }
+            }
+
+            function parse(nodes) {
                 let precedences = {
                     "*": 5,
+                    "/": 5,
                     "+": 2,
+                    "-": 2,
                 };
                 // We don't count ( and ) nodes
                 while (nodes.length > 1) {
@@ -236,9 +274,31 @@
                 }
                 return nodes;
             }
+
+            function process() {
+                let code = document.main.cmd.value;
+                let arr = code.split(" ");
+                let nodes = [];
+                for (const c of arr) {
+                    if (["+", "-", "*", "/"].includes(c)) {
+                        nodes.push(new Node("lit:binop", c));
+                    } else if (["(", ")"].includes(c)) {
+                        nodes.push(new Node("lit:sep", c));
+                    } else {
+                        nodes.push(new Node("lit:number", parseInt(c)));
+                    }
+                }
+                let output = document.getElementById("output");
+                let res = test(name, nodes);
+                output.prepend(res);
+            }
         </script>
     </head>
     <body>
+        <form name="main">
+            Type your expression: <input id="cmd" type="text" />
+            <input type="button" value="Go!" onclick="process()" />
+        </form>
         <div id="output"></div>
     </body>
 </html>

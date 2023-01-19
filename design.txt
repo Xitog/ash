@@ -133,7 +133,7 @@ is teste la classe ou nil
 EXT : ~= pour les matchs et <=> pour comparer en -1, 0, 1
 EXT : ..< pour les ranges où le dernier élément n'est pas inclus
 ALT : [deb..fin] ou [deb..fin[
-EXT : &a permet de faire des alias a = &b a et b poitent sur la même valeur
+EXT : &a permet de faire des alias a = &b a et b pointent sur la même valeur
 ALT : Définir l'interrogation de définition : defined? (en méthode) non car on veut savoir si une var existe, il faut un keyword ??? ou ?
 ALT : [X] pour indiquer que c'est un tableau de longueur X ou dyn pour dynamique : int[dyn] ou list(int, dyn)
 ALT : comment gérer le typage des list et des hashs ? int[50] ou [int, 50] ou list(int, 50) ? str=int[50]
