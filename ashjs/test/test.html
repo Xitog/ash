@@ -1,304 +1,428 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Test</title>
-        <style>
-            /* Original tree view css from Ross Angus */
+	<head>
+		<title>Test</title>
+		<style>
+			/* Original tree view css from Ross Angus */
 
-            body {
-                font-family: "Courier New", Courier, monospace;
-            }
+			body {
+				font-family: "Courier New", Courier, monospace;
+			}
 
-            /* It's supposed to look like a tree diagram */
-            .tree,
-            .tree ul,
-            .tree li {
-                list-style: none;
-                margin: 0;
-                padding: 0;
-                position: relative;
-            }
+			/* It's supposed to look like a tree diagram */
+			.tree,
+			.tree ul,
+			.tree li {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				position: relative;
+			}
 
-            .tree {
-                margin: 0 0 1em;
-                text-align: center;
-            }
-            .tree,
-            .tree ul {
-                display: table;
-            }
-            .tree ul {
-                width: 100%;
-            }
-            .tree li {
-                display: table-cell;
-                padding: 0.5em 0;
-                vertical-align: top;
-            }
-            /* _________ */
-            .tree li:before {
-                outline: solid 1px #666;
-                content: "";
-                left: 0;
-                position: absolute;
-                right: 0;
-                top: 0;
-            }
-            .tree li:first-child:before {
-                left: 50%;
-            }
-            .tree li:last-child:before {
-                right: 50%;
-            }
+			.tree {
+				margin: 0 0 1em;
+				text-align: center;
+			}
+			.tree,
+			.tree ul {
+				display: table;
+			}
+			.tree ul {
+				width: 100%;
+			}
+			.tree li {
+				display: table-cell;
+				padding: 0.5em 0;
+				vertical-align: top;
+			}
+			/* _________ */
+			.tree li:before {
+				outline: solid 1px #666;
+				content: "";
+				left: 0;
+				position: absolute;
+				right: 0;
+				top: 0;
+			}
+			.tree li:first-child:before {
+				left: 50%;
+			}
+			.tree li:last-child:before {
+				right: 50%;
+			}
 
-            .tree code,
-            .tree span {
-                border: solid 0.1em #666;
-                border-radius: 0.2em;
-                display: inline-block;
-                margin: 0 0.2em 0.5em;
-                padding: 0.2em 0.5em;
-                position: relative;
-            }
-            /* If the tree represents DOM structure */
-            .tree code {
-                font-family: monaco, Consolas, "Lucida Console", monospace;
-            }
+			.tree code,
+			.tree span {
+				border: solid 0.1em #666;
+				border-radius: 0.2em;
+				display: inline-block;
+				margin: 0 0.2em 0.5em;
+				padding: 0.2em 0.5em;
+				position: relative;
+			}
+			/* If the tree represents DOM structure */
+			.tree code {
+				font-family: monaco, Consolas, "Lucida Console", monospace;
+			}
 
-            /* | */
-            .tree ul:before,
-            .tree code:before,
-            .tree span:before {
-                outline: solid 1px #666;
-                content: "";
-                height: 0.5em;
-                left: 50%;
-                position: absolute;
-            }
-            .tree ul:before {
-                top: -0.5em;
-            }
-            .tree code:before,
-            .tree span:before {
-                top: -0.55em;
-            }
+			/* | */
+			.tree ul:before,
+			.tree code:before,
+			.tree span:before {
+				outline: solid 1px #666;
+				content: "";
+				height: 0.5em;
+				left: 50%;
+				position: absolute;
+			}
+			.tree ul:before {
+				top: -0.5em;
+			}
+			.tree code:before,
+			.tree span:before {
+				top: -0.55em;
+			}
 
-            /* The root node doesn't connect upwards */
-            .tree > li {
-                margin-top: 0;
-            }
-            .tree > li:before,
-            .tree > li:after,
-            .tree > li > code:before,
-            .tree > li > span:before {
-                outline: none;
-            }
-        </style>
-        <script>
-            window.onload = tests;
+			/* The root node doesn't connect upwards */
+			.tree > li {
+				margin-top: 0;
+			}
+			.tree > li:before,
+			.tree > li:after,
+			.tree > li > code:before,
+			.tree > li > span:before {
+				outline: none;
+			}
+		</style>
+		<script>
+			window.onload = tests;
 
-            class Node {
-                constructor(type, value, left = null, right = null) {
-                    this.type = type;
-                    this.value = value;
-                    this.left = left;
-                    this.right = right;
-                }
+			let language = {
+				tokens: {
+					op: [
+						// Maths
+						"+",
+						"*",
+					],
+					/*
+				op: [
+					// Maths
+					"+",
+					"-",
+					"*",
+					"/",
+					"**",
+					"//",
+					"%",
+					// Specials
+					".",
+					"<<",
+					"#",
+					"$",
+					// Booleans
+					"and",
+					"or",
+					"not",
+					"in",
+					"is",
+					// Comparisons
+					"==",
+					"!=",
+					"<",
+					"<=",
+					">=",
+					">",
+				],
+				sep: ["(", ")", "[", "]"],
+			             */
+					int: [/^[1-9]\d*$/],
+					//id: ["@%*"],
+					blank: [" "],
+				},
+				precedences: {
+					"*": 5,
+					"/": 5,
+					"+": 2,
+					"-": 2,
+				},
+			};
 
-                toString() {
-                    return `(${this.type}, ${this.value})`;
-                }
+			class Node {
+				constructor(type, value, left = null, right = null) {
+					this.type = type;
+					this.value = value;
+					this.left = left;
+					this.right = right;
+				}
 
-                toHTML() {
-                    let type = this.type.startsWith("lit:")
-                        ? this.type.slice(4, 7)
-                        : this.type;
-                    return `${this.value}<sub>${type}</sub>`;
-                }
+				toString() {
+					return `(${this.type}, ${this.value})`;
+				}
 
-                toHTMLTree(isRoot = false) {
-                    if (this.type.startsWith("lit:")) {
-                        return `<code>${this.value}</code>`;
-                    } else {
-                        let cls = "";
-                        if (isRoot) {
-                            cls = ' class="tree"';
-                        }
-                        let s = `<ul ${cls}><li><code>${this.value.value}</code><ul>`;
-                        s += "<li>" + this.left.toHTMLTree() + "</li>";
-                        if (this.right !== null) {
-                            s += "<li>" + this.right.toHTMLTree() + "</li>";
-                        }
-                        s += "</ul></li></ul>";
-                        return s;
-                    }
-                }
-            }
+				toHTML() {
+					let type = this.type.startsWith("lit:")
+						? this.type.slice(4, 7)
+						: this.type;
+					return `${this.value}<sub>${type}</sub>`;
+				}
 
-            function test(name, nodes) {
-                let container = document.createElement("div");
-                // Title
-                let title = document.createElement("h1");
-                title.innerText = name;
-                container.appendChild(title);
-                // Input nodes
-                let input = document.createElement("pre");
-                input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
-                container.appendChild(input);
-                // Parsed nodes
-                let ns = parse(nodes)[0];
-                let root = document.createElement("div");
-                container.appendChild(root);
-                root.innerHTML = ns.toHTMLTree(true);
-                // Result
-                let res = document.createElement("pre");
-                container.appendChild(res);
-                res.innerHTML = "Result = " + execute(ns);
-                return container;
-            }
+				toHTMLTree(isRoot = false) {
+					if (this.type.startsWith("lit:")) {
+						return `<code>${this.value}</code>`;
+					} else {
+						let cls = "";
+						if (isRoot) {
+							cls = ' class="tree"';
+						}
+						let s = `<ul ${cls}><li><code>${this.value.value}</code><ul>`;
+						s += "<li>" + this.left.toHTMLTree() + "</li>";
+						if (this.right !== null) {
+							s += "<li>" + this.right.toHTMLTree() + "</li>";
+						}
+						s += "</ul></li></ul>";
+						return s;
+					}
+				}
+			}
 
-            function tests() {
-                let tests = {
-                    "test-1": [
-                        new Node("lit:number", 2),
-                        new Node("lit:binop", "+"),
-                        new Node("lit:number", 3),
-                        new Node("lit:binop", "*"),
-                        new Node("lit:number", 5),
-                    ],
-                    "test-2": [
-                        new Node("lit:sep", "("),
-                        new Node("lit:number", 2),
-                        new Node("lit:binop", "+"),
-                        new Node("lit:number", 3),
-                        new Node("lit:sep", ")"),
-                        new Node("lit:binop", "*"),
-                        new Node("lit:number", 5),
-                    ],
-                    "test-3": [
-                        new Node("lit:number", 2),
-                        new Node("lit:binop", "-"),
-                        new Node("lit:number", 5),
-                    ],
-                };
-                let output = document.getElementById("output");
-                for (const [name, nodes] of Object.entries(tests)) {
-                    let res = test(name, nodes);
-                    output.appendChild(res);
-                }
-            }
+			function test(name, nodes) {
+				let container = document.createElement("div");
+				// Title
+				let title = document.createElement("h1");
+				title.innerText = name;
+				container.appendChild(title);
+				// Input nodes
+				let input = document.createElement("pre");
+				input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
+				container.appendChild(input);
+				// Parsed nodes
+				let ns = parse(nodes)[0];
+				let root = document.createElement("div");
+				container.appendChild(root);
+				root.innerHTML = ns.toHTMLTree(true);
+				// Result
+				let res = document.createElement("pre");
+				container.appendChild(res);
+				res.innerHTML = "Result = " + execute(ns);
+				return container;
+			}
 
-            function execute(node) {
-                if (node.type === "lit:number") {
-                    return node.value;
-                } else if (node.type === "expr:bin") {
-                    if (node.value.value === "+") {
-                        return execute(node.left) + execute(node.right);
-                    } else if (node.value.value === "-") {
-                        return execute(node.left) - execute(node.right);
-                    } else if (node.value.value === "*") {
-                        return execute(node.left) * execute(node.right);
-                    } else if (node.value.value === "/") {
-                        return execute(node.left) / execute(node.right);
-                    }
-                } else {
-                    throw new Error(
-                        `Unknown node type |${node.type}| for node ${node}`
-                    );
-                }
-            }
+			function tests() {
+				let tests = {
+					"test-1": [
+						new Node("lit:number", "2"),
+						new Node("lit:binop", "+"),
+						new Node("lit:number", "3"),
+						new Node("lit:binop", "*"),
+						new Node("lit:number", "5"),
+					],
+					"test-2": [
+						new Node("lit:sep", "("),
+						new Node("lit:number", "2"),
+						new Node("lit:binop", "+"),
+						new Node("lit:number", "3"),
+						new Node("lit:sep", ")"),
+						new Node("lit:binop", "*"),
+						new Node("lit:number", "5"),
+					],
+					"test-3": [
+						new Node("lit:number", "2"),
+						new Node("lit:binop", "-"),
+						new Node("lit:number", "5"),
+					],
+				};
+				let output = document.getElementById("output");
+				for (const [name, nodes] of Object.entries(tests)) {
+					let res = test(name, nodes);
+					output.appendChild(res);
+				}
+			}
 
-            function parse(nodes) {
-                let precedences = {
-                    "*": 5,
-                    "/": 5,
-                    "+": 2,
-                    "-": 2,
-                };
-                // We don't count ( and ) nodes
-                while (nodes.length > 1) {
-                    let max = 0;
-                    let index = null;
-                    let current_level = 1;
-                    for (const [i, n] of nodes.entries()) {
-                        if (n.value in precedences) {
-                            console.log(
-                                `Test on ${n} with lvl=${current_level} got ${
-                                    precedences[n.value] * current_level
-                                } and max=${max}`
-                            );
-                            if (precedences[n.value] * current_level > max) {
-                                console.log("Taken");
-                                index = i;
-                                max = precedences[n.value] * current_level;
-                            }
-                        } else if (n.value === "(") {
-                            current_level *= 10;
-                        } else if (n.value === ")") {
-                            current_level /= 10;
-                        }
-                    }
-                    console.log(`Index node chosen: ${index} with max=${max}`);
-                    if (max !== 0) {
-                        console.log(`Node chosen: ${nodes[index]})`);
-                    }
-                    if (max === 0) {
-                        console.log("ERROR");
-                        console.log(nodes.join(", "));
-                        throw new Error(`No operator found`);
-                    }
-                    let current = nodes[index];
-                    if (["lit:binop", "expr:bin"].includes(current.type)) {
-                        let left = nodes[index - 1];
-                        let right = nodes[index + 1];
-                        let startDeleteAt = index - 1;
-                        let deleteLength = 3;
-                        if (
-                            index - 2 >= 0 &&
-                            nodes[index - 2].value === "(" &&
-                            index + 2 < nodes.length &&
-                            nodes[index + 2].value === ")"
-                        ) {
-                            startDeleteAt = index - 2;
-                            deleteLength = 5;
-                        }
-                        nodes.splice(
-                            startDeleteAt,
-                            deleteLength,
-                            new Node("expr:bin", current, left, right)
-                        );
-                    } else {
-                        throw new Error(`Unexpected type: ${current.type}`);
-                    }
-                    console.log(nodes);
-                }
-                return nodes;
-            }
+			function execute(node) {
+				if (node.type === "lit:number") {
+					return parseInt(node.value);
+				} else if (node.type === "expr:bin") {
+					if (node.value.value === "+") {
+						return execute(node.left) + execute(node.right);
+					} else if (node.value.value === "-") {
+						return execute(node.left) - execute(node.right);
+					} else if (node.value.value === "*") {
+						return execute(node.left) * execute(node.right);
+					} else if (node.value.value === "/") {
+						return execute(node.left) / execute(node.right);
+					}
+				} else {
+					throw new Error(
+						`Unknown node type |${node.type}| for node ${node}`
+					);
+				}
+			}
 
-            function process() {
-                let code = document.main.cmd.value;
-                let arr = code.split(" ");
-                let nodes = [];
-                for (const c of arr) {
-                    if (["+", "-", "*", "/"].includes(c)) {
-                        nodes.push(new Node("lit:binop", c));
-                    } else if (["(", ")"].includes(c)) {
-                        nodes.push(new Node("lit:sep", c));
-                    } else {
-                        nodes.push(new Node("lit:number", parseInt(c)));
-                    }
-                }
-                let output = document.getElementById("output");
-                let res = test(name, nodes);
-                output.prepend(res);
-            }
-        </script>
-    </head>
-    <body>
-        <form name="main">
-            Type your expression: <input id="cmd" type="text" />
-            <input type="button" value="Go!" onclick="process()" />
-        </form>
-        <div id="output"></div>
-    </body>
+			function parse(nodes) {
+				// We don't count ( and ) nodes
+				while (nodes.length > 1) {
+					let max = 0;
+					let index = null;
+					let current_level = 1;
+					for (const [i, n] of nodes.entries()) {
+						if (n.value in language.precedences) {
+							console.log(
+								`Test on ${n} with lvl=${current_level} got ${
+									language.precedences[n.value] *
+									current_level
+								} and max=${max}`
+							);
+							if (
+								language.precedences[n.value] * current_level >
+								max
+							) {
+								console.log("Taken");
+								index = i;
+								max =
+									language.precedences[n.value] *
+									current_level;
+							}
+						} else if (n.value === "(") {
+							current_level *= 10;
+						} else if (n.value === ")") {
+							current_level /= 10;
+						}
+					}
+					console.log(`Index node chosen: ${index} with max=${max}`);
+					if (max !== 0) {
+						console.log(`Node chosen: ${nodes[index]})`);
+					}
+					if (max === 0) {
+						console.log("ERROR");
+						console.log(nodes.join(", "));
+						throw new Error(`No operator found`);
+					}
+					let current = nodes[index];
+					if (["lit:binop", "expr:bin"].includes(current.type)) {
+						let left = nodes[index - 1];
+						let right = nodes[index + 1];
+						let startDeleteAt = index - 1;
+						let deleteLength = 3;
+						if (
+							index - 2 >= 0 &&
+							nodes[index - 2].value === "(" &&
+							index + 2 < nodes.length &&
+							nodes[index + 2].value === ")"
+						) {
+							startDeleteAt = index - 2;
+							deleteLength = 5;
+						}
+						console.log(
+							`Splicing from ${startDeleteAt} with length ${deleteLength}`
+						);
+						nodes.splice(
+							startDeleteAt,
+							deleteLength,
+							new Node("expr:bin", current, left, right)
+						);
+					} else {
+						throw new Error(`Unexpected type: ${current.type}`);
+					}
+					console.log(nodes);
+				}
+				return nodes;
+			}
+
+			function process() {
+				let code = document.main.cmd.value;
+				let arr = code.split(" ");
+				let nodes = [];
+				let word = "";
+				let matches = [];
+				let old_matches = [];
+				for (let index = 0; index < code.length; index += 1) {
+					console.log(index);
+					if (index > 20) {
+						throw new Error("too much");
+					}
+					let c = code[index];
+					word += c;
+					console.log(`Word is |${word}|`);
+					matches = [];
+					for (const [t, elems] of Object.entries(language.tokens)) {
+						for (const e of elems) {
+							let res = false;
+							if (e instanceof RegExp) {
+								if (e.test(word)) {
+									console.log("matched int");
+									matches.push(new Node("int", word));
+									res = true;
+								}
+							} else if (e === word) {
+								console.log(`matched ${t}`);
+								matches.push(new Node(t, word));
+								res = true;
+								break;
+							}
+							console.log(`...against |${e}| = ${res}`);
+						}
+					}
+					console.log(
+						`Matches: ${matches.length} and old: ${old_matches.length}`
+					);
+					if (matches.length === 0 && old_matches.length === 1) {
+						console.log(`Adding node! ${old_matches[0]}`);
+						nodes.push(old_matches[0]);
+						word = "";
+						index -= 1;
+					}
+					old_matches = matches;
+				}
+				console.log(
+					`Matches: ${matches.length} and old: ${old_matches.length}`
+				);
+				if (word.length > 0) {
+					if (old_matches.length === 1) {
+						nodes.push(old_matches[0]);
+						word = "";
+					} else {
+						throw new Error(`Unlexed string: |${word}|`);
+					}
+				}
+				// filter blanks
+				let nn = [];
+				for (const n of nodes) {
+					if (n.type !== "blank") {
+						nn.push(n);
+					}
+				}
+				nodes = nn;
+				// retag nodes
+				for (const [i, n] of nodes.entries()) {
+					let type = "lit:binop";
+					if (n.type === "op") {
+						if (i == 0) {
+							type = "lit:unaop";
+						} else if (i - 1 > 0) {
+							if (nodes[i - 1].type === "sep") {
+								type = "lit:unaop";
+							}
+						}
+					} else {
+						type = "lit:number";
+					}
+					n.type = type;
+				}
+				console.log("AAA", cmd.value);
+				for (const [i, n] of nodes.entries()) {
+					console.log(i, n);
+				}
+				let output = document.getElementById("output");
+				let res = test(name, nodes);
+				output.prepend(res);
+			}
+		</script>
+	</head>
+	<body>
+		<form name="main">
+			Type your expression: <input id="cmd" type="text" />
+			<input type="button" value="Go!" onclick="process()" />
+		</form>
+		<div id="output"></div>
+	</body>
 </html>
