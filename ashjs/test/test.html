@@ -102,15 +102,12 @@
 					op: [
 						// Maths
 						"+",
+						"-",
 						"*",
+						"/",
+						"//",
 					],
 					/*
-				op: [
-					// Maths
-					"+",
-					"-",
-					"*",
-					"/",
 					"**",
 					"//",
 					"%",
@@ -132,9 +129,8 @@
 					"<=",
 					">=",
 					">",
-				],
-				sep: ["(", ")", "[", "]"],
-			             */
+				],*/
+					sep: ["(", ")", "[", "]"],
 					int: [/^[1-9]\d*$/],
 					//id: ["@%*"],
 					blank: [" "],
@@ -142,6 +138,7 @@
 				precedences: {
 					"*": 5,
 					"/": 5,
+					"//": 5,
 					"+": 2,
 					"-": 2,
 				},
@@ -209,30 +206,18 @@
 
 			function tests() {
 				let tests = {
-					"test-1": [
-						new Node("lit:number", "2"),
-						new Node("lit:binop", "+"),
-						new Node("lit:number", "3"),
-						new Node("lit:binop", "*"),
-						new Node("lit:number", "5"),
-					],
-					"test-2": [
-						new Node("lit:sep", "("),
-						new Node("lit:number", "2"),
-						new Node("lit:binop", "+"),
-						new Node("lit:number", "3"),
-						new Node("lit:sep", ")"),
-						new Node("lit:binop", "*"),
-						new Node("lit:number", "5"),
-					],
-					"test-3": [
-						new Node("lit:number", "2"),
-						new Node("lit:binop", "-"),
-						new Node("lit:number", "5"),
-					],
+					"Test 1": "2 + 3 * 5",
+					"Test 2": "(2 + 3) * 5",
+					"Test 3": "2 - 5",
+					"Test 4": "9 / 2",
+					"Test 5": "9 // 2",
 				};
 				let output = document.getElementById("output");
-				for (const [name, nodes] of Object.entries(tests)) {
+				for (const [name, cmd] of Object.entries(tests)) {
+					let nodes = lex(cmd);
+					for (const [i, n] of nodes.entries()) {
+						console.log(i, n);
+					}
 					let res = test(name, nodes);
 					output.appendChild(res);
 				}
@@ -250,6 +235,14 @@
 						return execute(node.left) * execute(node.right);
 					} else if (node.value.value === "/") {
 						return execute(node.left) / execute(node.right);
+					} else if (node.value.value === "//") {
+						return Math.floor(
+							execute(node.left) / execute(node.right)
+						);
+					} else {
+						throw new Error(
+							`Unknown operator |${node.value.value}|`
+						);
 					}
 				} else {
 					throw new Error(
@@ -328,9 +321,7 @@
 				return nodes;
 			}
 
-			function process() {
-				let code = document.main.cmd.value;
-				let arr = code.split(" ");
+			function lex(code) {
 				let nodes = [];
 				let word = "";
 				let matches = [];
@@ -408,10 +399,17 @@
 					}
 					n.type = type;
 				}
-				console.log("AAA", cmd.value);
+				console.log("End of lexing", code);
 				for (const [i, n] of nodes.entries()) {
 					console.log(i, n);
 				}
+				return nodes;
+			}
+
+			function process() {
+				let code = document.main.cmd.value;
+				let arr = code.split(" ");
+				let nodes = lex(cmd.value);
 				let output = document.getElementById("output");
 				let res = test(name, nodes);
 				output.prepend(res);
