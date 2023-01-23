@@ -106,12 +106,14 @@
 						"*",
 						"/",
 						"//",
+						"**",
+						// Booleans
 						"and",
 						"or",
+						// Affectation
+						"=",
 					],
 					/*
-					"**",
-					"//",
 					"%",
 					// Specials
 					".",
@@ -119,8 +121,6 @@
 					"#",
 					"$",
 					// Booleans
-					"and",
-					"or",
 					"not",
 					"in",
 					"is",
@@ -134,18 +134,20 @@
 				],*/
 					sep: ["(", ")", "[", "]"],
 					int: [/^[1-9]\d*$/],
-					boolean: ["true", "false"],
-					//id: ["@%*"],
+					bool: ["true", "false"],
+					id: [/^[a-zA-Z_]\w*$/],
 					blank: [" "],
 				},
 				precedences: {
 					"*": 5,
 					"/": 5,
 					"//": 5,
-					"+": 2,
-					"-": 2,
-					and: 1,
-					or: 1,
+					"**": 5,
+					"+": 3,
+					"-": 3,
+					and: 2,
+					or: 2,
+					"=": 1,
 				},
 			};
 
@@ -162,14 +164,11 @@
 				}
 
 				toHTML() {
-					let type = this.type.startsWith("lit:")
-						? this.type.slice(4, 7)
-						: this.type;
-					return `${this.value}<sub>${type}</sub>`;
+					return `${this.value}<sub>${this.type}</sub>`;
 				}
 
 				toHTMLTree(isRoot = false) {
-					if (this.type.startsWith("lit:")) {
+					if (!this.type.startsWith("expr:")) {
 						return `<code>${this.value}</code>`;
 					} else {
 						let cls = "";
@@ -212,10 +211,10 @@
 			function tests() {
 				let tests = {
 					"Test 1": "2 + 3 * 5",
-					"Test 2": "(2 + 3) * 5",
+					/*"Test 2": "(2 + 3) * 5",
 					"Test 3": "2 - 5",
 					"Test 4": "9 / 2",
-					"Test 5": "9 // 2",
+					"Test 5": "9 // 2",*/
 				};
 				let output = document.getElementById("output");
 				for (const [name, cmd] of Object.entries(tests)) {
@@ -228,11 +227,23 @@
 				}
 			}
 
-			function execute(node) {
-				if (node.type === "lit:number") {
+			let scope = {
+				a: 5,
+				b: 2,
+				t: true,
+				f: false,
+			};
+			function execute(node, symbol = false) {
+				if (node.type === "int") {
 					return parseInt(node.value);
-				} else if (node.type === "lit:boolean") {
+				} else if (node.type === "bool") {
 					return node.value === "true";
+				} else if (node.type === "id") {
+					if (!symbol) {
+						return scope[node.value];
+					} else {
+						return node.value;
+					}
 				} else if (node.type === "expr:bin") {
 					if (node.value.value === "+") {
 						return execute(node.left) + execute(node.right);
@@ -246,10 +257,20 @@
 						return Math.floor(
 							execute(node.left) / execute(node.right)
 						);
+					} else if (node.value.value === "**") {
+						return Math.pow(
+							execute(node.left),
+							execute(node.right)
+						);
 					} else if (node.value.value === "and") {
 						return execute(node.left) && execute(node.right);
 					} else if (node.value.value === "or") {
 						return execute(node.left) || execute(node.right);
+					} else if (node.value.value === "=") {
+						let symbol = execute(node.left, true);
+						let value = execute(node.right);
+						scope[symbol] = value;
+						return value;
 					} else {
 						throw new Error(
 							`Unknown operator |${node.value.value}|`
@@ -302,7 +323,7 @@
 						throw new Error(`No operator found`);
 					}
 					let current = nodes[index];
-					if (["lit:binop", "expr:bin"].includes(current.type)) {
+					if (["binop", "expr:bin"].includes(current.type)) {
 						let left = nodes[index - 1];
 						let right = nodes[index + 1];
 						let startDeleteAt = index - 1;
@@ -351,8 +372,10 @@
 							let res = false;
 							if (e instanceof RegExp) {
 								if (e.test(word)) {
-									console.log("matched int");
-									matches.push(new Node("int", word));
+									console.log(
+										`matched ${t} with ${e} for ${word}`
+									);
+									matches.push(new Node(t, word));
 									res = true;
 								}
 							} else if (e === word) {
@@ -396,19 +419,16 @@
 				nodes = nn;
 				// retag nodes
 				for (const [i, n] of nodes.entries()) {
-					let type = "lit:binop";
+					let type = n.type;
 					if (n.type === "op") {
+						type = "binop";
 						if (i == 0) {
-							type = "lit:unaop";
+							type = "unaop";
 						} else if (i - 1 > 0) {
 							if (nodes[i - 1].type === "sep") {
-								type = "lit:unaop";
+								type = "unaop";
 							}
 						}
-					} else if (n.type === "boolean") {
-						type = "lit:boolean";
-					} else {
-						type = "lit:number";
 					}
 					n.type = type;
 				}
