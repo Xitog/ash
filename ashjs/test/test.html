@@ -95,7 +95,7 @@
 			}
 		</style>
 		<script>
-			window.onload = tests;
+			window.onload = main;
 
 			let language = {
 				tokens: {
@@ -107,11 +107,19 @@
 						"/",
 						"//",
 						"**",
+						"%",
 						// Booleans
 						"and",
 						"or",
 						// Affectation
 						"=",
+						// Comparisons
+						"==",
+						"!=",
+						"<",
+						"<=",
+						">=",
+						">",
 					],
 					/*
 					"%",
@@ -124,13 +132,6 @@
 					"not",
 					"in",
 					"is",
-					// Comparisons
-					"==",
-					"!=",
-					"<",
-					"<=",
-					">=",
-					">",
 				],*/
 					sep: ["(", ")", "[", "]"],
 					int: [/^[1-9]\d*$/],
@@ -143,8 +144,15 @@
 					"/": 5,
 					"//": 5,
 					"**": 5,
-					"+": 3,
-					"-": 3,
+					"%": 5,
+					"+": 4,
+					"-": 4,
+					">": 3,
+					"<": 3,
+					">=": 3,
+					"<=": 3,
+					"==": 3,
+					"!=": 3,
 					and: 2,
 					or: 2,
 					"=": 1,
@@ -271,6 +279,18 @@
 						let value = execute(node.right);
 						scope[symbol] = value;
 						return value;
+					} else if (node.value.value === ">") {
+						return execute(node.left) > execute(node.right);
+					} else if (node.value.value === "<") {
+						return execute(node.left) < execute(node.right);
+					} else if (node.value.value === ">=") {
+						return execute(node.left) >= execute(node.right);
+					} else if (node.value.value === "<=") {
+						return execute(node.left) <= execute(node.right);
+					} else if (node.value.value === "==") {
+						return execute(node.left) == execute(node.right);
+					} else if (node.value.value === "!=") {
+						return execute(node.left) != execute(node.right);
 					} else {
 						throw new Error(
 							`Unknown operator |${node.value.value}|`
@@ -447,12 +467,29 @@
 				let res = test(name, nodes);
 				output.prepend(res);
 			}
+
+			function kprocess(event) {
+				alert(event.key);
+			}
+
+			function main() {
+				let input = document.getElementById("cmd");
+				input.addEventListener("keydown", function (event) {
+					if (event.key === "Enter") {
+						//process();
+						event.preventDefault();
+						document.getElementById("go").click();
+					}
+				});
+				tests();
+			}
 		</script>
 	</head>
 	<body>
 		<form name="main">
-			Type your expression: <input id="cmd" type="text" />
-			<input type="button" value="Go!" onclick="process()" />
+			Type your expression:
+			<input id="cmd" type="text" onkeydown="kprocess" />
+			<input id="go" type="button" value="Go!" onclick="process()" />
 		</form>
 		<div id="output"></div>
 	</body>
