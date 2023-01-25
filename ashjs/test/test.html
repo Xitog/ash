@@ -109,6 +109,7 @@
 						"**",
 						"%",
 						// Booleans
+						"not",
 						"and",
 						"or",
 						// Affectation
@@ -140,19 +141,21 @@
 					blank: [" "],
 				},
 				precedences: {
-					"*": 5,
-					"/": 5,
-					"//": 5,
-					"**": 5,
-					"%": 5,
-					"+": 4,
-					"-": 4,
-					">": 3,
-					"<": 3,
-					">=": 3,
-					"<=": 3,
-					"==": 3,
-					"!=": 3,
+					"una-": 7,
+					"*": 6,
+					"/": 6,
+					"//": 6,
+					"**": 6,
+					"%": 6,
+					"+": 5,
+					"-": 5,
+					">": 4,
+					"<": 4,
+					">=": 4,
+					"<=": 4,
+					"==": 4,
+					"!=": 4,
+					not: 3,
 					and: 2,
 					or: 2,
 					"=": 1,
@@ -212,26 +215,33 @@
 				// Result
 				let res = document.createElement("pre");
 				container.appendChild(res);
-				res.innerHTML = "Result = " + execute(ns);
-				return container;
+				let result = execute(ns);
+				res.innerHTML = "Result = " + result;
+				return [container, result];
 			}
 
 			function tests() {
 				let tests = {
-					"Test 1": "2 + 3 * 5",
-					/*"Test 2": "(2 + 3) * 5",
-					"Test 3": "2 - 5",
-					"Test 4": "9 / 2",
-					"Test 5": "9 // 2",*/
+					"Test 1": ["2 + 3 * 5", 17],
+					"Test 2": ["(2 + 3) * 5", 25],
+					"Test 3": ["2 - 5", -3],
+					"Test 4": ["9 / 2", 4.5],
+					"Test 5": ["9 // 2", 4],
+					"Test 6": ["not false and true", true],
 				};
 				let output = document.getElementById("output");
-				for (const [name, cmd] of Object.entries(tests)) {
-					let nodes = lex(cmd);
-					for (const [i, n] of nodes.entries()) {
-						console.log(i, n);
+				for (const [name, content] of Object.entries(tests)) {
+					let cmd = content[0];
+					let expected = content[1];
+					console.log("===================================");
+					console.log(`${name}: ${cmd}. Expected: ${expected}`);
+					console.log("===================================");
+					let result = process(cmd);
+					if (result !== expected) {
+						throw new Error(
+							`Test error. Expected: ${expected} vs ${result}`
+						);
 					}
-					let res = test(name, nodes);
-					output.appendChild(res);
 				}
 			}
 
@@ -270,6 +280,10 @@
 							execute(node.left),
 							execute(node.right)
 						);
+					} else if (node.value.value === "una-") {
+						return -execute(node.left);
+					} else if (node.value.value === "not") {
+						return !execute(node.left);
 					} else if (node.value.value === "and") {
 						return execute(node.left) && execute(node.right);
 					} else if (node.value.value === "or") {
@@ -303,9 +317,17 @@
 				}
 			}
 
+			function d(lst) {
+				console.log("Affichage liste :");
+				for (const [i, e] of lst.entries()) {
+					console.log(i, e);
+				}
+			}
+
 			function parse(nodes) {
-				// We don't count ( and ) nodes
-				while (nodes.length > 1) {
+				let security = 100;
+				while (nodes.length > 1 && security > 0) {
+					security -= 1;
 					let max = 0;
 					let index = null;
 					let current_level = 1;
@@ -317,8 +339,10 @@
 									current_level
 								} and max=${max}`
 							);
+							// En cas d'égalité on prend le plus à gauche
+							// c'est obligatoire pour les opérateurs unaires
 							if (
-								language.precedences[n.value] * current_level >
+								language.precedences[n.value] * current_level >=
 								max
 							) {
 								console.log("Taken");
@@ -342,33 +366,46 @@
 						console.log(nodes.join(", "));
 						throw new Error(`No operator found`);
 					}
+					// Perimeter
 					let current = nodes[index];
+					let left,
+						right,
+						startDeleteAt,
+						deleteLength = null;
 					if (["binop", "expr:bin"].includes(current.type)) {
-						let left = nodes[index - 1];
-						let right = nodes[index + 1];
-						let startDeleteAt = index - 1;
-						let deleteLength = 3;
-						if (
-							index - 2 >= 0 &&
-							nodes[index - 2].value === "(" &&
-							index + 2 < nodes.length &&
-							nodes[index + 2].value === ")"
-						) {
-							startDeleteAt = index - 2;
-							deleteLength = 5;
-						}
-						console.log(
-							`Splicing from ${startDeleteAt} with length ${deleteLength}`
-						);
-						nodes.splice(
-							startDeleteAt,
-							deleteLength,
-							new Node("expr:bin", current, left, right)
-						);
+						left = nodes[index - 1];
+						right = nodes[index + 1];
+						startDeleteAt = index - 1;
+						deleteLength = 3;
+					} else if (current.type === "unaop") {
+						left = nodes[index + 1];
+						startDeleteAt = index;
+						deleteLength = 2;
 					} else {
 						throw new Error(`Unexpected type: ${current.type}`);
 					}
-					console.log(nodes);
+					// Deletion
+					if (
+						index - 2 >= 0 &&
+						nodes[index - 2].value === "(" &&
+						index + 2 < nodes.length &&
+						nodes[index + 2].value === ")"
+					) {
+						startDeleteAt = index - 2;
+						deleteLength += 2;
+					}
+					console.log(
+						`Splicing from ${startDeleteAt} with length ${deleteLength}`
+					);
+					nodes.splice(
+						startDeleteAt,
+						deleteLength,
+						new Node("expr:bin", current, left, right)
+					);
+					d(nodes);
+				}
+				if (security === 0) {
+					throw new Error("Infinite parsing loop, aborting.");
 				}
 				return nodes;
 			}
@@ -410,7 +447,7 @@
 					console.log(
 						`Matches: ${matches.length} and old: ${old_matches.length}`
 					);
-					if (matches.length === 0 && old_matches.length === 1) {
+					if (matches.length === 0 && old_matches.length > 0) {
 						console.log(`Adding node! ${old_matches[0]}`);
 						nodes.push(old_matches[0]);
 						word = "";
@@ -422,7 +459,7 @@
 					`Matches: ${matches.length} and old: ${old_matches.length}`
 				);
 				if (word.length > 0) {
-					if (old_matches.length === 1) {
+					if (old_matches.length > 0) {
 						nodes.push(old_matches[0]);
 						word = "";
 					} else {
@@ -439,37 +476,50 @@
 				nodes = nn;
 				// retag nodes
 				for (const [i, n] of nodes.entries()) {
-					let type = n.type;
 					if (n.type === "op") {
-						type = "binop";
-						if (i == 0) {
-							type = "unaop";
-						} else if (i - 1 > 0) {
-							if (nodes[i - 1].type === "sep") {
-								type = "unaop";
+						n.type = "binop";
+						if (n.value === "not") {
+							n.type = "unaop";
+						} else if (n.value === "-") {
+							console.log("BBB", i);
+							if (i == 0) {
+								n.type = "unaop";
+								n.value = "una-";
+							} else if (i - 1 >= 0) {
+								console.log(
+									"AAAAAAAAAAAAAAAAAAA",
+									nodes[i - 1].type
+								);
+								if (
+									["sep", "binop", "unaop"].includes(
+										nodes[i - 1].type
+									)
+								) {
+									n.type = "unaop";
+									n.value = "una-";
+								}
 							}
 						}
 					}
-					n.type = type;
 				}
 				console.log("End of lexing", code);
-				for (const [i, n] of nodes.entries()) {
-					console.log(i, n);
-				}
+				d(nodes);
 				return nodes;
 			}
 
-			function process() {
+			function clickprocess() {
 				let code = document.main.cmd.value;
-				let arr = code.split(" ");
-				let nodes = lex(cmd.value);
-				let output = document.getElementById("output");
-				let res = test(name, nodes);
-				output.prepend(res);
+				process(code);
 			}
 
-			function kprocess(event) {
-				alert(event.key);
+			function process(code) {
+				let nodes = lex(code);
+				let output = document.getElementById("output");
+				let res = test(name, nodes);
+				let container = res[0];
+				let result = res[1];
+				output.prepend(container); // appendChild
+				return result;
 			}
 
 			function main() {
@@ -488,8 +538,8 @@
 	<body>
 		<form name="main">
 			Type your expression:
-			<input id="cmd" type="text" onkeydown="kprocess" />
-			<input id="go" type="button" value="Go!" onclick="process()" />
+			<input id="cmd" type="text" />
+			<input id="go" type="button" value="Go!" onclick="clickprocess()" />
 		</form>
 		<div id="output"></div>
 	</body>
