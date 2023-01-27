@@ -135,9 +135,12 @@
 					"is",
 				],*/
 					sep: ["(", ")", "[", "]"],
-					int: [/^[1-9]\d*$/],
+					int: [/^[1-9]\d*$/, "0"],
+					float: [/^[1-9]\d*\.\d+$/],
+					wrong_float: [/^[1-9]\d*\.$/],
 					bool: ["true", "false"],
 					id: [/^[a-zA-Z_]\w*$/],
+					string: [/^"\w*"$/],
 					blank: [" "],
 				},
 				precedences: {
@@ -179,7 +182,7 @@
 				}
 
 				toHTMLTree(isRoot = false) {
-					if (!this.type.startsWith("expr:")) {
+					if (this.type !== "expr") {
 						return `<code>${this.value}</code>`;
 					} else {
 						let cls = "";
@@ -228,6 +231,9 @@
 					"Test 4": ["9 / 2", 4.5],
 					"Test 5": ["9 // 2", 4],
 					"Test 6": ["not false and true", true],
+					"Test 7": ["a + 0", 5],
+					"Test 8": ["4.2", 4.2],
+					"Test 9": ['"abc" + "def"', "abcdef"],
 				};
 				let output = document.getElementById("output");
 				for (const [name, content] of Object.entries(tests)) {
@@ -236,7 +242,7 @@
 					console.log("===================================");
 					console.log(`${name}: ${cmd}. Expected: ${expected}`);
 					console.log("===================================");
-					let result = process(cmd);
+					let result = process(name, cmd);
 					if (result !== expected) {
 						throw new Error(
 							`Test error. Expected: ${expected} vs ${result}`
@@ -254,6 +260,8 @@
 			function execute(node, symbol = false) {
 				if (node.type === "int") {
 					return parseInt(node.value);
+				} else if (node.type === "float") {
+					return parseFloat(node.value);
 				} else if (node.type === "bool") {
 					return node.value === "true";
 				} else if (node.type === "id") {
@@ -262,13 +270,24 @@
 					} else {
 						return node.value;
 					}
-				} else if (node.type === "expr:bin") {
+				} else if (node.type === "string") {
+					return node.value.substring(1, node.value.length - 1);
+				} else if (node.type === "expr") {
 					if (node.value.value === "+") {
 						return execute(node.left) + execute(node.right);
 					} else if (node.value.value === "-") {
 						return execute(node.left) - execute(node.right);
 					} else if (node.value.value === "*") {
-						return execute(node.left) * execute(node.right);
+						let left = execute(node.left);
+						let right = execute(node.right);
+						if (
+							typeof left === "string" &&
+							Number.isInteger(right)
+						) {
+							return left.repeat(right);
+						} else {
+							return left * right;
+						}
 					} else if (node.value.value === "/") {
 						return execute(node.left) / execute(node.right);
 					} else if (node.value.value === "//") {
@@ -372,7 +391,7 @@
 						right,
 						startDeleteAt,
 						deleteLength = null;
-					if (["binop", "expr:bin"].includes(current.type)) {
+					if (["binop", "expr"].includes(current.type)) {
 						left = nodes[index - 1];
 						right = nodes[index + 1];
 						startDeleteAt = index - 1;
@@ -400,7 +419,7 @@
 					nodes.splice(
 						startDeleteAt,
 						deleteLength,
-						new Node("expr:bin", current, left, right)
+						new Node("expr", current, left, right)
 					);
 					d(nodes);
 				}
@@ -509,10 +528,10 @@
 
 			function clickprocess() {
 				let code = document.main.cmd.value;
-				process(code);
+				process(">>>", code);
 			}
 
-			function process(code) {
+			function process(name, code) {
 				let nodes = lex(code);
 				let output = document.getElementById("output");
 				let res = test(name, nodes);
@@ -526,7 +545,6 @@
 				let input = document.getElementById("cmd");
 				input.addEventListener("keydown", function (event) {
 					if (event.key === "Enter") {
-						//process();
 						event.preventDefault();
 						document.getElementById("go").click();
 					}
