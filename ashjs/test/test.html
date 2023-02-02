@@ -144,6 +144,7 @@
 					blank: [" "],
 				},
 				precedences: {
+					"(": 8,
 					"una-": 7,
 					"*": 6,
 					"/": 6,
@@ -258,6 +259,10 @@
 				b: 2,
 				t: true,
 				f: false,
+				fun: function (s) {
+					console.log(s);
+					return s;
+				},
 			};
 			function execute(node, symbol = false) {
 				if (node.type === "int") {
@@ -278,6 +283,7 @@
 					let right =
 						node.right === null ? null : execute(node.right);
 					let op = node.value.value;
+					// Handling of affectation
 					if (op === "=") {
 						let symbol = execute(node.left, true);
 						if (typeof symbol !== "string") {
@@ -287,6 +293,16 @@
 						}
 						scope[symbol] = right;
 						return value;
+					}
+					// Handling of calling
+					if (op === "(") {
+						let symbol = execute(node.left, true);
+						if (typeof symbol !== "string") {
+							throw new Error(
+								"Left part of a calling should be an identifer"
+							);
+						}
+						return scope[symbol](right);
 					}
 					let left = execute(node.left);
 					// String ---------------------------------------
@@ -384,7 +400,17 @@
 					let index = null;
 					let current_level = 1;
 					for (const [i, n] of nodes.entries()) {
-						if (n.value in language.precedences) {
+						// Level of ( ). Warning: ( can be a sep OR a op-bin for call
+						if (n.value === "(") {
+							current_level *= 10;
+						} else if (n.value === ")") {
+							current_level /= 10;
+						}
+						// Selection of the most prioritary operator
+						if (
+							n.type.startsWith("op") &&
+							n.value in language.precedences
+						) {
 							console.log(
 								`Test on ${n} with lvl=${current_level} got ${
 									language.precedences[n.value] *
@@ -403,12 +429,14 @@
 									language.precedences[n.value] *
 									current_level;
 							}
-						} else if (n.value === "(") {
-							current_level *= 10;
-						} else if (n.value === ")") {
-							current_level /= 10;
 						}
 					}
+					if (current_level !== 1) {
+						throw new Error(
+							`Mismatched parenthesis: ${current_level}`
+						);
+					}
+
 					console.log(`Index node chosen: ${index} with max=${max}`);
 					if (max !== 0) {
 						console.log(`Node chosen: ${nodes[index]})`);
@@ -424,19 +452,19 @@
 						right,
 						startDeleteAt,
 						deleteLength = null;
-					if (["binop", "expr"].includes(current.type)) {
+					if (["op-bin", "expr"].includes(current.type)) {
 						left = nodes[index - 1];
 						right = nodes[index + 1];
 						startDeleteAt = index - 1;
 						deleteLength = 3;
-					} else if (current.type === "unaop") {
+					} else if (current.type === "op-una") {
 						left = nodes[index + 1];
 						startDeleteAt = index;
 						deleteLength = 2;
 					} else {
 						throw new Error(`Unexpected type: ${current.type}`);
 					}
-					// Deletion
+					// Deletion of sep ( )
 					if (
 						index - 2 >= 0 &&
 						nodes[index - 2].value === "(" &&
@@ -445,6 +473,20 @@
 					) {
 						startDeleteAt = index - 2;
 						deleteLength += 2;
+					}
+					// Deletation of sep ) after a calling (
+					if (current.type === "op-bin" && current.value === "(") {
+						if (
+							index + 2 >= nodes.length ||
+							nodes[index + 2].type !== "sep" ||
+							nodes[index + 2].value !== ")"
+						) {
+							throw new Error(
+								"Calling opening parenthesis not matched" // Should never be called due to Mismatched parenthesis error before
+							);
+						} else {
+							deleteLength += 1;
+						}
 					}
 					console.log(
 						`Splicing from ${startDeleteAt} with length ${deleteLength}`
@@ -529,27 +571,28 @@
 				// retag nodes
 				for (const [i, n] of nodes.entries()) {
 					if (n.type === "op") {
-						n.type = "binop";
+						n.type = "op-bin";
 						if (n.value === "not") {
-							n.type = "unaop";
+							n.type = "op-una";
 						} else if (n.value === "-") {
-							console.log("BBB", i);
 							if (i == 0) {
-								n.type = "unaop";
+								n.type = "op-una";
 								n.value = "una-";
 							} else if (i - 1 >= 0) {
-								console.log(
-									"AAAAAAAAAAAAAAAAAAA",
-									nodes[i - 1].type
-								);
 								if (
-									["sep", "binop", "unaop"].includes(
+									["sep", "op-bin", "op-una"].includes(
 										nodes[i - 1].type
 									)
 								) {
-									n.type = "unaop";
+									n.type = "op-una";
 									n.value = "una-";
 								}
+							}
+						}
+					} else if (n.type === "sep") {
+						if (i - 1 >= 0) {
+							if (nodes[i - 1].type === "id") {
+								n.type = "op-bin";
 							}
 						}
 					}
@@ -587,17 +630,24 @@
 		</script>
 	</head>
 	<body>
-		<form name="main">
-			Type your expression:
-			<input id="cmd" type="text" />
-			<input id="go" type="button" value="Go!" onclick="clickprocess()" />
-			<input
-				id="res"
-				type="text"
-				disabled
-				style="background-color: gainsboro"
-			/>
-		</form>
+		<div style="text-align: center; padding-top: 70px">
+			<form name="main">
+				Type your expression:
+				<input id="cmd" type="text" />
+				<input
+					id="go"
+					type="button"
+					value="Go!"
+					onclick="clickprocess()"
+				/>
+				<input
+					id="res"
+					type="text"
+					disabled
+					style="background-color: gainsboro"
+				/>
+			</form>
+		</div>
 		<div id="output"></div>
 	</body>
 </html>
