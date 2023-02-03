@@ -12,31 +12,40 @@
 			/* It's supposed to look like a tree diagram */
 			.tree,
 			.tree ul,
-			.tree li {
+			.tree li,
+			.monotree,
+			.monotree ul,
+			.monotree li {
 				list-style: none;
 				margin: 0;
 				padding: 0;
 				position: relative;
 			}
 
-			.tree {
+			.tree,
+			.monotree {
 				margin: 0 0 1em;
 				text-align: center;
 			}
 			.tree,
-			.tree ul {
+			.tree ul,
+			.monotree,
+			.monotree ul {
 				display: table;
 			}
-			.tree ul {
+			.tree ul,
+			.monotree ul {
 				width: 100%;
 			}
-			.tree li {
+			.tree li,
+			.monotree li {
 				display: table-cell;
 				padding: 0.5em 0;
 				vertical-align: top;
 			}
 			/* _________ */
-			.tree li:before {
+			.tree li:before,
+			.monotree li:before {
 				outline: solid 1px #666;
 				content: "";
 				left: 0;
@@ -44,15 +53,18 @@
 				right: 0;
 				top: 0;
 			}
-			.tree li:first-child:before {
+			.tree li:first-child:before,
+			.monotree li:first-child:before {
 				left: 50%;
 			}
-			.tree li:last-child:before {
+			.tree li:last-child:before,
+			.monotree li:last-child:before {
 				right: 50%;
 			}
 
 			.tree code,
-			.tree span {
+			.tree span,
+			.monotree code {
 				border: solid 0.1em #666;
 				border-radius: 0.2em;
 				display: inline-block;
@@ -61,7 +73,8 @@
 				position: relative;
 			}
 			/* If the tree represents DOM structure */
-			.tree code {
+			.tree code,
+			.monotree code {
 				font-family: monaco, Consolas, "Lucida Console", monospace;
 			}
 
@@ -92,6 +105,11 @@
 			.tree > li > code:before,
 			.tree > li > span:before {
 				outline: none;
+			}
+
+			.tree li[data-type="expr"] > code,
+			.monotree li[data-type="expr"] > code {
+				background-color: #ffcccb;
 			}
 		</style>
 		<script>
@@ -184,13 +202,17 @@
 
 				toHTMLTree(isRoot = false) {
 					if (this.type !== "expr") {
-						return `<code>${this.value}</code>`;
+						if (isRoot) {
+							return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
+						} else {
+							return `<code>${this.value}</code>`;
+						}
 					} else {
 						let cls = "";
 						if (isRoot) {
 							cls = ' class="tree"';
 						}
-						let s = `<ul ${cls}><li><code>${this.value.value}</code><ul>`;
+						let s = `<ul ${cls}><li data-type="${this.type}"><code>${this.value.value}</code><ul>`;
 						s += "<li>" + this.left.toHTMLTree() + "</li>";
 						if (this.right !== null) {
 							s += "<li>" + this.right.toHTMLTree() + "</li>";
@@ -201,7 +223,8 @@
 				}
 			}
 
-			function test(name, nodes) {
+			function test(name, code, debug_lex, debug_parse) {
+				let nodes = lex(code, debug_lex);
 				let container = document.createElement("div");
 				// Title
 				let title = document.createElement("h1");
@@ -212,7 +235,7 @@
 				input.innerHTML = nodes.map((x) => x.toHTML()).join(", ");
 				container.appendChild(input);
 				// Parsed nodes
-				let ns = parse(nodes)[0];
+				let ns = parse(nodes, debug_parse)[0];
 				let root = document.createElement("div");
 				container.appendChild(root);
 				root.innerHTML = ns.toHTMLTree(true);
@@ -263,6 +286,9 @@
 					console.log(s);
 					return s;
 				},
+				noarg: function () {
+					console.log("fonction sans arg");
+				},
 			};
 			function execute(node, symbol = false) {
 				if (node.type === "int") {
@@ -273,6 +299,13 @@
 					return node.value === "true";
 				} else if (node.type === "id") {
 					if (!symbol) {
+						if (scope[node.value] instanceof Function) {
+							let val = scope[node.value]();
+							if (val === undefined || val === null) {
+								return "nil"; // replace by nil object
+							}
+							return val;
+						}
 						return scope[node.value];
 					} else {
 						return node.value;
@@ -392,7 +425,7 @@
 				}
 			}
 
-			function parse(nodes) {
+			function parse(nodes, debug) {
 				let security = 100;
 				while (nodes.length > 1 && security > 0) {
 					security -= 1;
@@ -411,19 +444,23 @@
 							n.type.startsWith("op") &&
 							n.value in language.precedences
 						) {
-							console.log(
-								`Test on ${n} with lvl=${current_level} got ${
-									language.precedences[n.value] *
-									current_level
-								} and max=${max}`
-							);
+							if (debug) {
+								console.log(
+									`Test on ${n} with lvl=${current_level} got ${
+										language.precedences[n.value] *
+										current_level
+									} and max=${max}`
+								);
+							}
 							// En cas d'égalité on prend le plus à gauche
 							// c'est obligatoire pour les opérateurs unaires
 							if (
 								language.precedences[n.value] * current_level >=
 								max
 							) {
-								console.log("Taken");
+								if (debug) {
+									console.log("Taken");
+								}
 								index = i;
 								max =
 									language.precedences[n.value] *
@@ -437,9 +474,10 @@
 						);
 					}
 
-					console.log(`Index node chosen: ${index} with max=${max}`);
-					if (max !== 0) {
-						console.log(`Node chosen: ${nodes[index]})`);
+					if (debug && max !== 0) {
+						console.log(
+							`Index node chosen @${index} ${nodes[index]} with max=${max}`
+						);
 					}
 					if (max === 0) {
 						console.log("ERROR");
@@ -488,15 +526,19 @@
 							deleteLength += 1;
 						}
 					}
-					console.log(
-						`Splicing from ${startDeleteAt} with length ${deleteLength}`
-					);
+					if (debug) {
+						console.log(
+							`Splicing from ${startDeleteAt} with length ${deleteLength}`
+						);
+					}
 					nodes.splice(
 						startDeleteAt,
 						deleteLength,
 						new Node("expr", current, left, right)
 					);
-					d(nodes);
+					if (debug) {
+						d(nodes);
+					}
 				}
 				if (security === 0) {
 					throw new Error("Infinite parsing loop, aborting.");
@@ -504,54 +546,70 @@
 				return nodes;
 			}
 
-			function lex(code) {
+			function lex(code, debug) {
 				let nodes = [];
 				let word = "";
 				let matches = [];
 				let old_matches = [];
 				for (let index = 0; index < code.length; index += 1) {
-					console.log(index);
+					if (debug) {
+						console.log(index);
+					}
 					if (index > 20) {
 						throw new Error("too much");
 					}
 					let c = code[index];
 					word += c;
-					console.log(`Word is |${word}|`);
+					if (debug) {
+						console.log(`Word is |${word}|`);
+					}
 					matches = [];
 					for (const [t, elems] of Object.entries(language.tokens)) {
 						for (const e of elems) {
 							let res = false;
 							if (e instanceof RegExp) {
 								if (e.test(word)) {
-									console.log(
-										`matched ${t} with ${e} for ${word}`
-									);
+									if (debug) {
+										console.log(
+											`matched ${t} with ${e} for ${word}`
+										);
+									}
 									matches.push(new Node(t, word));
 									res = true;
 								}
 							} else if (e === word) {
-								console.log(`matched ${t}`);
+								if (debug) {
+									console.log(`matched ${t}`);
+								}
 								matches.push(new Node(t, word));
 								res = true;
 								break;
 							}
-							console.log(`...against |${e}| = ${res}`);
+							if (debug) {
+								console.log(`...against |${e}| = ${res}`);
+							}
 						}
 					}
-					console.log(
-						`Matches: ${matches.length} and old: ${old_matches.length}`
-					);
+					if (debug) {
+						console.log(
+							`Matches: ${matches.length} and old: ${old_matches.length}`
+						);
+					}
 					if (matches.length === 0 && old_matches.length > 0) {
-						console.log(`Adding node! ${old_matches[0]}`);
+						if (debug) {
+							console.log(`Adding node! ${old_matches[0]}`);
+						}
 						nodes.push(old_matches[0]);
 						word = "";
 						index -= 1;
 					}
 					old_matches = matches;
 				}
-				console.log(
-					`Matches: ${matches.length} and old: ${old_matches.length}`
-				);
+				if (debug) {
+					console.log(
+						`Matches: ${matches.length} and old: ${old_matches.length}`
+					);
+				}
 				if (word.length > 0) {
 					if (old_matches.length > 0) {
 						nodes.push(old_matches[0]);
@@ -597,8 +655,10 @@
 						}
 					}
 				}
-				console.log("End of lexing", code);
-				d(nodes);
+				if (debug) {
+					console.log("End of lexing", code);
+					d(nodes);
+				}
 				return nodes;
 			}
 
@@ -608,9 +668,11 @@
 			}
 
 			function process(name, code) {
-				let nodes = lex(code);
 				let output = document.getElementById("output");
-				let res = test(name, nodes);
+				let debug_lex = document.getElementById("debug_lex").checked;
+				let debug_parse =
+					document.getElementById("debug_parse").checked;
+				let res = test(name, code, debug_lex, debug_parse);
 				let container = res[0];
 				let result = res[1];
 				output.prepend(container); // appendChild
@@ -630,14 +692,16 @@
 		</script>
 	</head>
 	<body>
-		<div style="text-align: center; padding-top: 70px">
+		<div
+			style="text-align: center; padding-top: 70px; padding-bottom: 70px"
+		>
 			<form name="main">
 				Type your expression:
 				<input id="cmd" type="text" />
 				<input
 					id="go"
 					type="button"
-					value="Go!"
+					value="Run"
 					onclick="clickprocess()"
 				/>
 				<input
@@ -646,6 +710,21 @@
 					disabled
 					style="background-color: gainsboro"
 				/>
+				Debug :
+				<input
+					id="debug_lex"
+					name="debug_lex"
+					type="checkbox"
+					onchange="console.clear()"
+				/>
+				<label for="debug_lex">Lex</label>
+				<input
+					id="debug_parse"
+					name="debug_parse"
+					type="checkbox"
+					onchange="console.clear()"
+				/>
+				<label for="debug_parse">Parse</label>
 			</form>
 		</div>
 		<div id="output"></div>
