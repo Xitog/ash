@@ -299,6 +299,7 @@
 					return node.value === "true";
 				} else if (node.type === "id") {
 					if (!symbol) {
+						// Function call without parameters
 						if (scope[node.value] instanceof Function) {
 							let val = scope[node.value]();
 							if (val === undefined || val === null) {
@@ -334,6 +335,9 @@
 							throw new Error(
 								"Left part of a calling should be an identifer"
 							);
+						}
+						if (!(scope[symbol] instanceof Function)) {
+							throw new Error(`${symbol} is not a function.`);
 						}
 						return scope[symbol](right);
 					}
@@ -433,12 +437,6 @@
 					let index = null;
 					let current_level = 1;
 					for (const [i, n] of nodes.entries()) {
-						// Level of ( ). Warning: ( can be a sep OR a op-bin for call
-						if (n.value === "(") {
-							current_level *= 10;
-						} else if (n.value === ")") {
-							current_level /= 10;
-						}
 						// Selection of the most prioritary operator
 						if (
 							n.type.startsWith("op") &&
@@ -466,6 +464,13 @@
 									language.precedences[n.value] *
 									current_level;
 							}
+						}
+						// Level of ( ). Warning: ( can be a sep OR a op-bin for call
+						// ( add to current level but must be counted as outside
+						if (n.value === "(") {
+							current_level *= 10;
+						} else if (n.value === ")") {
+							current_level /= 10;
 						}
 					}
 					if (current_level !== 1) {
@@ -506,6 +511,7 @@
 					if (
 						index - 2 >= 0 &&
 						nodes[index - 2].value === "(" &&
+						nodes[index - 2].type === "sep" && // don't delete ( in function call !
 						index + 2 < nodes.length &&
 						nodes[index + 2].value === ")"
 					) {
