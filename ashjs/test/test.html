@@ -139,6 +139,8 @@
 						"<=",
 						">=",
 						">",
+						// List
+						",",
 					],
 					/*
 					"%",
@@ -162,27 +164,52 @@
 					blank: [" "],
 				},
 				precedences: {
-					"(": 8,
-					"una-": 7,
-					"*": 6,
-					"/": 6,
-					"//": 6,
-					"**": 6,
-					"%": 6,
-					"+": 5,
-					"-": 5,
-					">": 4,
-					"<": 4,
-					">=": 4,
-					"<=": 4,
-					"==": 4,
-					"!=": 4,
-					not: 3,
-					and: 2,
-					or: 2,
+					"(": 9,
+					"una-": 8,
+					"*": 7,
+					"/": 7,
+					"//": 7,
+					"**": 7,
+					"%": 7,
+					"+": 6,
+					"-": 6,
+					">": 5,
+					"<": 5,
+					">=": 5,
+					"<=": 5,
+					"==": 5,
+					"!=": 5,
+					not: 4,
+					and: 3,
+					or: 3,
+					",": 2,
 					"=": 1,
 				},
 			};
+
+			class NodeList {
+				constructor() {
+					this.nodes = [];
+				}
+				unshift(n) {
+					this.nodes.unshift(n);
+				}
+				push(n) {
+					this.nodes.push(n);
+				}
+				get(i) {
+					return this.nodes[i];
+				}
+				getList() {
+					return this.nodes;
+				}
+				getSize() {
+					return this.nodes.length;
+				}
+				toString() {
+					return `NodeList of ${this.nodes.length} elements`;
+				}
+			}
 
 			class Node {
 				constructor(type, value, left = null, right = null) {
@@ -289,6 +316,17 @@
 				noarg: function () {
 					console.log("fonction sans arg");
 				},
+				add: function (args) {
+					if (!(args instanceof NodeList)) {
+						throw new Error("Parameters should be a NodeList");
+					}
+					if (args.getSize() !== 2) {
+						throw new Error("Add take two parameters");
+					}
+					let arg1 = args.get(0);
+					let arg2 = args.get(1);
+					return arg1 + arg2;
+				},
 			};
 			function execute(node, symbol = false) {
 				if (node.type === "int") {
@@ -342,6 +380,18 @@
 						return scope[symbol](right);
 					}
 					let left = execute(node.left);
+					// Handling of list
+					if (op === ",") {
+						if (left instanceof NodeList) {
+							left.unshift(right);
+						} else {
+							let nx = new NodeList();
+							nx.unshift(left);
+							nx.unshift(right);
+							left = nx;
+						}
+						return left;
+					}
 					// String ---------------------------------------
 					if (typeof left === "string") {
 						if (op === "+") {
