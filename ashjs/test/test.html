@@ -381,8 +381,8 @@
 					let radius = args.get(2);
 					let color = args.get(3);
 					let full = args.get(4);
-					var canvas = document.getElementById("screen");
-					var context = canvas.getContext("2d");
+					let canvas = document.getElementById("screen");
+					let context = canvas.getContext("2d");
 					context.beginPath();
 					context.arc(
 						centerX,
@@ -404,8 +404,8 @@
 				rect: function (args) {
 					// x y w h color full
 					console.log("function rect", args);
-					var canvas = document.getElementById("screen");
-					var context = canvas.getContext("2d");
+					let canvas = document.getElementById("screen");
+					let context = canvas.getContext("2d");
 					context.fillStyle = args.get(4);
 					context.strokeStyle = args.get(4);
 					console.log(context.fillStyle);
@@ -424,6 +424,27 @@
 							args.get(3)
 						);
 					}
+				},
+				clear: function (args) {
+					console.log("function clear", args);
+					let canvas = document.getElementById("screen");
+					let context = canvas.getContext("2d");
+					context.clearRect(0, 0, 640, 480);
+				},
+				line: function (args) {
+					console.log("function line", args);
+					var canvas = document.getElementById("screen");
+					let context = canvas.getContext("2d");
+					let x1 = args.get(0);
+					let y1 = args.get(1);
+					let x2 = args.get(2);
+					let y2 = args.get(3);
+					context.lineWidth = args.get(4);
+					context.strokeStyle = args.get(5);
+					context.beginPath();
+					context.moveTo(x1, y1);
+					context.lineTo(x2, y2);
+					context.stroke();
 				},
 			};
 			function execute(node, symbol = false, debug = false) {
