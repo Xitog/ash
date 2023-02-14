@@ -217,13 +217,6 @@
 				},
 			};
 
-			class NilClass {
-				toString() {
-					return "nil";
-				}
-			}
-			const nil = new NilClass();
-
 			class NodeList {
 				constructor() {
 					this.nodes = [];
@@ -287,6 +280,100 @@
 				}
 			}
 
+			//-----------------------------------------------------------------
+			// Classes for execution
+			//-----------------------------------------------------------------
+
+			class NilClass {
+				toString() {
+					return "nil";
+				}
+			}
+			const nil = new NilClass();
+
+			class AshParameter {
+				constructor(name, type = "any", def = nil) {
+					this.name = name;
+					this.type = type;
+					this.def = def;
+				}
+			}
+
+			class AshFunction {
+				constructor(name, paramList, code) {
+					this.name = name;
+					this.paramList = paramList;
+					this.code = code;
+				}
+				call(argList) {
+					if (!(argList instanceof NodeList)) {
+						throw new Error(
+							`Parameters should be a NodeList and is a ${typeof argList}`
+						);
+					}
+					if (argList.getSize() > this.paramList.length) {
+						throw new Error(
+							`Too many parameters: maximum expected is ${this.paramList.length} and ${argList.length} were provided.`
+						);
+					}
+					for (
+						let index = 0;
+						index < this.paramList.length;
+						index++
+					) {
+						let param = this.paramList[index];
+						if (index < argList.getSize()) {
+							let arg = argList.get(index);
+							if (param.type !== "any") {
+								if (param.type === "int") {
+									if (
+										!(arg instanceof Number) ||
+										!Number.isInteger(left)
+									) {
+										throw new Error(
+											`Parameter ${index} should be an integer.`
+										);
+									}
+								} else if (param.type === "flt") {
+									if (typeof arg !== "number") {
+										throw new Error(
+											`Parameter ${arg} at ${index} should be a number and is a ${typeof arg}.`
+										);
+									}
+								} else if (param.type === "bool") {
+									if (!(arg instanceof Boolean)) {
+										throw new Error(
+											`Parameter ${index} should be an boolean.`
+										);
+									}
+								} else if (param.type === "str") {
+									if (!(arg instanceof String)) {
+										throw new Error(
+											`Parameter ${index} should be a string.`
+										);
+									}
+								}
+							}
+						} else {
+							if (param.def === nil) {
+								throw new Error(
+									`Not enough parameter: function ${
+										this.name
+									} requires ${
+										this.paramList.length
+									} parameters and ${argList.getSize()} were given.`
+								);
+							}
+						}
+					}
+					return this.code(argList);
+				}
+			}
+
+			//-----------------------------------------------------------------
+			// Functions
+			//-----------------------------------------------------------------
+
 			function test(name, code, debug_lex, debug_parse, debug_execute) {
 				let nodes = lex(code, debug_lex);
 				let container = document.createElement("div");
@@ -349,24 +436,26 @@
 				t: true,
 				f: false,
 				fun: function (s) {
-					console.log(s);
-					return s;
+					let arg = s[0];
+					console.log(arg);
+					return arg;
 				},
 				noarg: function () {
 					console.log("fonction sans arg");
 					return nil;
 				},
-				add: function (args) {
-					if (!(args instanceof NodeList)) {
-						throw new Error("Parameters should be a NodeList");
+				add: new AshFunction(
+					"add",
+					[
+						new AshParameter("x", "flt"),
+						new AshParameter("y", "flt"),
+					],
+					function (args) {
+						let arg1 = args.get(0);
+						let arg2 = args.get(1);
+						return arg1 + arg2;
 					}
-					if (args.getSize() !== 2) {
-						throw new Error("Add takes 2 parameters");
-					}
-					let arg1 = args.get(0);
-					let arg2 = args.get(1);
-					return arg1 + arg2;
-				},
+				),
 				circle: function (args) {
 					console.log("function circle", args);
 					// x, y, r, color, full
@@ -447,6 +536,7 @@
 					context.stroke();
 				},
 			};
+
 			function execute(node, symbol = false, debug = false) {
 				if (node.type === "int") {
 					return parseInt(node.value);
@@ -495,10 +585,18 @@
 								"Left part of a calling should be an identifer"
 							);
 						}
-						if (!(scope[symbol] instanceof Function)) {
+						if (!(right instanceof NodeList)) {
+							let nx = new NodeList();
+							nx.unshift(right);
+							right = nx;
+						}
+						if (scope[symbol] instanceof AshFunction) {
+							return scope[symbol].call(right);
+						} else if (scope[symbol] instanceof Function) {
+							return scope[symbol](right);
+						} else {
 							throw new Error(`${symbol} is not a function.`);
 						}
-						return scope[symbol](right);
 					}
 					let left = execute(node.left, false, debug);
 					// Handling of list
@@ -851,6 +949,7 @@
 			}
 
 			function process(name, code) {
+				console.clear();
 				let output = document.getElementById("output");
 				let debug_lex = document.getElementById("debug_lex").checked;
 				let debug_parse =
