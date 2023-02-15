@@ -297,6 +297,14 @@
 					this.type = type;
 					this.def = def;
 				}
+
+				toString() {
+					let extra = "";
+					if (this.def !== nil) {
+						extra = ` = ${this.def}`;
+					}
+					return `${this.name} : ${this.type}${extra}`;
+				}
 			}
 
 			class AshFunction {
@@ -305,6 +313,15 @@
 					this.paramList = paramList;
 					this.code = code;
 				}
+
+				toString() {
+					return (
+						`function ${this.name} (` +
+						this.paramList.map((x) => x.toString()).join(", ") +
+						")"
+					);
+				}
+
 				call(argList) {
 					if (!(argList instanceof NodeList)) {
 						throw new Error(
@@ -357,9 +374,7 @@
 						} else {
 							if (param.def === nil) {
 								throw new Error(
-									`Not enough parameter: function ${
-										this.name
-									} requires ${
+									`Not enough parameter: ${this} requires ${
 										this.paramList.length
 									} parameters and ${argList.getSize()} were given.`
 								);
