@@ -165,6 +165,379 @@ class AshFunction {
 	}
 }
 
+class AshParser {
+	constructor() {
+		this.index = 0;
+		this.nodes = [];
+		this.debug = false;
+		this.current = null;
+	}
+	shift(until = null) {
+		if (until === null) {
+			this.index += 1;
+		} else {
+			this.index = until;
+		}
+		if (this.index >= this.nodes.length) {
+			this.current = null;
+		} else {
+			this.current = this.nodes[this.index];
+		}
+		return this.current;
+	}
+	findFirstNode(type, value) {
+		for (let i = this.index; i < this.nodes.length; i++) {
+			let n = this.nodes[i];
+			if (n.type === type && n.value === value) {
+				return i;
+			}
+		}
+		throw new Error(
+			`Impossible to find next node of type=${type} and value=${value}`
+		);
+	}
+	findEndingNode() {
+		let level = 1;
+		for (let i = this.index; i < this.nodes.length; i++) {
+			let n = this.nodes[i];
+			if (["if", "while"].includes(n.value)) {
+				level += 1;
+			} else if (n.value === "end") {
+				level -= 1;
+			}
+			if (level === 0) {
+				return i;
+			}
+		}
+		throw new Error(`Impossible to find ending node.`);
+	}
+	parse(nodes, debug) {
+		this.index = 0;
+		this.nodes = nodes;
+		this.debug = debug;
+		this.current = this.nodes[this.index];
+		return this.parseStart();
+	}
+	parseStart(until = null) {
+		if (this.debug) {
+			let end = until === null ? this.nodes.length : until;
+			console.log(`parseStart from ${this.index} to ${until}`);
+		}
+		let res = null;
+		if (this.current.type === "keyword" && this.current.value === "if") {
+			res = this.parseIf(until);
+		} else {
+			res = this.parseExpression(until);
+		}
+		if (res === null || res === undefined) {
+			throw new Error("Something went wrong in parsing. Aborting.");
+		}
+		return res;
+	}
+	parseIf(until = null) {
+		if (this.debug) {
+			let end = until === null ? this.nodes.length : until;
+			console.log(`parseIf from ${this.index} to ${until}`);
+		}
+		this.shift(); // remove if
+		let indexThen = this.findFirstNode("keyword", "then");
+		let condition = this.parseExpression(indexThen);
+		this.shift(); // remove then
+		let indexEnd = this.findEndingNode();
+		let action = this.parseStart(indexEnd);
+		this.shift(); // remove end
+		return new Node("if", condition, action); // Promoting node from keyword to if
+	}
+	parseExpression(until = null) {
+		if (until === null) {
+			until = this.nodes.length;
+		}
+		// make a local shallow copy
+		let nodes = Array.from(this.nodes.slice(this.index, until));
+		if (this.debug) {
+			console.log(`parseExpression from ${this.index} to ${until}`);
+			d(nodes);
+		}
+		// in advance, we set the index to the end
+		this.shift(until);
+		let security = 100;
+		while (nodes.length > 1 && security > 0) {
+			security -= 1;
+			let max = 0;
+			let index = null;
+			let current_level = 1;
+			for (const [i, n] of nodes.entries()) {
+				// Selection of the most prioritary operator
+				if (
+					["binop", "unaop"].includes(n.type) &&
+					n.value in language.precedences
+				) {
+					if (this.debug) {
+						console.log(
+							`Test on ${n} with lvl=${current_level} got ${
+								language.precedences[n.value] * current_level
+							} and max=${max}`
+						);
+					}
+					// En cas d'égalité on prend le plus à gauche
+					// c'est obligatoire pour les opérateurs unaires
+					if (language.precedences[n.value] * current_level >= max) {
+						if (this.debug) {
+							console.log("Taken");
+						}
+						index = i;
+						max = language.precedences[n.value] * current_level;
+					}
+				}
+				// Level of ( ). Warning: ( can be a sep OR a binop for call
+				// ( add to current level but must be counted as outside
+				if (n.value === "(") {
+					current_level *= 10;
+				} else if (n.value === ")") {
+					current_level /= 10;
+				}
+			}
+			if (current_level !== 1) {
+				throw new Error(`Mismatched parenthesis: ${current_level}`);
+			}
+
+			if (this.debug && max !== 0) {
+				console.log(
+					`Index node chosen @${index} ${nodes[index]} with max=${max}`
+				);
+			}
+			if (max === 0) {
+				console.log("ERROR");
+				console.log(nodes.join(", "));
+				throw new Error(`No operator found`);
+			}
+			// Perimeter
+			let current = nodes[index];
+			let left,
+				right,
+				startDeleteAt,
+				deleteLength = null;
+			if (["binop", "expr"].includes(current.type)) {
+				left = nodes[index - 1];
+				right = nodes[index + 1];
+				startDeleteAt = index - 1;
+				deleteLength = 3;
+			} else if (current.type === "unaop") {
+				left = nodes[index + 1];
+				startDeleteAt = index;
+				deleteLength = 2;
+			} else {
+				throw new Error(`Unexpected type: ${current.type}`);
+			}
+			// Deletion of sep ( )
+			if (
+				index - 2 >= 0 &&
+				nodes[index - 2].value === "(" &&
+				nodes[index - 2].type === "sep" && // don't delete ( in function call !
+				index + 2 < nodes.length &&
+				nodes[index + 2].value === ")"
+			) {
+				startDeleteAt = index - 2;
+				deleteLength += 2;
+			}
+			// Deletation of sep ) after a calling (
+			if (current.type === "binop" && current.value === "(") {
+				if (
+					index + 2 >= nodes.length ||
+					nodes[index + 2].type !== "sep" ||
+					nodes[index + 2].value !== ")"
+				) {
+					throw new Error(
+						"Calling opening parenthesis not matched" // Should never be called due to Mismatched parenthesis error before
+					);
+				} else {
+					deleteLength += 1;
+				}
+			}
+			if (this.debug) {
+				console.log(
+					`Splicing from ${startDeleteAt} with length ${deleteLength}`
+				);
+			}
+			nodes.splice(
+				startDeleteAt,
+				deleteLength,
+				new Node("expr", current, left, right)
+			);
+			if (this.debug) {
+				d(nodes);
+			}
+		}
+		if (security === 0) {
+			throw new Error("Infinite parsing loop, aborting.");
+		}
+		if (this.debug) {
+			console.log("Ending parseExpression");
+			d(nodes);
+		}
+		return nodes[0];
+	}
+}
+
+class AshInterpreter {
+	execute(node, symbol = false, debug = false) {
+		if (node.type === "int") {
+			return parseInt(node.value);
+		} else if (node.type === "float") {
+			return parseFloat(node.value);
+		} else if (node.type === "bool") {
+			return node.value === "true";
+		} else if (node.type === "id") {
+			if (!symbol) {
+				// Function call without parameters
+				if (scope[node.value] instanceof Function) {
+					let val = scope[node.value]();
+					if (val === undefined || val === null) {
+						return "nil"; // replace by nil object
+					}
+					return val;
+				}
+				return scope[node.value];
+			} else {
+				return node.value;
+			}
+		} else if (node.type === "string") {
+			return node.value.substring(1, node.value.length - 1);
+		} else if (node.type === "expr") {
+			let right =
+				node.right === null
+					? null
+					: this.execute(node.right, false, debug);
+			let op = node.value.value;
+			// Handling of affectation
+			if (op === "=") {
+				let symbol = this.execute(node.left, true, debug);
+				if (typeof symbol !== "string") {
+					throw new Error(
+						"Left part of an affectation should be an identifer"
+					);
+				}
+				scope[symbol] = right;
+				return right;
+			}
+			// Handling of calling
+			if (op === "(") {
+				let symbol = this.execute(node.left, true, debug);
+				if (typeof symbol !== "string") {
+					throw new Error(
+						"Left part of a calling should be an identifer"
+					);
+				}
+				if (!(right instanceof NodeList)) {
+					let nx = new NodeList();
+					nx.unshift(right);
+					right = nx;
+				}
+				if (scope[symbol] instanceof AshFunction) {
+					return scope[symbol].call(right);
+				} else if (scope[symbol] instanceof Function) {
+					return scope[symbol](right);
+				} else {
+					throw new Error(`${symbol} is not a function.`);
+				}
+			}
+			let left = this.execute(node.left, false, debug);
+			// Handling of list
+			if (op === ",") {
+				if (right instanceof NodeList) {
+					right.unshift(left);
+					if (debug) {
+						console.log("Adding to NodeList", right);
+					}
+				} else {
+					let nx = new NodeList();
+					nx.unshift(right);
+					nx.unshift(left);
+					right = nx;
+					if (debug) {
+						console.log("Creating new NodeList", right);
+					}
+				}
+				return right;
+			}
+			// String ---------------------------------------
+			if (typeof left === "string") {
+				if (op === "+") {
+					if (typeof right !== "string") {
+						throw new Error("Can only add a string to a string");
+					}
+					return left + right;
+				} else if (op === "*") {
+					if (typeof right !== "number") {
+						throw new Error("Can only repeat a string by a number");
+					}
+					return left.repeat(Math.floor(right));
+				} else {
+					throw new Error(`Unsupported operator ${op} for string`);
+				}
+			} else if (typeof left === "number") {
+				if (op === "+") {
+					return left + right;
+				} else if (op === "-") {
+					return left - right;
+				} else if (op === "*") {
+					return left * right;
+				} else if (op === "/") {
+					return left / right;
+				} else if (op === "//") {
+					return Math.floor(left / right);
+				} else if (op === "**") {
+					return Math.pow(left, right);
+				} else if (op === "%") {
+					return left % right;
+				} else if (op === "<") {
+					return left < right;
+				} else if (op === "<=") {
+					return left <= right;
+				} else if (op === ">") {
+					return left > right;
+				} else if (op === ">=") {
+					return left >= right;
+				} else if (op === "==") {
+					return left === right;
+				} else if (op === "!=") {
+					return left !== right;
+				} else if (op === "una-") {
+					return -left;
+				} else {
+					let type = Number.isInteger(left) ? "integer" : "float";
+					throw new Error(`Unsupported operator ${op} for ${type}`);
+				}
+			} else if (typeof left === "boolean") {
+				if (op === "not") {
+					return !left;
+				} else if (op === "and") {
+					return left && right;
+				} else if (op === "or") {
+					return left || right;
+				} else {
+					throw new Error(`Unsupported operator ${op} for boolean`);
+				}
+			} else {
+				throw new Error(`Unsupported type: ${typeof left}`);
+			}
+		} else if (node.type === "if") {
+			let condition = this.execute(node.value);
+			if (condition === true) {
+				return this.execute(node.left);
+			} else {
+				return nil;
+			}
+		} else {
+			console.log(node, typeof node);
+			console.log(node.type, typeof node.type);
+			console.log(node.value, typeof node.value);
+			throw new Error(
+				`Unknown node type |${node.type}| for node ${node}`
+			);
+		}
+	}
+}
 //-----------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------
@@ -213,6 +586,7 @@ let language = {
 		float: [/^[1-9]\d*\.\d+$/],
 		wrong_float: [/^[1-9]\d*\.$/],
 		bool: ["true", "false"],
+		keyword: ["if", "then", "end"],
 		id: [/^[a-zA-Z_]\w*$/],
 		string: [/^"\w*"$/],
 		blank: [" "],
@@ -248,11 +622,13 @@ let scope = {
 	b: 2,
 	t: true,
 	f: false,
-	fun: function (s) {
-		let arg = s[0];
+	log: new AshFunction("log", [new AshParameter("x", "any")], function (
+		args
+	) {
+		let arg = args.get(0);
 		console.log(arg);
 		return arg;
-	},
+	}),
 	noarg: function () {
 		console.log("fonction sans arg");
 		return nil;
@@ -356,14 +732,17 @@ function test(name, code, debug_lex, debug_parse, debug_execute) {
 	input.innerHTML = nodes.map((x) => x.toHTML()).join(" "); //.join(", ");
 	container.appendChild(input);
 	// Parsed nodes
-	let ns = parse(nodes, debug_parse)[0];
+	let ns = new AshParser().parse(nodes, debug_parse);
+	if (debug_parse) {
+		console.log("Result of parsing:", ns);
+	}
 	let root = document.createElement("div");
 	container.appendChild(root);
 	root.innerHTML = ns.toHTMLTree(true);
 	// Result
 	let res = document.createElement("pre");
 	container.appendChild(res);
-	let result = execute(ns, false, debug_execute);
+	let result = new AshInterpreter().execute(ns, false, debug_execute);
 	res.innerHTML = "Result = " + result;
 	let boxres = document.getElementById("res");
 	boxres.value = result;
@@ -398,267 +777,11 @@ function tests(debug = false) {
 	}
 }
 
-function execute(node, symbol = false, debug = false) {
-	if (node.type === "int") {
-		return parseInt(node.value);
-	} else if (node.type === "float") {
-		return parseFloat(node.value);
-	} else if (node.type === "bool") {
-		return node.value === "true";
-	} else if (node.type === "id") {
-		if (!symbol) {
-			// Function call without parameters
-			if (scope[node.value] instanceof Function) {
-				let val = scope[node.value]();
-				if (val === undefined || val === null) {
-					return "nil"; // replace by nil object
-				}
-				return val;
-			}
-			return scope[node.value];
-		} else {
-			return node.value;
-		}
-	} else if (node.type === "string") {
-		return node.value.substring(1, node.value.length - 1);
-	} else if (node.type === "expr") {
-		let right =
-			node.right === null ? null : execute(node.right, false, debug);
-		let op = node.value.value;
-		// Handling of affectation
-		if (op === "=") {
-			let symbol = execute(node.left, true, debug);
-			if (typeof symbol !== "string") {
-				throw new Error(
-					"Left part of an affectation should be an identifer"
-				);
-			}
-			scope[symbol] = right;
-			return right;
-		}
-		// Handling of calling
-		if (op === "(") {
-			let symbol = execute(node.left, true, debug);
-			if (typeof symbol !== "string") {
-				throw new Error(
-					"Left part of a calling should be an identifer"
-				);
-			}
-			if (!(right instanceof NodeList)) {
-				let nx = new NodeList();
-				nx.unshift(right);
-				right = nx;
-			}
-			if (scope[symbol] instanceof AshFunction) {
-				return scope[symbol].call(right);
-			} else if (scope[symbol] instanceof Function) {
-				return scope[symbol](right);
-			} else {
-				throw new Error(`${symbol} is not a function.`);
-			}
-		}
-		let left = execute(node.left, false, debug);
-		// Handling of list
-		if (op === ",") {
-			if (right instanceof NodeList) {
-				right.unshift(left);
-				if (debug) {
-					console.log("Adding to NodeList", right);
-				}
-			} else {
-				let nx = new NodeList();
-				nx.unshift(right);
-				nx.unshift(left);
-				right = nx;
-				if (debug) {
-					console.log("Creating new NodeList", right);
-				}
-			}
-			return right;
-		}
-		// String ---------------------------------------
-		if (typeof left === "string") {
-			if (op === "+") {
-				if (typeof right !== "string") {
-					throw new Error("Can only add a string to a string");
-				}
-				return left + right;
-			} else if (op === "*") {
-				if (typeof right !== "number") {
-					throw new Error("Can only repeat a string by a number");
-				}
-				return left.repeat(Math.floor(right));
-			} else {
-				throw new Error(`Unsupported operator ${op} for string`);
-			}
-		} else if (typeof left === "number") {
-			if (op === "+") {
-				return left + right;
-			} else if (op === "-") {
-				return left - right;
-			} else if (op === "*") {
-				return left * right;
-			} else if (op === "/") {
-				return left / right;
-			} else if (op === "//") {
-				return Math.floor(left / right);
-			} else if (op === "**") {
-				return Math.pow(left, right);
-			} else if (op === "%") {
-				return left % right;
-			} else if (op === "<") {
-				return left < right;
-			} else if (op === "<=") {
-				return left <= right;
-			} else if (op === ">") {
-				return left > right;
-			} else if (op === ">=") {
-				return left >= right;
-			} else if (op === "==") {
-				return left === right;
-			} else if (op === "!=") {
-				return left !== right;
-			} else if (op === "una-") {
-				return -left;
-			} else {
-				let type = Number.isInteger(left) ? "integer" : "float";
-				throw new Error(`Unsupported operator ${op} for ${type}`);
-			}
-		} else if (typeof left === "boolean") {
-			if (op === "not") {
-				return !left;
-			} else if (op === "and") {
-				return left && right;
-			} else if (op === "or") {
-				return left || right;
-			} else {
-				throw new Error(`Unsupported operator ${op} for boolean`);
-			}
-		} else {
-			throw new Error(`Unsupported type: ${typeof left}`);
-		}
-	} else {
-		throw new Error(`Unknown node type |${node.type}| for node ${node}`);
-	}
-}
-
 function d(lst) {
 	console.log("Affichage liste :");
 	for (const [i, e] of lst.entries()) {
 		console.log(i, e);
 	}
-}
-
-function parse(nodes, debug) {
-	let security = 100;
-	while (nodes.length > 1 && security > 0) {
-		security -= 1;
-		let max = 0;
-		let index = null;
-		let current_level = 1;
-		for (const [i, n] of nodes.entries()) {
-			// Selection of the most prioritary operator
-			if (n.type.startsWith("op") && n.value in language.precedences) {
-				if (debug) {
-					console.log(
-						`Test on ${n} with lvl=${current_level} got ${
-							language.precedences[n.value] * current_level
-						} and max=${max}`
-					);
-				}
-				// En cas d'égalité on prend le plus à gauche
-				// c'est obligatoire pour les opérateurs unaires
-				if (language.precedences[n.value] * current_level >= max) {
-					if (debug) {
-						console.log("Taken");
-					}
-					index = i;
-					max = language.precedences[n.value] * current_level;
-				}
-			}
-			// Level of ( ). Warning: ( can be a sep OR a op-bin for call
-			// ( add to current level but must be counted as outside
-			if (n.value === "(") {
-				current_level *= 10;
-			} else if (n.value === ")") {
-				current_level /= 10;
-			}
-		}
-		if (current_level !== 1) {
-			throw new Error(`Mismatched parenthesis: ${current_level}`);
-		}
-
-		if (debug && max !== 0) {
-			console.log(
-				`Index node chosen @${index} ${nodes[index]} with max=${max}`
-			);
-		}
-		if (max === 0) {
-			console.log("ERROR");
-			console.log(nodes.join(", "));
-			throw new Error(`No operator found`);
-		}
-		// Perimeter
-		let current = nodes[index];
-		let left,
-			right,
-			startDeleteAt,
-			deleteLength = null;
-		if (["op-bin", "expr"].includes(current.type)) {
-			left = nodes[index - 1];
-			right = nodes[index + 1];
-			startDeleteAt = index - 1;
-			deleteLength = 3;
-		} else if (current.type === "op-una") {
-			left = nodes[index + 1];
-			startDeleteAt = index;
-			deleteLength = 2;
-		} else {
-			throw new Error(`Unexpected type: ${current.type}`);
-		}
-		// Deletion of sep ( )
-		if (
-			index - 2 >= 0 &&
-			nodes[index - 2].value === "(" &&
-			nodes[index - 2].type === "sep" && // don't delete ( in function call !
-			index + 2 < nodes.length &&
-			nodes[index + 2].value === ")"
-		) {
-			startDeleteAt = index - 2;
-			deleteLength += 2;
-		}
-		// Deletation of sep ) after a calling (
-		if (current.type === "op-bin" && current.value === "(") {
-			if (
-				index + 2 >= nodes.length ||
-				nodes[index + 2].type !== "sep" ||
-				nodes[index + 2].value !== ")"
-			) {
-				throw new Error(
-					"Calling opening parenthesis not matched" // Should never be called due to Mismatched parenthesis error before
-				);
-			} else {
-				deleteLength += 1;
-			}
-		}
-		if (debug) {
-			console.log(
-				`Splicing from ${startDeleteAt} with length ${deleteLength}`
-			);
-		}
-		nodes.splice(
-			startDeleteAt,
-			deleteLength,
-			new Node("expr", current, left, right)
-		);
-		if (debug) {
-			d(nodes);
-		}
-	}
-	if (security === 0) {
-		throw new Error("Infinite parsing loop, aborting.");
-	}
-	return nodes;
 }
 
 function lex(code, debug) {
@@ -742,18 +865,16 @@ function lex(code, debug) {
 	// retag nodes
 	for (const [i, n] of nodes.entries()) {
 		if (n.type === "op") {
-			n.type = "op-bin";
+			n.type = "binop";
 			if (n.value === "not") {
-				n.type = "op-una";
+				n.type = "unaop";
 			} else if (n.value === "-") {
 				if (i == 0) {
-					n.type = "op-una";
+					n.type = "unaop";
 					n.value = "una-";
 				} else if (i - 1 >= 0) {
-					if (
-						["sep", "op-bin", "op-una"].includes(nodes[i - 1].type)
-					) {
-						n.type = "op-una";
+					if (["sep", "binop", "unaop"].includes(nodes[i - 1].type)) {
+						n.type = "unaop";
 						n.value = "una-";
 					}
 				}
@@ -761,7 +882,7 @@ function lex(code, debug) {
 		} else if (n.type === "sep") {
 			if (i - 1 >= 0) {
 				if (nodes[i - 1].type === "id") {
-					n.type = "op-bin";
+					n.type = "binop";
 				}
 			}
 		}
