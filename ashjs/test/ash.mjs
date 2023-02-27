@@ -55,7 +55,12 @@ class Node {
 	}
 
 	toHTMLTree(isRoot = false) {
-		if (this.type !== "expr" && this.type !== "suite") {
+		if (
+			this.type !== "expr" &&
+			this.type !== "suite" &&
+			this.type !== "while" &&
+			this.type !== "if"
+		) {
 			if (isRoot) {
 				return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
 			} else {
@@ -71,9 +76,12 @@ class Node {
 			if (this.type === "expr") {
 				val = this.value.value;
 			} else {
-				val = "suite";
+				val = this.type;
 			}
 			let s = `<ul ${cls}><li data-type="${this.type}"><code>${val}</code><ul>`;
+			if (["while", "if"].includes(this.type)) {
+				s += "<li>" + this.value.toHTMLTree() + "</li>";
+			}
 			s += "<li>" + this.left.toHTMLTree() + "</li>";
 			if (this.right !== null) {
 				s += "<li>" + this.right.toHTMLTree() + "</li>";
@@ -205,7 +213,6 @@ class AshLexer {
 			matches = [];
 			for (const [t, elems] of Object.entries(language.tokens)) {
 				for (const e of elems) {
-					let res = false;
 					if (e instanceof RegExp) {
 						if (e.test(word)) {
 							if (debug) {
@@ -214,19 +221,18 @@ class AshLexer {
 								);
 							}
 							matches.push(new Node(t, word));
-							res = true;
+							break;
 						}
 					} else if (e === word) {
 						if (debug) {
 							console.log(`matched ${t}`);
 						}
 						matches.push(new Node(t, word));
-						res = true;
 						break;
 					}
-					if (debug) {
-						console.log(`...against |${e}| = ${res}`);
-					}
+					//if (debug) {
+					//	console.log(`...against |${e}| = false`);
+					//}
 				}
 			}
 			if (debug) {
@@ -252,7 +258,6 @@ class AshLexer {
 		if (word.length > 0) {
 			if (old_matches.length > 0) {
 				nodes.push(old_matches[0]);
-				word = "";
 			} else {
 				throw new Error(`Unlexed string: |${word}|`);
 			}
@@ -294,11 +299,18 @@ class AshLexer {
 				}
 			}
 		}
-		//nodes.push(new Node("end", "end"));
 		if (debug) {
 			console.log("End of lexing", code);
 		}
 		return nodes;
+	}
+}
+
+class Result {
+	constructor() {
+		this.end = null;
+		this.then = null;
+		this.do = null;
 	}
 }
 
@@ -332,22 +344,22 @@ class AshParser {
 		this.level += 1;
 		this.log(`>>> delimite_if from=${this.index} max=${until}`);
 		let levels = ["if"];
-		let results = [];
+		let results = new Result();
 		for (let i = this.index + 1; i < until; i++) {
 			let n = this.nodes[i];
 			if (n.equals("keyword", "then") && levels.length === 1) {
-				results["then"] = i;
+				results.then = i;
 			} else if (n.equals("keyword", "if")) {
 				levels.push("if");
 			} else if (n.equals("keyword", "end")) {
 				levels.pop();
 			}
 			if (levels.length === 0) {
-				results["end"] = i;
+				results.end = i;
 				break;
 			}
 		}
-		if (!("then" in results) || !("end" in results)) {
+		if (results.then === null || results.end === null) {
 			throw new Error(`Wrong if detected: ${results}`);
 		}
 		this.level -= 1;
@@ -362,18 +374,18 @@ class AshParser {
 		for (let i = this.index + 1; i < until; i++) {
 			let n = this.nodes[i];
 			if (n.equals("keyword", "do") && levels.length === 1) {
-				results["do"] = i;
+				results.do = i;
 			} else if (n.equals("keyword", "while")) {
 				levels.push("while");
 			} else if (n.equals("keyword", "loop")) {
 				levels.pop();
 			}
 			if (levels.length === 0) {
-				results["end"] = i;
+				results.end = i;
 				break;
 			}
 		}
-		if (!("do" in results) || !("end" in results)) {
+		if (results.do === null || results.end === null) {
 			throw new Error(`Wrong loop detected: ${results}`);
 		}
 		this.level -= 1;
@@ -388,13 +400,13 @@ class AshParser {
 			let n = this.nodes[i];
 			console.log(i, n, until);
 			if (n.equals("sep", [";", "\n"])) {
-				results["end"] = i;
+				results.end = i;
 				break;
 			} else if (i === until - 1) {
-				results["end"] = until; // We must take the last
+				results.end = until; // We must take the last
 			}
 		}
-		if (!("end" in results)) {
+		if (results.end === null) {
 			throw new Error(`Wrong expr detected: ${results}`);
 		}
 		this.level -= 1;
@@ -446,7 +458,7 @@ class AshParser {
 		let suite = null;
 		let security = 10;
 		while (this.index < this.nodes.length) {
-			let end = this.delimite_expr(until)["end"];
+			let end = this.delimite_expr(until).end;
 			this.log(
 				`    --- parseSuite from ${this.index} to ${end}`,
 				this.nodes.slice(this.index, end)
@@ -458,8 +470,7 @@ class AshParser {
 				suite.right = new Node("suite");
 				suite = suite.right;
 			}
-			res = this.parseExpression(end);
-			suite.left = res;
+			suite.left = this.parseExpression(end);
 			this.log("    --- suite = " + suite.toString());
 			this.shift(end + 1); // shift all + ending tokens
 			security -= 1;
@@ -475,14 +486,14 @@ class AshParser {
 		let res = this.delimite_if(until);
 		if (this.debug) {
 			console.log(
-				`>>> parseIf from ${this.index} to ${until}, then at=${res["then"]} (max=${until})`
+				`>>> parseIf from ${this.index} to ${res.end}, then at=${res.then} (max=${until})`
 			);
 		}
 		this.shift(); // remove if
-		let condition = this.parseExpression(res["then"]);
-		this.shift(res["then"] + 1); // remove then
-		let action = this.parseStart(res["end"]);
-		this.shift(res["end"] + 1); // remove end
+		let condition = this.parseExpression(res.then);
+		this.shift(res.then + 1); // remove then
+		let action = this.parseStart(res.end);
+		this.shift(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node("if", condition, action); // Promoting node from keyword to if
 	}
@@ -491,14 +502,14 @@ class AshParser {
 		let res = this.delimite_loop(until);
 		if (this.debug) {
 			console.log(
-				`>>> parseWhile from ${this.index} to ${res["end"]}, do at=${res["do"]} (max=${until})`
+				`>>> parseWhile from ${this.index} to ${res.end}, do at=${res.do} (max=${until})`
 			);
 		}
 		this.shift(); // remove while
-		let condition = this.parseExpression(res["do"]);
-		this.shift(res["do"] + 1); // remove do;
+		let condition = this.parseExpression(res.do);
+		this.shift(res.do + 1); // remove do;
 		let action = this.parseStart(res["end"]);
-		this.shift(res["end"] + 1); // remove end
+		this.shift(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node("while", condition, action); // Promoting node from keyword to while
 	}
@@ -866,7 +877,7 @@ let language = {
 		bool: ["true", "false"],
 		keyword: ["if", "then", "end", "while", "do", "loop"],
 		id: [/^[a-zA-Z_]\w*$/],
-		string: [/^"\w*"$/],
+		string: [/^"[\w:/\.\-]*"$/],
 		blank: [" "],
 	},
 	precedences: {
@@ -894,6 +905,8 @@ let language = {
 };
 
 const nil = new NilClass();
+
+let resources = {};
 
 let scope = {
 	a: 5,
@@ -979,7 +992,7 @@ let scope = {
 	},
 	line: function (args) {
 		console.log("function line", args);
-		var canvas = document.getElementById("screen");
+		let canvas = document.getElementById("screen");
 		let context = canvas.getContext("2d");
 		let x1 = args.get(0);
 		let y1 = args.get(1);
@@ -991,6 +1004,28 @@ let scope = {
 		context.moveTo(x1, y1);
 		context.lineTo(x2, y2);
 		context.stroke();
+	},
+	draw: function (args) {
+		console.log("function draw", args);
+		let canvas = document.getElementById("screen");
+		let context = canvas.getContext("2d");
+		let x = args.get(1);
+		let y = args.get(2);
+		let i = args.get(0);
+		if (typeof i === "string") {
+			let img;
+			if (i in resources) {
+				img = resources[i];
+				context.drawImage(img, x, y);
+			} else {
+				img = new Image(32, 32);
+				img.onload = function () {
+					context.drawImage(img, x, y);
+				};
+				img.src = i;
+				resources[i] = img;
+			}
+		}
 	},
 };
 
@@ -1025,9 +1060,7 @@ function test(name, code, debug_lex, debug_parse, debug_execute) {
 	container.appendChild(res);
 	let result = new AshInterpreter().execute(ns, false, debug_execute);
 	res.innerHTML = "Result = " + result;
-	let boxres = document.getElementById("res");
-	boxres.value = result;
-	return [container, result];
+	return [result, container];
 }
 
 function tests(debug = false) {
@@ -1042,7 +1075,6 @@ function tests(debug = false) {
 		"Test 8": ["4.2", 4.2],
 		"Test 9": ['"abc" + "def"', "abcdef"],
 	};
-	let output = document.getElementById("output");
 	for (const [name, content] of Object.entries(tests)) {
 		let cmd = content[0];
 		let expected = content[1];
@@ -1051,24 +1083,13 @@ function tests(debug = false) {
 			console.log(`${name}: ${cmd}. Expected: ${expected}`);
 			console.log("===================================");
 		}
-		let result = process(name, cmd);
-		if (result !== expected) {
-			throw new Error(`Test error. Expected: ${expected} vs ${result}`);
+		let result = test(name, cmd, false, false, false);
+		if (result[0] !== expected) {
+			throw new Error(
+				`Test error. Expected: ${expected} vs ${result[0]}`
+			);
 		}
 	}
 }
 
-function process(name, code) {
-	console.clear();
-	let output = document.getElementById("output");
-	let debug_lex = document.getElementById("debug_lex").checked;
-	let debug_parse = document.getElementById("debug_parse").checked;
-	let debug_execute = document.getElementById("debug_execute").checked;
-	let res = test(name, code, debug_lex, debug_parse, debug_execute);
-	let container = res[0];
-	let result = res[1];
-	output.prepend(container); // appendChild
-	return result;
-}
-
-export { process, tests };
+export { test, tests };

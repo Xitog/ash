@@ -143,39 +143,85 @@
 			}
 		</style>
 		<script type="module">
-			import { process, tests } from "./ash.mjs";
+			import { test, tests } from "./ash.mjs";
 
 			window.onload = main;
 
 			function clickprocess() {
-				let code = document.main.cmd.value;
-				process(">>>", code);
+				let code;
+				if (document.getElementById("expression").checked) {
+					code = document.main.expr.value;
+				} else {
+					code = document.main.inst.value.replaceAll("\n", "");
+				}
+				let res = process(">>>", code);
+			}
+
+			function process(name, code) {
+				console.clear();
+				let output = document.getElementById("output");
+				let debug_lex = document.getElementById("debug_lex").checked;
+				let debug_parse =
+					document.getElementById("debug_parse").checked;
+				let debug_execute =
+					document.getElementById("debug_execute").checked;
+				let res = test(
+					name,
+					code,
+					debug_lex,
+					debug_parse,
+					debug_execute
+				);
+				let result = res[0];
+				let container = res[1];
+				output.prepend(container); // appendChild
+				let boxres;
+				if (document.getElementById("expression").checked) {
+					boxres = document.getElementById("res_expr");
+				} else {
+					boxres = document.getElementById("res_inst");
+				}
+				boxres.value = result;
 			}
 
 			function reset_form() {
-				let expr = document.getElementById("expression").checked;
-				let inst = document.getElementById("instructions").checked;
-				if (expr) {
-					document.getElementById("legend_cmd").innerText =
-						"Type your expression";
+				let exprchk = document.getElementById("expression").checked;
+				//let instchk = document.getElementById("instructions").checked;
+
+				let expr = document.getElementById("fieldset_expr");
+				let inst = document.getElementById("fieldset_inst");
+
+				if (exprchk) {
+					expr.style.display = "block";
+					inst.style.display = "none";
 				} else {
-					document.getElementById("legend_cmd").innerText =
-						"Type your instructions";
+					expr.style.display = "none";
+					inst.style.display = "block";
 				}
+
 				console.clear();
 			}
 
 			function main() {
-				let input = document.getElementById("cmd");
+				let input = document.getElementById("expr");
 				input.addEventListener("keydown", function (event) {
 					if (event.key === "Enter") {
 						event.preventDefault();
-						document.getElementById("go").click();
+						document.getElementById("go_expr").click();
 					}
 				});
-				let go = document.getElementById("go");
+				let go = document.getElementById("go_expr");
 				go.onclick = clickprocess;
-				tests(false);
+				go = document.getElementById("go_inst");
+				go.onclick = clickprocess;
+				//tests(false);
+				let expr = document.getElementById("expression");
+				let inst = document.getElementById("instructions");
+
+				expr.addEventListener("change", reset_form);
+				inst.addEventListener("change", reset_form);
+
+				reset_form();
 			}
 		</script>
 	</head>
@@ -187,28 +233,40 @@
 			<form name="main">
 				<fieldset>
 					<legend>Choose</legend>
-					<input
-						id="expression"
-						name="mode"
-						type="radio"
-						onchange="reset_form()"
-						checked
-					/>
+					<input id="expression" name="mode" type="radio" checked />
 					<label for="expression">Expression</label>
-					<input
-						id="instructions"
-						name="mode"
-						type="radio"
-						onchange="reset_form()"
-					/>
+					<input id="instructions" name="mode" type="radio" />
 					<label for="instructions">Instructions</label>
 				</fieldset>
-				<fieldset>
-					<legend id="legend_cmd">Type your expression</legend>
-					<input id="cmd" type="text" size="60" />
-					<input id="go" type="button" value="Run" />
+				<fieldset id="fieldset_expr">
+					<legend id="legend_expr">Type your expression</legend>
+					<input id="expr" name="expr" type="text" size="60" />
+					<input id="go_expr" type="button" value="Run" />
 					<input
-						id="res"
+						id="res_expr"
+						type="text"
+						disabled
+						style="background-color: gainsboro"
+					/>
+				</fieldset>
+				<fieldset id="fieldset_inst" style="display: none">
+					<legend id="legend_instr">Type your instructions</legend>
+					<textarea
+						id="inst"
+						name="inst"
+						rows="5"
+						cols="80"
+						autofocus
+						placeholder="Enter your code here"
+						spellcheck="false"
+						required
+						autocomplete="false"
+						style="resize: none"
+					></textarea>
+					<br /><br />
+					<input id="go_inst" type="button" value="Run" />
+					<input
+						id="res_inst"
 						type="text"
 						disabled
 						style="background-color: gainsboro"
