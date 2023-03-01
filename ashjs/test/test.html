@@ -143,7 +143,7 @@
 			}
 		</style>
 		<script type="module">
-			import { test, tests } from "./ash.mjs";
+			import { lex, parse, execute, process, tests } from "./ash.mjs";
 
 			window.onload = main;
 
@@ -152,12 +152,12 @@
 				if (document.getElementById("expression").checked) {
 					code = document.main.expr.value;
 				} else {
-					code = document.main.inst.value.replaceAll("\n", "");
+					code = document.main.inst.value; //.replaceAll("\n", "");
 				}
-				let res = process(">>>", code);
+				let res = iprocess(">>>", code);
 			}
 
-			function process(name, code) {
+			function iprocess(name, code) {
 				console.clear();
 				let output = document.getElementById("output");
 				let debug_lex = document.getElementById("debug_lex").checked;
@@ -165,15 +165,44 @@
 					document.getElementById("debug_parse").checked;
 				let debug_execute =
 					document.getElementById("debug_execute").checked;
-				let res = test(
-					name,
-					code,
-					debug_lex,
-					debug_parse,
-					debug_execute
-				);
-				let result = res[0];
-				let container = res[1];
+
+				let nodes = lex(code, debug_lex);
+				// HTML Result
+				let container = document.createElement("div");
+				// Title
+				let title = document.createElement("h1");
+				title.innerText = name;
+				container.appendChild(title);
+				// Input nodes
+				let input = document.createElement("pre");
+				input.innerHTML = nodes
+					.map((x, index) => index + " " + x.toHTML())
+					.join(" "); //.join(", ");
+				container.appendChild(input);
+
+				// Parsing
+				let result = null;
+				try {
+					let root = parse(nodes, debug_parse);
+					// Graphic output
+					let graph = document.createElement("div");
+					graph.innerHTML = root.toHTMLTree(true);
+					container.appendChild(graph);
+
+					// Executing
+					try {
+						result = execute(root, debug_execute);
+					} catch (exception) {
+						result = `EXECUTION ERROR: ${exception}`;
+					}
+				} catch (exception) {
+					result = `PARSE ERROR: ${exception}`;
+				}
+				// Result
+				let res = document.createElement("pre");
+				res.innerHTML = "Result = " + result;
+				container.appendChild(res);
+
 				output.prepend(container); // appendChild
 				let boxres;
 				if (document.getElementById("expression").checked) {

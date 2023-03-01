@@ -43,10 +43,11 @@ class Node {
 	}
 
 	toString() {
+		let val = this.value !== "\n" ? this.value : "\\n";
 		if (this.type !== "expr" && this.type !== "suite") {
-			return `(t=${this.type}, v=${this.value})`;
+			return `(t=${this.type}, v=${val})`;
 		} else {
-			return `(t=${this.type}, v=${this.value}, l=${this.left}, r=${this.right})`;
+			return `(t=${this.type}, v=${val}, l=${this.left}, r=${this.right})`;
 		}
 	}
 
@@ -193,68 +194,56 @@ class AshFunction {
 }
 
 class AshLexer {
-	lex(code, debug) {
+	constructor(debug = false) {
+		this.debug = debug;
+	}
+	log(s) {
+		if (this.debug) {
+			console.log(s);
+		}
+	}
+	lex(code) {
 		let nodes = [];
 		let word = "";
 		let matches = [];
 		let old_matches = [];
 		for (let index = 0; index < code.length; index += 1) {
-			if (debug) {
-				console.log(index);
-			}
+			this.log(index);
 			if (index > 200) {
 				throw new Error("too much");
 			}
 			let c = code[index];
 			word += c;
-			if (debug) {
-				console.log(`Word is |${word}|`);
-			}
+			this.log(`Word is |${word}|`);
 			matches = [];
 			for (const [t, elems] of Object.entries(language.tokens)) {
 				for (const e of elems) {
 					if (e instanceof RegExp) {
 						if (e.test(word)) {
-							if (debug) {
-								console.log(
-									`matched ${t} with ${e} for ${word}`
-								);
-							}
+							this.log(`matched ${t} with ${e} for ${word}`);
 							matches.push(new Node(t, word));
 							break;
 						}
 					} else if (e === word) {
-						if (debug) {
-							console.log(`matched ${t}`);
-						}
+						this.log(`matched ${t}`);
 						matches.push(new Node(t, word));
 						break;
 					}
-					//if (debug) {
 					//	console.log(`...against |${e}| = false`);
-					//}
 				}
 			}
-			if (debug) {
-				console.log(
-					`Matches: ${matches.length} and old: ${old_matches.length}`
-				);
-			}
+			this.log(
+				`Matches: ${matches.length} and old: ${old_matches.length}`
+			);
 			if (matches.length === 0 && old_matches.length > 0) {
-				if (debug) {
-					console.log(`Adding node! ${old_matches[0]}`);
-				}
+				this.log(`Adding node! ${old_matches[0]}`);
 				nodes.push(old_matches[0]);
 				word = "";
 				index -= 1;
 			}
 			old_matches = matches;
 		}
-		if (debug) {
-			console.log(
-				`Matches: ${matches.length} and old: ${old_matches.length}`
-			);
-		}
+		this.log(`Matches: ${matches.length} and old: ${old_matches.length}`);
 		if (word.length > 0) {
 			if (old_matches.length > 0) {
 				nodes.push(old_matches[0]);
@@ -299,9 +288,7 @@ class AshLexer {
 				}
 			}
 		}
-		if (debug) {
-			console.log("End of lexing", code);
-		}
+		this.log("End of lexing", code);
 		return nodes;
 	}
 }
@@ -315,34 +302,51 @@ class Result {
 }
 
 class AshParser {
-	constructor() {
+	constructor(debug = false) {
 		this.index = 0;
 		this.nodes = [];
-		this.debug = false;
+		this.debug = debug;
 		this.current = null;
 		this.level = 0;
 	}
 
-	shift(until = null) {
+	shift() {
 		this.level += 1;
-		this.log(`>>> shift until ${until}`);
-		if (until === null) {
-			this.index += 1;
-		} else {
-			this.index = until;
-		}
-		if (this.index >= this.nodes.length) {
-			this.current = null;
-		} else {
+		let res = this.nodes[this.index];
+		this.log(`>>> shift ${res} @${this.index}`);
+		this.index += 1;
+		if (this.index < this.nodes.length) {
 			this.current = this.nodes[this.index];
+		} else {
+			this.current = null;
 		}
 		this.level -= 1;
-		return this.current;
+		return res;
 	}
 
-	delimite_if(until) {
+	shiftTo(until) {
+		if (until === undefined || until === null || isNaN(until)) {
+			throw new Error("Can't shift to undefined position.");
+		}
 		this.level += 1;
-		this.log(`>>> delimite_if from=${this.index} max=${until}`);
+		this.log(`>>> shift until ${until}`);
+		this.index = until;
+		if (this.index < this.nodes.length) {
+			this.current = this.nodes[this.index];
+		} else {
+			this.current = null;
+		}
+		this.level -= 1;
+		let res = null;
+		if (this.current !== null) {
+			res = this.nodes[this.index - 1];
+		}
+		return res;
+	}
+
+	delimiteIf(until) {
+		this.level += 1;
+		this.log(`>>> delimiteIf from=${this.index} max=${until}`);
 		let levels = ["if"];
 		let results = new Result();
 		for (let i = this.index + 1; i < until; i++) {
@@ -366,11 +370,11 @@ class AshParser {
 		return results;
 	}
 
-	delimite_loop(until) {
+	delimiteLoop(until) {
 		this.level += 1;
-		this.log(`>>> delimite_loop from=${this.index} max=${until}`);
+		this.log(`>>> delimiteLoop from=${this.index} max=${until}`);
 		let levels = ["while"];
-		let results = [];
+		let results = new Result();
 		for (let i = this.index + 1; i < until; i++) {
 			let n = this.nodes[i];
 			if (n.equals("keyword", "do") && levels.length === 1) {
@@ -392,14 +396,37 @@ class AshParser {
 		return results;
 	}
 
-	delimite_expr(until) {
+	delimiteSubProgram(until) {
 		this.level += 1;
-		this.log(`>>> delimite_expr from=${this.index} max=${until}`);
-		let results = [];
+		let levels = ["sub"];
+		this.log(`>>> delimiteSubProgram from=${this.index} max=${until}`);
+		let results = new Result();
 		for (let i = this.index; i < until; i++) {
 			let n = this.nodes[i];
-			console.log(i, n, until);
-			if (n.equals("sep", [";", "\n"])) {
+			if (n.equals("keyword", "if")) {
+				levels.push("if");
+			} else if (n.equals("keyword", "end")) {
+				levels.pop();
+			}
+			if (levels.length === 0) {
+				results.end = i;
+				break;
+			}
+		}
+		return results;
+	}
+
+	delimiteExpr(until) {
+		this.level += 1;
+		this.log(`>>> delimiteExpr from=${this.index} max=${until}`);
+		let results = new Result();
+		for (let i = this.index; i < until; i++) {
+			let n = this.nodes[i];
+			//this.log(`dEx ${i}. ${n} ${until}`);
+			if (
+				n.equals("sep", [";", "\n"]) ||
+				n.equals("keyword", ["end", "loop"])
+			) {
 				results.end = i;
 				break;
 			} else if (i === until - 1) {
@@ -426,39 +453,50 @@ class AshParser {
 		}
 	}
 
-	parse(nodes, debug) {
+	parse(nodes, debug = null) {
 		this.index = 0;
 		this.nodes = nodes;
-		this.debug = debug;
+		if (debug !== null) {
+			this.debug = debug;
+		}
 		this.current = this.nodes[this.index];
 		this.level = 0;
 		this.log(nodes);
 		return this.parseStart();
 	}
+
 	parseStart(until = null) {
+		this.level += 1;
 		until = until === null ? this.nodes.length : until;
 		this.log(`>>> parseStart from ${this.index} to ${until}`);
 		let res = null;
+		while (this.current.equals("sep", "\n")) {
+			this.shift();
+		}
 		if (this.current.equals("keyword", "if")) {
 			res = this.parseIf(until);
 		} else if (this.current.equals("keyword", "while")) {
 			res = this.parseWhile(until);
+		} else if (this.current.equals("keyword", ["function", "procedure"])) {
+			res = this.parseSubProgram(until);
 		} else {
 			res = this.parseSuite(until);
 		}
 		if (res === null || res === undefined) {
 			throw new Error("Something went wrong in parsing. Aborting.");
 		}
+		this.level -= 1;
 		return res;
 	}
+
 	parseSuite(until) {
 		this.level += 1;
 		this.log(`>>> parseSuite from ${this.index} max ${until}`);
 		let root = null;
 		let suite = null;
 		let security = 10;
-		while (this.index < this.nodes.length) {
-			let end = this.delimite_expr(until).end;
+		while (this.index < until) {
+			let end = this.delimiteExpr(until).end;
 			this.log(
 				`    --- parseSuite from ${this.index} to ${end}`,
 				this.nodes.slice(this.index, end)
@@ -472,7 +510,7 @@ class AshParser {
 			}
 			suite.left = this.parseExpression(end);
 			this.log("    --- suite = " + suite.toString());
-			this.shift(end + 1); // shift all + ending tokens
+			this.shiftTo(end + 1); // shift all + ending tokens
 			security -= 1;
 			if (security === 0) {
 				throw new Error("Too many iteration. Aborting");
@@ -481,48 +519,60 @@ class AshParser {
 		this.level -= 1;
 		return root;
 	}
+
 	parseIf(until) {
 		this.level += 1;
-		let res = this.delimite_if(until);
-		if (this.debug) {
-			console.log(
-				`>>> parseIf from ${this.index} to ${res.end}, then at=${res.then} (max=${until})`
-			);
-		}
+		let res = this.delimiteIf(until);
+		this.log(
+			`>>> parseIf from ${this.index} to ${res.end}, then at=${res.then} (max=${until})`
+		);
 		this.shift(); // remove if
 		let condition = this.parseExpression(res.then);
-		this.shift(res.then + 1); // remove then
+		this.shiftTo(res.then + 1); // remove then
 		let action = this.parseStart(res.end);
-		this.shift(res.end + 1); // remove end
+		this.shiftTo(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node("if", condition, action); // Promoting node from keyword to if
 	}
+
 	parseWhile(until) {
 		this.level += 1;
-		let res = this.delimite_loop(until);
-		if (this.debug) {
-			console.log(
-				`>>> parseWhile from ${this.index} to ${res.end}, do at=${res.do} (max=${until})`
-			);
-		}
+		let res = this.delimiteLoop(until);
+		this.log(
+			`>>> parseWhile from ${this.index} to ${res.end}, do at=${res.do} (max=${until})`
+		);
 		this.shift(); // remove while
 		let condition = this.parseExpression(res.do);
-		this.shift(res.do + 1); // remove do;
-		let action = this.parseStart(res["end"]);
-		this.shift(res.end + 1); // remove end
+		this.shiftTo(res.do + 1); // remove do
+		let action = this.parseStart(res.end - 1); // Don't include loop
+		this.shiftTo(res.end + 1); // remove loop
 		this.level -= 1;
 		return new Node("while", condition, action); // Promoting node from keyword to while
 	}
+
+	parseSubProgram(until) {
+		this.level += 1;
+		let res = this.delimiteSubProgram(until);
+		this.log(
+			`>>> parseSubProgram from ${this.index} to ${res.end} (max=${until})`
+		);
+		let type = this.shift().value; // remove function or procedure
+		let name = this.shift(); // remove name
+		let action = this.parseStart(res.end);
+		this.shiftTo(res.end + 1); // remove def
+		this.level -= 1;
+		return new Node(type, name, null, action);
+	}
+
 	parseExpression(until) {
+		this.debug = false; // SPECIAL
 		this.level += 1;
 		// make a local shallow copy
 		let nodes = Array.from(this.nodes.slice(this.index, until)); // take also the last element
-		if (this.debug) {
-			this.log(`>>> parseExpression from ${this.index} to ${until}`);
-			this.log(nodes);
-		}
+		this.log(`>>> parseExpression from ${this.index} to ${until}`);
+		this.log(nodes);
 		// in advance, we set the index to the end
-		this.shift(until);
+		this.shiftTo(until);
 		let security = 100;
 		while (nodes.length > 1 && security > 0) {
 			security -= 1;
@@ -535,19 +585,15 @@ class AshParser {
 					["binop", "unaop"].includes(n.type) &&
 					n.value in language.precedences
 				) {
-					if (this.debug) {
-						this.log(
-							`Test on ${n} with lvl=${current_level} got ${
-								language.precedences[n.value] * current_level
-							} and max=${max}`
-						);
-					}
+					this.log(
+						`Test on ${n} with lvl=${current_level} got ${
+							language.precedences[n.value] * current_level
+						} and max=${max}`
+					);
 					// En cas d'égalité on prend le plus à gauche
 					// c'est obligatoire pour les opérateurs unaires
 					if (language.precedences[n.value] * current_level >= max) {
-						if (this.debug) {
-							this.log("Taken");
-						}
+						this.log("Taken");
 						index = i;
 						max = language.precedences[n.value] * current_level;
 					}
@@ -564,7 +610,7 @@ class AshParser {
 				throw new Error(`Mismatched parenthesis: ${current_level}`);
 			}
 
-			if (this.debug && max !== 0) {
+			if (max !== 0) {
 				this.log(
 					`Index node chosen @${index} ${nodes[index]} with max=${max}`
 				);
@@ -634,9 +680,10 @@ class AshParser {
 		if (security === 0) {
 			throw new Error("Infinite parsing loop, aborting.");
 		}
+		this.debug = true; // SPECIAL
 		if (this.debug) {
 			this.log("<<< ret Ending parseExpression");
-			this.log(nodes);
+			//this.log(nodes);
 		}
 		this.level -= 1;
 		return nodes[0];
@@ -644,24 +691,34 @@ class AshParser {
 }
 
 class AshInterpreter {
-	execute(node, symbol = false, debug = false) {
-		if (debug) {
-			console.log(`executing ${node}`);
+	constructor(debug = false) {
+		this.debug = debug;
+	}
+	log(s) {
+		if (this.debug) {
+			console.log(s);
 		}
-		let r = this.execute_core(node, symbol, debug);
-		if (debug) {
-			console.log(`result is ${r}`);
-		}
+	}
+	execute(node, symbol = false) {
+		this.log(`executing ${node}`);
+		let r = this.execute_core(node, symbol);
+		this.log(`result is ${r}`);
 		return r;
 	}
 	execute_core(node, symbol = false, debug = false) {
 		if (node.type === "suite") {
 			if (node.right === null) {
-				return this.execute(node.left, false, debug);
+				return this.execute(node.left);
 			} else {
 				this.execute(node.left);
-				return this.execute(node.right, false, debug);
+				return this.execute(node.right);
 			}
+		} else if (node.type === "function") {
+			let res = this.execute(node.right);
+			return res;
+		} else if (node.type === "procedure") {
+			this.execute(node.right);
+			return nil;
 		} else if (node.type === "int") {
 			return parseInt(node.value);
 		} else if (node.type === "float") {
@@ -685,14 +742,11 @@ class AshInterpreter {
 		} else if (node.type === "string") {
 			return node.value.substring(1, node.value.length - 1);
 		} else if (node.type === "expr") {
-			let right =
-				node.right === null
-					? null
-					: this.execute(node.right, false, debug);
+			let right = node.right === null ? null : this.execute(node.right);
 			let op = node.value.value;
 			// Handling of affectation
 			if (op === "=") {
-				let symbol = this.execute(node.left, true, debug);
+				let symbol = this.execute(node.left, true);
 				if (typeof symbol !== "string") {
 					throw new Error(
 						"Left part of an affectation should be an identifer"
@@ -703,7 +757,7 @@ class AshInterpreter {
 			}
 			// Handling of calling
 			if (op === "(") {
-				let symbol = this.execute(node.left, true, debug);
+				let symbol = this.execute(node.left, true);
 				if (typeof symbol !== "string") {
 					throw new Error(
 						"Left part of a calling should be an identifer"
@@ -722,22 +776,18 @@ class AshInterpreter {
 					throw new Error(`${symbol} is not a function.`);
 				}
 			}
-			let left = this.execute(node.left, false, debug);
+			let left = this.execute(node.left);
 			// Handling of list
 			if (op === ",") {
 				if (right instanceof NodeList) {
 					right.unshift(left);
-					if (debug) {
-						console.log("Adding to NodeList", right);
-					}
+					this.log("Adding to NodeList", right);
 				} else {
 					let nx = new NodeList();
 					nx.unshift(right);
 					nx.unshift(left);
 					right = nx;
-					if (debug) {
-						console.log("Creating new NodeList", right);
-					}
+					this.log("Creating new NodeList", right);
 				}
 				return right;
 			}
@@ -818,9 +868,9 @@ class AshInterpreter {
 			}
 			return last;
 		} else {
-			console.log(node, typeof node);
-			console.log(node.type, typeof node.type);
-			console.log(node.value, typeof node.value);
+			this.log(node, typeof node);
+			this.log(node.type, typeof node.type);
+			this.log(node.value, typeof node.value);
 			throw new Error(
 				`Unknown node type |${node.type}| for node ${node}`
 			);
@@ -875,7 +925,17 @@ let language = {
 		float: [/^[1-9]\d*\.\d+$/],
 		wrong_float: [/^[1-9]\d*\.$/],
 		bool: ["true", "false"],
-		keyword: ["if", "then", "end", "while", "do", "loop"],
+		keyword: [
+			"if",
+			"then",
+			"end",
+			"while",
+			"do",
+			"loop",
+			"function",
+			"procedure",
+			"def",
+		],
 		id: [/^[a-zA-Z_]\w*$/],
 		string: [/^"[\w:/\.\-]*"$/],
 		blank: [" "],
@@ -1033,34 +1093,30 @@ let scope = {
 // Functions
 //-----------------------------------------------------------------
 
-function test(name, code, debug_lex, debug_parse, debug_execute) {
-	let nodes = new AshLexer().lex(code, debug_lex);
-	let container = document.createElement("div");
-	// Title
-	let title = document.createElement("h1");
-	title.innerText = name;
-	container.appendChild(title);
-	// Input nodes
-	let input = document.createElement("pre");
-	input.innerHTML = nodes.map((x) => x.toHTML()).join(" "); //.join(", ");
-	container.appendChild(input);
-	// Parsed nodes
-	let ns = new AshParser().parse(nodes, debug_parse);
-	if (debug_parse) {
-		console.log("Result of parsing:", ns);
-	}
-	let root = document.createElement("div");
-	container.appendChild(root);
-	root.innerHTML = ns.toHTMLTree(true);
-	if (debug_lex || debug_parse || debug_execute) {
-		console.log("= Interpreting ====================================");
-	}
-	// Result
-	let res = document.createElement("pre");
-	container.appendChild(res);
-	let result = new AshInterpreter().execute(ns, false, debug_execute);
-	res.innerHTML = "Result = " + result;
-	return [result, container];
+function log(s) {
+	console.log(s);
+}
+
+function lex(code, debug_lex) {
+	log(`Lexing ${debug_lex}`);
+	return new AshLexer(debug_lex).lex(code);
+}
+
+function parse(nodes, debug_parse) {
+	log(`Parsing ${debug_parse}`);
+	return new AshParser(debug_parse).parse(nodes);
+}
+
+function execute(root, debug_execute) {
+	log(`Executing ${debug_execute}`);
+	return new AshInterpreter(debug_execute).execute(root, false);
+}
+
+function process(code, debug_lex, debug_parse, debug_execute) {
+	let nodes = lex(code, debug_lex);
+	let root = parse(nodes, debug_parse);
+	let result = execute(root, debug_execute);
+	return result;
 }
 
 function tests(debug = false) {
@@ -1079,9 +1135,9 @@ function tests(debug = false) {
 		let cmd = content[0];
 		let expected = content[1];
 		if (debug) {
-			console.log("===================================");
-			console.log(`${name}: ${cmd}. Expected: ${expected}`);
-			console.log("===================================");
+			log("===================================");
+			log(`${name}: ${cmd}. Expected: ${expected}`);
+			log("===================================");
 		}
 		let result = test(name, cmd, false, false, false);
 		if (result[0] !== expected) {
@@ -1092,4 +1148,4 @@ function tests(debug = false) {
 	}
 }
 
-export { test, tests };
+export { lex, parse, execute, process, tests };
