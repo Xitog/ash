@@ -60,7 +60,9 @@ class Node {
 			this.type !== "expr" &&
 			this.type !== "suite" &&
 			this.type !== "while" &&
-			this.type !== "if"
+			this.type !== "if" &&
+			this.type !== "function" &&
+			this.type !== "procedure"
 		) {
 			if (isRoot) {
 				return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
@@ -76,6 +78,8 @@ class Node {
 			let val = "";
 			if (this.type === "expr") {
 				val = this.value.value;
+			} else if (["function", "procedure"].includes(this.type)) {
+				val = `${this.type} <b>${this.value.value}</b>`;
 			} else {
 				val = this.type;
 			}
@@ -83,7 +87,10 @@ class Node {
 			if (["while", "if"].includes(this.type)) {
 				s += "<li>" + this.value.toHTMLTree() + "</li>";
 			}
-			s += "<li>" + this.left.toHTMLTree() + "</li>";
+			if (this.left !== null) {
+				// only during the time that functions don't have parameter
+				s += "<li>" + this.left.toHTMLTree() + "</li>";
+			}
 			if (this.right !== null) {
 				s += "<li>" + this.right.toHTMLTree() + "</li>";
 			}
