@@ -126,6 +126,8 @@ class AshParameter {
 	}
 }
 
+let GlobalInterpreter = null;
+
 class AshFunction {
 	constructor(name, paramList, code) {
 		this.name = name;
@@ -196,7 +198,12 @@ class AshFunction {
 				}
 			}
 		}
-		return this.code(argList);
+		if (typeof this.code === "function") {
+			return this.code(argList);
+		} else {
+			// TODO: parameters
+			return GlobalInterpreter.execute(this.code);
+		}
 	}
 }
 
@@ -441,7 +448,7 @@ class AshParser {
 			}
 		}
 		if (results.end === null) {
-			throw new Error(`Wrong expr detected: ${results}`);
+			throw new Error(`No ending for expression detected.`);
 		}
 		this.level -= 1;
 		return results;
@@ -475,39 +482,31 @@ class AshParser {
 	parseStart(until = null) {
 		this.level += 1;
 		until = until === null ? this.nodes.length : until;
-		this.log(`>>> parseStart from ${this.index} to ${until}`);
-		let res = null;
-		while (this.current.equals("sep", "\n")) {
-			this.shift();
-		}
-		if (this.current.equals("keyword", "if")) {
-			res = this.parseIf(until);
-		} else if (this.current.equals("keyword", "while")) {
-			res = this.parseWhile(until);
-		} else if (this.current.equals("keyword", ["function", "procedure"])) {
-			res = this.parseSubProgram(until);
-		} else {
-			res = this.parseSuite(until);
-		}
-		if (res === null || res === undefined) {
-			throw new Error("Something went wrong in parsing. Aborting.");
-		}
-		this.level -= 1;
-		return res;
-	}
-
-	parseSuite(until) {
-		this.level += 1;
-		this.log(`>>> parseSuite from ${this.index} max ${until}`);
+		this.log(`>>> parseStart from ${this.index} max ${until}`);
 		let root = null;
 		let suite = null;
-		let security = 10;
 		while (this.index < until) {
-			let end = this.delimiteExpr(until).end;
-			this.log(
-				`    --- parseSuite from ${this.index} to ${end}`,
-				this.nodes.slice(this.index, end)
-			);
+			console.log(this.index, this.current);
+			let res = null;
+			if (this.current.equals("sep", "\n")) {
+				this.shift();
+				continue;
+			}
+			if (this.current.equals("keyword", "if")) {
+				res = this.parseIf(until);
+			} else if (this.current.equals("keyword", "while")) {
+				res = this.parseWhile(until);
+			} else if (
+				this.current.equals("keyword", ["function", "procedure"])
+			) {
+				res = this.parseSubProgram(until);
+			} else {
+				res = this.parseExpression(until);
+			}
+			// Check
+			if (res === null || res === undefined) {
+				throw new Error("Something went wrong in parsing. Aborting.");
+			}
 			if (suite === null) {
 				suite = new Node("suite");
 				root = suite;
@@ -515,13 +514,7 @@ class AshParser {
 				suite.right = new Node("suite");
 				suite = suite.right;
 			}
-			suite.left = this.parseExpression(end);
-			this.log("    --- suite = " + suite.toString());
-			this.shiftTo(end + 1); // shift all + ending tokens
-			security -= 1;
-			if (security === 0) {
-				throw new Error("Too many iteration. Aborting");
-			}
+			suite.left = res;
 		}
 		this.level -= 1;
 		return root;
@@ -536,7 +529,7 @@ class AshParser {
 		this.shift(); // remove if
 		let condition = this.parseExpression(res.then);
 		this.shiftTo(res.then + 1); // remove then
-		let action = this.parseStart(res.end);
+		let action = this.parseStart(res.end - 1);
 		this.shiftTo(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node("if", condition, action); // Promoting node from keyword to if
@@ -565,21 +558,21 @@ class AshParser {
 		);
 		let type = this.shift().value; // remove function or procedure
 		let name = this.shift(); // remove name
-		let action = this.parseStart(res.end);
-		this.shiftTo(res.end + 1); // remove def
+		let action = this.parseStart(res.end - 1); // don't take the "end"
+		this.shiftTo(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node(type, name, null, action);
 	}
 
 	parseExpression(until) {
-		this.debug = false; // SPECIAL
 		this.level += 1;
+		let res = this.delimiteExpr(until);
 		// make a local shallow copy
-		let nodes = Array.from(this.nodes.slice(this.index, until)); // take also the last element
-		this.log(`>>> parseExpression from ${this.index} to ${until}`);
+		let nodes = Array.from(this.nodes.slice(this.index, res.end)); // take also the last element
+		this.log(`>>> parseExpression from ${this.index} to ${res.end}`);
 		this.log(nodes);
 		// in advance, we set the index to the end
-		this.shiftTo(until);
+		this.shiftTo(res.end);
 		let security = 100;
 		while (nodes.length > 1 && security > 0) {
 			security -= 1;
@@ -659,6 +652,13 @@ class AshParser {
 			// Deletation of sep ) after a calling (
 			if (current.type === "binop" && current.value === "(") {
 				if (
+					index + 1 < nodes.length &&
+					nodes[index + 1].equals("sep", ")")
+				) {
+					// Call without parameter
+					// Do nothing
+					right = null; // delete ")"
+				} else if (
 					index + 2 >= nodes.length ||
 					nodes[index + 2].type !== "sep" ||
 					nodes[index + 2].value !== ")"
@@ -667,6 +667,8 @@ class AshParser {
 						"Calling opening parenthesis not matched" // Should never be called due to Mismatched parenthesis error before
 					);
 				} else {
+					// Call with one parameter (a NodeList)
+					// Extend deletion
 					deleteLength += 1;
 				}
 			}
@@ -687,10 +689,8 @@ class AshParser {
 		if (security === 0) {
 			throw new Error("Infinite parsing loop, aborting.");
 		}
-		this.debug = true; // SPECIAL
 		if (this.debug) {
 			this.log("<<< ret Ending parseExpression");
-			//this.log(nodes);
 		}
 		this.level -= 1;
 		return nodes[0];
@@ -700,6 +700,7 @@ class AshParser {
 class AshInterpreter {
 	constructor(debug = false) {
 		this.debug = debug;
+		GlobalInterpreter = this;
 	}
 	log(s) {
 		if (this.debug) {
@@ -720,11 +721,12 @@ class AshInterpreter {
 				this.execute(node.left);
 				return this.execute(node.right);
 			}
-		} else if (node.type === "function") {
-			let res = this.execute(node.right);
-			return res;
-		} else if (node.type === "procedure") {
-			this.execute(node.right);
+		} else if (node.type === "function" || node.type === "procedure") {
+			scope[node.value.value] = new AshFunction(
+				node.value.value,
+				[],
+				node.right
+			);
 			return nil;
 		} else if (node.type === "int") {
 			return parseInt(node.value);
@@ -770,7 +772,9 @@ class AshInterpreter {
 						"Left part of a calling should be an identifer"
 					);
 				}
-				if (!(right instanceof NodeList)) {
+				if (right === null) {
+					right = new NodeList();
+				} else if (!(right instanceof NodeList)) {
 					let nx = new NodeList();
 					nx.unshift(right);
 					right = nx;
@@ -780,7 +784,14 @@ class AshInterpreter {
 				} else if (scope[symbol] instanceof Function) {
 					return scope[symbol](right);
 				} else {
-					throw new Error(`${symbol} is not a function.`);
+					Object.entries(scope).forEach(function (key, val) {
+						console.log(key, ":", val);
+					});
+					throw new Error(
+						`${symbol} is not a function but a ${typeof scope[
+							symbol
+						]}.`
+					);
 				}
 			}
 			let left = this.execute(node.left);
