@@ -403,8 +403,10 @@ class AshParser {
 				break;
 			}
 		}
-		if (results.do === null || results.end === null) {
-			throw new Error(`Wrong loop detected: ${results}`);
+		if (results.do === null) {
+			throw new Error("No do for this loop");
+		} else if (results.end === null) {
+			throw new Error(`No end for this loop`);
 		}
 		this.level -= 1;
 		return results;
@@ -436,7 +438,6 @@ class AshParser {
 		let results = new Result();
 		for (let i = this.index; i < until; i++) {
 			let n = this.nodes[i];
-			//this.log(`dEx ${i}. ${n} ${until}`);
 			if (
 				n.equals("sep", [";", "\n"]) ||
 				n.equals("keyword", ["end", "loop"])
@@ -486,7 +487,6 @@ class AshParser {
 		let root = null;
 		let suite = null;
 		while (this.index < until) {
-			console.log(this.index, this.current);
 			let res = null;
 			if (this.current.equals("sep", "\n")) {
 				this.shift();
@@ -751,8 +751,23 @@ class AshInterpreter {
 		} else if (node.type === "string") {
 			return node.value.substring(1, node.value.length - 1);
 		} else if (node.type === "expr") {
-			let right = node.right === null ? null : this.execute(node.right);
 			let op = node.value.value;
+			// Reorganize a += 5 as a = a + 5
+			if (["*=", "**=", "/=", "//=", "+=", "-=", "%="].includes(op)) {
+				let new_node = new Node(
+					"expr",
+					new Node("binop", "="),
+					node.left,
+					new Node(
+						"expr",
+						new Node("binop", op.replace("=", "")),
+						node.left,
+						node.right
+					)
+				);
+				return this.execute_core(new_node);
+			}
+			let right = node.right === null ? null : this.execute(node.right);
 			// Handling of affectation
 			if (op === "=") {
 				let symbol = this.execute(node.left, true);
@@ -880,9 +895,11 @@ class AshInterpreter {
 		} else if (node.type === "while") {
 			let condition = this.execute(node.value);
 			let last = nil;
-			while (condition === true) {
+			let security = 16384;
+			while (condition === true && security > 0) {
 				last = this.execute(node.left);
 				condition = this.execute(node.value);
+				security -= 1;
 			}
 			return last;
 		} else {
@@ -916,6 +933,13 @@ let language = {
 			"or",
 			// Affectation
 			"=",
+			"*=",
+			"/=",
+			"//=",
+			"**=",
+			"%=",
+			"+=",
+			"-=",
 			// Comparisons
 			"==",
 			"!=",
@@ -978,9 +1002,25 @@ let language = {
 		and: 3,
 		or: 3,
 		",": 2,
+		"*=": 1,
+		"/=": 1,
+		"//=": 1,
+		"**=": 1,
+		"%=": 1,
+		"+=": 1,
+		"-=": 1,
 		"=": 1,
 	},
 };
+
+let current_line = 1;
+function globalDrawText(s) {
+	let canvas = document.getElementById("screen");
+	let context = canvas.getContext("2d");
+	context.font = "16px Courier";
+	context.fillText(s, 10, current_line * 20);
+	current_line += 1;
+}
 
 const nil = new NilClass();
 
@@ -996,6 +1036,7 @@ let scope = {
 	) {
 		let arg = args.get(0);
 		console.log(arg);
+		globalDrawText(arg);
 		return arg;
 	}),
 	noarg: function () {

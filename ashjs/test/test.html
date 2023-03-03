@@ -143,7 +143,7 @@
 			}
 		</style>
 		<script type="module">
-			import { lex, parse, execute, process, tests } from "./ash.mjs";
+			import { lex, parse, execute, tests } from "./ash.mjs";
 
 			window.onload = main;
 
@@ -154,7 +154,7 @@
 				} else {
 					code = document.main.inst.value; //.replaceAll("\n", "");
 				}
-				let res = iprocess(">>>", code);
+				iprocess(">>>", code);
 			}
 
 			function iprocess(name, code) {
@@ -215,7 +215,6 @@
 
 			function reset_form() {
 				let exprchk = document.getElementById("expression").checked;
-				//let instchk = document.getElementById("instructions").checked;
 
 				let expr = document.getElementById("fieldset_expr");
 				let inst = document.getElementById("fieldset_inst");
