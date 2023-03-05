@@ -125,9 +125,18 @@
 				outline: none;
 			}
 
-			.tree li[data-type="expr"] > code,
-			.monotree li[data-type="expr"] > code {
+			code[data-type="keyword"] {
+				font-weight: bold;
+				color: orange;
+			}
+			code[data-type="expr"] {
 				background-color: #ffcccb;
+			}
+			code[data-type="id"] {
+				color: purple;
+			}
+			code[data-type="int"] {
+				color: red;
 			}
 
 			h1 {

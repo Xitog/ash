@@ -67,7 +67,7 @@ class Node {
 			if (isRoot) {
 				return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
 			} else {
-				return `<code>${this.value}</code>`;
+				return `<code data-type="${this.type}">${this.value}</code>`;
 			}
 		} else {
 			// Handling of suite & expr
@@ -83,7 +83,11 @@ class Node {
 			} else {
 				val = this.type;
 			}
-			let s = `<ul ${cls}><li data-type="${this.type}"><code>${val}</code><ul>`;
+			let type = this.type;
+			if (["while", "if", "function", "procedure"].includes(this.type)) {
+				type = "keyword";
+			}
+			let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
 			if (["while", "if"].includes(this.type)) {
 				s += "<li>" + this.value.toHTMLTree() + "</li>";
 			}
