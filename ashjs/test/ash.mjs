@@ -702,9 +702,134 @@ class AshParser {
 }
 
 class AshInterpreter {
-	constructor(debug = false) {
+	constructor(debug = false, info = console.log, error = console.log) {
 		this.debug = debug;
 		GlobalInterpreter = this;
+		this.info = info;
+		this.error = error;
+		this.scope = {
+			a: 5,
+			b: 2,
+			t: true,
+			f: false,
+			log: new AshFunction(
+				"log",
+				[new AshParameter("x", "any")],
+				function (args) {
+					let arg = args.get(0);
+					console.log(arg);
+					info(arg);
+					return arg;
+				}
+			),
+			noarg: function () {
+				console.log("fonction sans arg");
+				return nil;
+			},
+			add: new AshFunction(
+				"add",
+				[new AshParameter("x", "flt"), new AshParameter("y", "flt")],
+				function (args) {
+					let arg1 = args.get(0);
+					let arg2 = args.get(1);
+					return arg1 + arg2;
+				}
+			),
+			circle: function (args) {
+				console.log("function circle", args);
+				// x, y, r, color, full
+				if (!(args instanceof NodeList)) {
+					throw new Error("Parameters should be a NodeList");
+				}
+				if (args.getSize() !== 5) {
+					throw new Error("Circle takes 5 parameters");
+				}
+				let centerX = args.get(0);
+				let centerY = args.get(1);
+				let radius = args.get(2);
+				let color = args.get(3);
+				let full = args.get(4);
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				context.beginPath();
+				context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+				if (full) {
+					context.fillStyle = color;
+					context.fill();
+				} else {
+					context.strokeStyle = color;
+					context.stroke();
+				}
+				return nil;
+			},
+			rect: function (args) {
+				// x y w h color full
+				console.log("function rect", args);
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				context.fillStyle = args.get(4);
+				context.strokeStyle = args.get(4);
+				console.log(context.fillStyle);
+				if (args.get(5)) {
+					context.fillRect(
+						args.get(0),
+						args.get(1),
+						args.get(2),
+						args.get(3)
+					);
+				} else {
+					context.strokeRect(
+						args.get(0),
+						args.get(1),
+						args.get(2),
+						args.get(3)
+					);
+				}
+			},
+			clear: function (args) {
+				console.log("function clear", args);
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				context.clearRect(0, 0, 640, 480);
+			},
+			line: function (args) {
+				console.log("function line", args);
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				let x1 = args.get(0);
+				let y1 = args.get(1);
+				let x2 = args.get(2);
+				let y2 = args.get(3);
+				context.lineWidth = args.get(4);
+				context.strokeStyle = args.get(5);
+				context.beginPath();
+				context.moveTo(x1, y1);
+				context.lineTo(x2, y2);
+				context.stroke();
+			},
+			draw: function (args) {
+				console.log("function draw", args);
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				let x = args.get(1);
+				let y = args.get(2);
+				let i = args.get(0);
+				if (typeof i === "string") {
+					let img;
+					if (i in resources) {
+						img = resources[i];
+						context.drawImage(img, x, y);
+					} else {
+						img = new Image(32, 32);
+						img.onload = function () {
+							context.drawImage(img, x, y);
+						};
+						img.src = i;
+						resources[i] = img;
+					}
+				}
+			},
+		};
 	}
 	log(s) {
 		if (this.debug) {
@@ -726,7 +851,7 @@ class AshInterpreter {
 				return this.execute(node.right);
 			}
 		} else if (node.type === "function" || node.type === "procedure") {
-			scope[node.value.value] = new AshFunction(
+			this.scope[node.value.value] = new AshFunction(
 				node.value.value,
 				[],
 				node.right
@@ -741,14 +866,20 @@ class AshInterpreter {
 		} else if (node.type === "id") {
 			if (!symbol) {
 				// Function call without parameters
-				if (scope[node.value] instanceof Function) {
-					let val = scope[node.value]();
+				if (this.scope[node.value] instanceof Function) {
+					let val = this.scope[node.value]();
 					if (val === undefined || val === null) {
 						return "nil"; // replace by nil object
 					}
 					return val;
 				}
-				return scope[node.value];
+				if (node.value in this.scope) {
+					return this.scope[node.value];
+				} else {
+					throw new Error(
+						`Variable ${node.value} unknown in current scope.`
+					);
+				}
 			} else {
 				return node.value;
 			}
@@ -780,7 +911,7 @@ class AshInterpreter {
 						"Left part of an affectation should be an identifer"
 					);
 				}
-				scope[symbol] = right;
+				this.scope[symbol] = right;
 				return right;
 			}
 			// Handling of calling
@@ -798,16 +929,16 @@ class AshInterpreter {
 					nx.unshift(right);
 					right = nx;
 				}
-				if (scope[symbol] instanceof AshFunction) {
-					return scope[symbol].call(right);
-				} else if (scope[symbol] instanceof Function) {
-					return scope[symbol](right);
+				if (this.scope[symbol] instanceof AshFunction) {
+					return this.scope[symbol].call(right);
+				} else if (this.scope[symbol] instanceof Function) {
+					return this.scope[symbol](right);
 				} else {
-					Object.entries(scope).forEach(function (key, val) {
+					Object.entries(this.scope).forEach(function (key, val) {
 						console.log(key, ":", val);
 					});
 					throw new Error(
-						`${symbol} is not a function but a ${typeof scope[
+						`${symbol} is not a function but a ${typeof this.scope[
 							symbol
 						]}.`
 					);
@@ -901,11 +1032,27 @@ class AshInterpreter {
 			let last = nil;
 			let security = 16384;
 			while (condition === true && security > 0) {
-				last = this.execute(node.left);
+				try {
+					last = this.execute(node.left);
+				} catch (e) {
+					if (e.message === "break") {
+						break;
+					} else {
+						throw e;
+					}
+				}
 				condition = this.execute(node.value);
 				security -= 1;
 			}
 			return last;
+		} else if (node.type === "keyword") {
+			if (node.value === "break") {
+				throw new Error("break");
+			} else {
+				throw new Error(
+					`Don't know what to do with keyword node ${node.value}`
+				);
+			}
 		} else {
 			this.log(node, typeof node);
 			this.log(node.type, typeof node.type);
@@ -980,11 +1127,11 @@ let language = {
 			"loop",
 			"function",
 			"procedure",
-			"def",
+			"break",
 		],
 		id: [/^[a-zA-Z_]\w*$/],
 		string: [/^"[\w:/\.\-]*"$/],
-		blank: [" "],
+		blank: [" ", "\t"],
 	},
 	precedences: {
 		"(": 9,
@@ -1017,140 +1164,9 @@ let language = {
 	},
 };
 
-let current_line = 1;
-function globalDrawText(s) {
-	let canvas = document.getElementById("screen");
-	let context = canvas.getContext("2d");
-	context.font = "16px Courier";
-	context.fillText(s, 10, current_line * 20);
-	current_line += 1;
-}
-
 const nil = new NilClass();
 
 let resources = {};
-
-let scope = {
-	a: 5,
-	b: 2,
-	t: true,
-	f: false,
-	log: new AshFunction("log", [new AshParameter("x", "any")], function (
-		args
-	) {
-		let arg = args.get(0);
-		console.log(arg);
-		globalDrawText(arg);
-		return arg;
-	}),
-	noarg: function () {
-		console.log("fonction sans arg");
-		return nil;
-	},
-	add: new AshFunction(
-		"add",
-		[new AshParameter("x", "flt"), new AshParameter("y", "flt")],
-		function (args) {
-			let arg1 = args.get(0);
-			let arg2 = args.get(1);
-			return arg1 + arg2;
-		}
-	),
-	circle: function (args) {
-		console.log("function circle", args);
-		// x, y, r, color, full
-		if (!(args instanceof NodeList)) {
-			throw new Error("Parameters should be a NodeList");
-		}
-		if (args.getSize() !== 5) {
-			throw new Error("Circle takes 5 parameters");
-		}
-		let centerX = args.get(0);
-		let centerY = args.get(1);
-		let radius = args.get(2);
-		let color = args.get(3);
-		let full = args.get(4);
-		let canvas = document.getElementById("screen");
-		let context = canvas.getContext("2d");
-		context.beginPath();
-		context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-		if (full) {
-			context.fillStyle = color;
-			context.fill();
-		} else {
-			context.strokeStyle = color;
-			context.stroke();
-		}
-		return nil;
-	},
-	rect: function (args) {
-		// x y w h color full
-		console.log("function rect", args);
-		let canvas = document.getElementById("screen");
-		let context = canvas.getContext("2d");
-		context.fillStyle = args.get(4);
-		context.strokeStyle = args.get(4);
-		console.log(context.fillStyle);
-		if (args.get(5)) {
-			context.fillRect(
-				args.get(0),
-				args.get(1),
-				args.get(2),
-				args.get(3)
-			);
-		} else {
-			context.strokeRect(
-				args.get(0),
-				args.get(1),
-				args.get(2),
-				args.get(3)
-			);
-		}
-	},
-	clear: function (args) {
-		console.log("function clear", args);
-		let canvas = document.getElementById("screen");
-		let context = canvas.getContext("2d");
-		context.clearRect(0, 0, 640, 480);
-	},
-	line: function (args) {
-		console.log("function line", args);
-		let canvas = document.getElementById("screen");
-		let context = canvas.getContext("2d");
-		let x1 = args.get(0);
-		let y1 = args.get(1);
-		let x2 = args.get(2);
-		let y2 = args.get(3);
-		context.lineWidth = args.get(4);
-		context.strokeStyle = args.get(5);
-		context.beginPath();
-		context.moveTo(x1, y1);
-		context.lineTo(x2, y2);
-		context.stroke();
-	},
-	draw: function (args) {
-		console.log("function draw", args);
-		let canvas = document.getElementById("screen");
-		let context = canvas.getContext("2d");
-		let x = args.get(1);
-		let y = args.get(2);
-		let i = args.get(0);
-		if (typeof i === "string") {
-			let img;
-			if (i in resources) {
-				img = resources[i];
-				context.drawImage(img, x, y);
-			} else {
-				img = new Image(32, 32);
-				img.onload = function () {
-					context.drawImage(img, x, y);
-				};
-				img.src = i;
-				resources[i] = img;
-			}
-		}
-	},
-};
 
 //-----------------------------------------------------------------
 // Functions
@@ -1170,9 +1186,9 @@ function parse(nodes, debug_parse) {
 	return new AshParser(debug_parse).parse(nodes);
 }
 
-function execute(root, debug_execute) {
+function execute(root, debug_execute, info, error) {
 	log(`Executing ${debug_execute}`);
-	return new AshInterpreter(debug_execute).execute(root, false);
+	return new AshInterpreter(debug_execute, info, error).execute(root, false);
 }
 
 function process(code, debug_lex, debug_parse, debug_execute) {

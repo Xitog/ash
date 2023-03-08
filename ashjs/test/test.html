@@ -152,9 +152,31 @@
 			}
 		</style>
 		<script type="module">
-			import { lex, parse, execute, tests } from "./ash.mjs";
+			import { lex, parse, execute } from "./ash.mjs"; // tests
 
 			window.onload = main;
+
+			let current_line = 1;
+			function globalDrawText(
+				s,
+				color = "#000000",
+				size = 16,
+				font = "Courier"
+			) {
+				let canvas = document.getElementById("screen");
+				let context = canvas.getContext("2d");
+				context.font = `${size}px ${font}`;
+				context.fillStyle = color;
+				context.fillText(s, 10, current_line * 20);
+				current_line += 1;
+			}
+
+			function info(s) {
+				globalDrawText(s);
+			}
+			function error(s) {
+				globalDrawText(s, "#ff0000");
+			}
 
 			function clickprocess() {
 				let code;
@@ -191,6 +213,7 @@
 
 				// Parsing
 				let result = null;
+				let ok = true;
 				try {
 					let root = parse(nodes, debug_parse);
 					// Graphic output
@@ -200,17 +223,24 @@
 
 					// Executing
 					try {
-						result = execute(root, debug_execute);
+						result = execute(root, debug_execute, info, error);
 					} catch (exception) {
 						result = `EXECUTION ERROR: ${exception}`;
+						ok = false;
 					}
 				} catch (exception) {
 					result = `PARSE ERROR: ${exception}`;
+					ok = false;
 				}
 				// Result
 				let res = document.createElement("pre");
 				res.innerHTML = "Result = " + result;
 				container.appendChild(res);
+				if (ok) {
+					info(result);
+				} else {
+					error(result);
+				}
 
 				output.prepend(container); // appendChild
 				let boxres;
