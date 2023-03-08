@@ -269,10 +269,10 @@ class AshLexer {
 				throw new Error(`Unlexed string: |${word}|`);
 			}
 		}
-		// filter blanks
+		// filter blanks & comments
 		let nn = [];
 		for (const n of nodes) {
-			if (n.type !== "blank") {
+			if (n.type !== "blank" && n.type !== "comment") {
 				nn.push(n);
 			}
 		}
@@ -1132,6 +1132,7 @@ let language = {
 		id: [/^[a-zA-Z_]\w*$/],
 		string: [/^"[\w:/\.\-]*"$/],
 		blank: [" ", "\t"],
+		comment: [/^--[^\n]*$/],
 	},
 	precedences: {
 		"(": 9,
