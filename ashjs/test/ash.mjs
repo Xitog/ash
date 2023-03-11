@@ -1375,6 +1375,9 @@ async function main() {
 		input: process.stdin,
 		output: process.stdout,
 	});
+	// Test
+	const answer = await io.question("What is your quest ?");
+	console.log(answer);
 	if (process.argv.length === 2) {
 		// Run only with node.exe and the script
 	} else {
