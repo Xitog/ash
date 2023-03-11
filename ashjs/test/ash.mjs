@@ -1,3 +1,40 @@
+// -----------------------------------------------------------
+// MIT Licence (Expat License Wording)
+// -----------------------------------------------------------
+// Copyright © 2020, Damien Gouteux
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+// For more information about my projects see:
+// https://xitog.github.io/dgx (in French)
+
+//-------------------------------------------------------------------------------
+// Imports
+//-------------------------------------------------------------------------------
+
+const node =
+	typeof process !== "undefined" &&
+	process !== null &&
+	typeof process.version !== "undefined" &&
+	process.version !== null &&
+	typeof process.version === "string";
+
 //-----------------------------------------------------------------------------
 // Classes
 //-----------------------------------------------------------------------------
@@ -26,12 +63,11 @@ class NodeList {
 	}
 }
 
-class Node {
-	constructor(type, value, left = null, right = null) {
+class Token {
+	constructor(type, value, line) {
 		this.type = type;
 		this.value = value;
-		this.left = left;
-		this.right = right;
+		this.line = line;
 	}
 
 	// equals("keyword", "if") or equals("keyword", ["if", "while"])
@@ -44,11 +80,7 @@ class Node {
 
 	toString() {
 		let val = this.value !== "\n" ? this.value : "\\n";
-		if (this.type !== "expr" && this.type !== "suite") {
-			return `(t=${this.type}, v=${val})`;
-		} else {
-			return `(t=${this.type}, v=${val}, l=${this.left}, r=${this.right})`;
-		}
+		return `Token(t=${this.type}, v=${val}, @${this.line})`;
 	}
 
 	toHTML() {
@@ -56,51 +88,72 @@ class Node {
 	}
 
 	toHTMLTree(isRoot = false) {
-		if (
-			this.type !== "expr" &&
-			this.type !== "suite" &&
-			this.type !== "while" &&
-			this.type !== "if" &&
-			this.type !== "function" &&
-			this.type !== "procedure"
-		) {
-			if (isRoot) {
-				return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
-			} else {
-				return `<code data-type="${this.type}">${this.value}</code>`;
-			}
+		if (isRoot) {
+			return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
 		} else {
-			// Handling of suite & expr
-			let cls = "";
-			if (isRoot) {
-				cls = ' class="tree"';
-			}
-			let val = "";
-			if (this.type === "expr") {
-				val = this.value.value;
-			} else if (["function", "procedure"].includes(this.type)) {
-				val = `${this.type} <b>${this.value.value}</b>`;
-			} else {
-				val = this.type;
-			}
-			let type = this.type;
-			if (["while", "if", "function", "procedure"].includes(this.type)) {
-				type = "keyword";
-			}
-			let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
-			if (["while", "if"].includes(this.type)) {
-				s += "<li>" + this.value.toHTMLTree() + "</li>";
-			}
-			if (this.left !== null) {
-				// only during the time that functions don't have parameter
-				s += "<li>" + this.left.toHTMLTree() + "</li>";
-			}
-			if (this.right !== null) {
-				s += "<li>" + this.right.toHTMLTree() + "</li>";
-			}
-			s += "</ul></li></ul>";
-			return s;
+			return `<code data-type="${this.type}">${this.value}</code>`;
 		}
+	}
+}
+
+class Node extends Token {
+	constructor(type, value, left = null, right = null) {
+		super(type, value, 0);
+		this.left = left;
+		this.right = right;
+	}
+
+	toString() {
+		let val = "";
+		let left = "";
+		let right = "";
+		if (this.val !== undefined && this.val !== null) {
+			val = this.value !== "\n" ? this.value : "\\n";
+			val = `, v=${val}`;
+		}
+		if (this.left !== undefined && this.left !== null) {
+			left = `, l=${this.left}`;
+		}
+		if (this.right !== undefined && this.right !== null) {
+			right = `, r=${this.right}`;
+		}
+		return `Node(t=${this.type}${val}${left}${right})`;
+	}
+
+	toHTMLTree(isRoot = false) {
+		let cls = "";
+		if (isRoot) {
+			cls = ' class="tree"';
+		}
+		let val = "";
+		if (this.type === "expr") {
+			val = this.value.value;
+		} else if (["function", "procedure"].includes(this.type)) {
+			val = `${this.type} <b>${this.value.value}</b>`;
+		} else {
+			val = this.type;
+		}
+		let type = this.type;
+		if (
+			["import", "while", "if", "function", "procedure"].includes(
+				this.type
+			)
+		) {
+			type = "keyword";
+		}
+		let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
+		if (["import", "while", "if"].includes(this.type)) {
+			s += "<li>" + this.value.toHTMLTree() + "</li>";
+		}
+		if (this.left !== null) {
+			// only during the time that functions don't have parameter
+			s += "<li>" + this.left.toHTMLTree() + "</li>";
+		}
+		if (this.right !== null) {
+			s += "<li>" + this.right.toHTMLTree() + "</li>";
+		}
+		s += "</ul></li></ul>";
+		return s;
 	}
 }
 
@@ -211,20 +264,28 @@ class AshFunction {
 	}
 }
 
-class AshLexer {
+class AshInstrument {
 	constructor(debug = false) {
 		this.debug = debug;
 	}
+
 	log(s) {
 		if (this.debug) {
 			console.log(s);
 		}
+	}
+}
+
+class AshLexer extends AshInstrument {
+	constructor(debug = false) {
+		super(debug);
 	}
 	lex(code) {
 		let nodes = [];
 		let word = "";
 		let matches = [];
 		let old_matches = [];
+		let line = 1;
 		for (let index = 0; index < code.length; index += 1) {
 			this.log(index);
 			if (index > 200) {
@@ -232,22 +293,22 @@ class AshLexer {
 			}
 			let c = code[index];
 			word += c;
-			this.log(`Word is |${word}|`);
+			let safeWord = word.replace(/\n/g, "\\n");
+			this.log(`Word is |${safeWord}|`);
 			matches = [];
 			for (const [t, elems] of Object.entries(language.tokens)) {
 				for (const e of elems) {
 					if (e instanceof RegExp) {
 						if (e.test(word)) {
-							this.log(`matched ${t} with ${e} for ${word}`);
-							matches.push(new Node(t, word));
+							this.log(`matched ${t} with ${e} for ${safeWord}`);
+							matches.push(new Token(t, word, line));
 							break;
 						}
 					} else if (e === word) {
 						this.log(`matched ${t}`);
-						matches.push(new Node(t, word));
+						matches.push(new Token(t, word, line));
 						break;
 					}
-					//	console.log(`...against |${e}| = false`);
 				}
 			}
 			this.log(
@@ -260,6 +321,9 @@ class AshLexer {
 				index -= 1;
 			}
 			old_matches = matches;
+			if (c === "\n") {
+				line += 1;
+			}
 		}
 		this.log(`Matches: ${matches.length} and old: ${old_matches.length}`);
 		if (word.length > 0) {
@@ -319,11 +383,11 @@ class Result {
 	}
 }
 
-class AshParser {
+class AshParser extends AshInstrument {
 	constructor(debug = false) {
+		super(debug);
 		this.index = 0;
 		this.nodes = [];
-		this.debug = debug;
 		this.current = null;
 		this.level = 0;
 	}
@@ -500,6 +564,8 @@ class AshParser {
 				res = this.parseIf(until);
 			} else if (this.current.equals("keyword", "while")) {
 				res = this.parseWhile(until);
+			} else if (this.current.equals("keyword", "import")) {
+				res = this.parseImport(until);
 			} else if (
 				this.current.equals("keyword", ["function", "procedure"])
 			) {
@@ -566,6 +632,15 @@ class AshParser {
 		this.shiftTo(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node(type, name, null, action);
+	}
+
+	parseImport(until) {
+		this.level += 1;
+		this.log(`>>> parseImport from ${this.index} to ${until}`);
+		this.shift(); // remove import
+		let name = this.shift();
+		this.level -= 1;
+		return new Node("import", name, null, null);
 	}
 
 	parseExpression(until) {
@@ -701,12 +776,22 @@ class AshParser {
 	}
 }
 
-class AshInterpreter {
+class AshInterpreter extends AshInstrument {
 	constructor(debug = false, info = console.log, error = console.log) {
-		this.debug = debug;
+		super(debug);
 		GlobalInterpreter = this;
-		this.info = info;
-		this.error = error;
+		if (info !== null) {
+			this.info = info;
+		} else {
+			this.info = console.log;
+			info = console.log;
+		}
+		if (error !== null) {
+			this.error = error;
+		} else {
+			this.error = console.log;
+			// Code non utilisé : error = console.log;
+		}
 		this.scope = {
 			a: 5,
 			b: 2,
@@ -717,7 +802,9 @@ class AshInterpreter {
 				[new AshParameter("x", "any")],
 				function (args) {
 					let arg = args.get(0);
-					console.log(arg);
+					if (info != console.log) {
+						console.log(arg);
+					}
 					info(arg);
 					return arg;
 				}
@@ -831,11 +918,6 @@ class AshInterpreter {
 			},
 		};
 	}
-	log(s) {
-		if (this.debug) {
-			console.log(s);
-		}
-	}
 	execute(node, symbol = false) {
 		this.log(`executing ${node}`);
 		let r = this.execute_core(node, symbol);
@@ -867,6 +949,7 @@ class AshInterpreter {
 			if (!symbol) {
 				// Function call without parameters
 				if (this.scope[node.value] instanceof Function) {
+					// Todo Unifier avec AshFunction !
 					let val = this.scope[node.value]();
 					if (val === undefined || val === null) {
 						return "nil"; // replace by nil object
@@ -902,7 +985,10 @@ class AshInterpreter {
 				);
 				return this.execute_core(new_node);
 			}
-			let right = node.right === null ? null : this.execute(node.right);
+			let right =
+				node.right === null
+					? null
+					: this.execute(node.right, op === ".");
 			// Handling of affectation
 			if (op === "=") {
 				let symbol = this.execute(node.left, true);
@@ -1017,6 +1103,33 @@ class AshInterpreter {
 				} else {
 					throw new Error(`Unsupported operator ${op} for boolean`);
 				}
+			} else if (typeof left === "object") {
+				if (op === ".") {
+					if (typeof right === "string") {
+						if (!symbol) {
+							// Function call without parameters
+							if (left[right] instanceof AshFunction) {
+								let val = left[right].call(new NodeList()); // TODO
+								if (val === undefined || val === null) {
+									return "nil";
+								}
+								return val;
+							}
+							if (right in left) {
+								return left[right];
+							} else {
+								throw new Error(
+									`${right} unknown member in ${left}.`
+								);
+							}
+						} else {
+							return node.value;
+						}
+					}
+				}
+				throw new Error(
+					`Unsupported operator ${op} for object with right ${right}`
+				);
 			} else {
 				throw new Error(`Unsupported type: ${typeof left}`);
 			}
@@ -1045,6 +1158,17 @@ class AshInterpreter {
 				security -= 1;
 			}
 			return last;
+		} else if (node.type === "import") {
+			let name = node.value.value;
+			console.log(`Importing ${name}`);
+			if (name === "io") {
+				this.scope["io"] = {
+					read: new AshFunction("read", [], function (args) {
+						return 5;
+					}),
+				};
+			}
+			return nil;
 		} else if (node.type === "keyword") {
 			if (node.value === "break") {
 				throw new Error("break");
@@ -1100,11 +1224,12 @@ let language = {
 			">",
 			// List
 			",",
+			// Access
+			".",
 		],
 		/*
         "%",
         // Specials
-        ".",
         "<<",
         "#",
         "$",
@@ -1128,13 +1253,17 @@ let language = {
 			"function",
 			"procedure",
 			"break",
+			"import",
 		],
 		id: [/^[a-zA-Z_]\w*$/],
-		string: [/^"[\w:/\.\-]*"$/],
+		string: [/^"[\w:/\.\- !?#]*"$/],
 		blank: [" ", "\t"],
-		comment: [/^--[^\n]*$/],
+		comment: [/^--[^\n]*\n$/],
+		wrong_string: [/^"[\w:/\.\- !?#]*$/],
+		wrong_comment: [/^--[^\n]*$/],
 	},
 	precedences: {
+		".": 9.5,
 		"(": 9,
 		"una-": 8,
 		"*": 7,
@@ -1177,29 +1306,34 @@ function log(s) {
 	console.log(s);
 }
 
-function lex(code, debug_lex) {
+function AshLex(code, debug_lex = false) {
 	log(`Lexing ${debug_lex}`);
 	return new AshLexer(debug_lex).lex(code);
 }
 
-function parse(nodes, debug_parse) {
+function AshParse(nodes, debug_parse = false) {
 	log(`Parsing ${debug_parse}`);
 	return new AshParser(debug_parse).parse(nodes);
 }
 
-function execute(root, debug_execute, info, error) {
+function AshExecute(root, debug_execute = false, info = null, error = null) {
 	log(`Executing ${debug_execute}`);
 	return new AshInterpreter(debug_execute, info, error).execute(root, false);
 }
 
-function process(code, debug_lex, debug_parse, debug_execute) {
-	let nodes = lex(code, debug_lex);
-	let root = parse(nodes, debug_parse);
-	let result = execute(root, debug_execute);
+function AshProcess(
+	code,
+	debug_lex = false,
+	debug_parse = false,
+	debug_execute = false
+) {
+	let nodes = AshLex(code, debug_lex);
+	let root = AshParse(nodes, debug_parse);
+	let result = AshExecute(root, debug_execute);
 	return result;
 }
 
-function tests(debug = false) {
+function AshTests(debug = false) {
 	let tests = {
 		"Test 1": ["2 + 3 * 5", 17],
 		"Test 2": ["(2 + 3) * 5", 25],
@@ -1228,4 +1362,60 @@ function tests(debug = false) {
 	}
 }
 
-export { lex, parse, execute, process, tests };
+//-------------------------------------------------------------------------------
+// Main
+//-------------------------------------------------------------------------------
+
+async function main() {
+	console.log("Running main function");
+
+	let fs = await import("fs");
+	let readline = await import("readline");
+	let io = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+	if (process.argv.length === 2) {
+		// Run only with node.exe and the script
+	} else {
+		// Run with script name
+		let filename = process.argv[2];
+		let debug = false;
+		if (process.argv.length > 3) {
+			if (process.argv[3] === "d") {
+				debug = true;
+			}
+		}
+		//try {
+		let data = fs.readFileSync(filename, "utf-8");
+		data = data.replace(/\r\n/g, "\n");
+		console.log(`Data read from file: ${filename}`);
+		// Lex
+		let tokens = AshLex(data, debug);
+		for (const [i, tok] of tokens.entries()) {
+			console.log(`    ${i}. ${tok}`);
+		}
+		// Parse
+		let root = AshParse(tokens);
+		console.log(`    ${root}`);
+		// Execute
+		AshProcess(data, false, false, false);
+		// Release io
+		io.close();
+		//} catch (e) {
+		//	console.log(`Error when reading file: ${filename}`);
+		//	console.log(e.message);
+		//	console.trace();
+		//}
+	}
+}
+
+if (node) {
+	await main();
+}
+
+//-------------------------------------------------------------------------------
+// Exports
+//-------------------------------------------------------------------------------
+
+export { AshLex, AshParse, AshExecute, AshProcess, AshTests };

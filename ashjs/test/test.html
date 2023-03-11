@@ -152,7 +152,7 @@
 			}
 		</style>
 		<script type="module">
-			import { lex, parse, execute } from "./ash.mjs"; // tests
+			import { AshLex, AshParse, AshExecute } from "./ash.mjs"; // tests
 
 			window.onload = main;
 
@@ -197,7 +197,7 @@
 				let debug_execute =
 					document.getElementById("debug_execute").checked;
 
-				let nodes = lex(code, debug_lex);
+				let nodes = AshLex(code, debug_lex);
 				// HTML Result
 				let container = document.createElement("div");
 				// Title
@@ -215,7 +215,7 @@
 				let result = null;
 				let ok = true;
 				try {
-					let root = parse(nodes, debug_parse);
+					let root = AshParse(nodes, debug_parse);
 					// Graphic output
 					let graph = document.createElement("div");
 					graph.innerHTML = root.toHTMLTree(true);
@@ -223,7 +223,7 @@
 
 					// Executing
 					try {
-						result = execute(root, debug_execute, info, error);
+						result = AshExecute(root, debug_execute, info, error);
 					} catch (exception) {
 						result = `EXECUTION ERROR: ${exception}`;
 						ok = false;
