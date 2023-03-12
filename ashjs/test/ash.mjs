@@ -1164,7 +1164,7 @@ class AshInterpreter extends AshInstrument {
 			if (name === "io") {
 				this.scope["io"] = {
 					read: new AshFunction("read", [], function (args) {
-						return 5;
+						return reader.question("AAAA:");
 					}),
 				};
 			}
@@ -1366,18 +1366,9 @@ function AshTests(debug = false) {
 // Main
 //-------------------------------------------------------------------------------
 
-async function main() {
+function main() {
 	console.log("Running main function");
-
-	let fs = await import("fs");
-	let readline = await import("readline");
-	let io = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-	// Test
-	const answer = await io.question("What is your quest ?");
-	console.log(answer);
+	process.argv.push("./tests/read_line.ash");
 	if (process.argv.length === 2) {
 		// Run only with node.exe and the script
 	} else {
@@ -1403,8 +1394,6 @@ async function main() {
 		console.log(`    ${root}`);
 		// Execute
 		AshProcess(data, false, false, false);
-		// Release io
-		io.close();
 		//} catch (e) {
 		//	console.log(`Error when reading file: ${filename}`);
 		//	console.log(e.message);
@@ -1413,8 +1402,11 @@ async function main() {
 	}
 }
 
+const fs = node ? await import("fs") : null;
+const reader = node ? await import("readline-sync") : null;
+
 if (node) {
-	await main();
+	main();
 }
 
 //-------------------------------------------------------------------------------
