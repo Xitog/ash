@@ -1388,13 +1388,39 @@ function AshTests(debug = false) {
 //-------------------------------------------------------------------------------
 
 function main() {
-	if (process.argv.length === 2) {
+	let debug = false;
+	let filename = null;
+	// 1: node.exe
+	// 2: .\ash.mjs
+	// 3: filename or -d
+	// 4: filename or -d
+	if (process.argv.length > 4) {
+		throw new Error(
+			`Too many parameters: ${process.argv.length}. The maximum is 4.`
+		);
+	} else if (process.argv.length === 4) {
+		if (process.argv[3] === "-d") {
+			debug = true;
+			filename = process.argv[2];
+		} else if (process.argv[2] === "-d") {
+			debug = true;
+			filename = process.argv[3];
+		}
+	} else if (process.argv.length === 3) {
+		if (process.argv[2] === "-d") {
+			debug = true;
+		} else {
+			filename = process.argv[2];
+		}
+	}
+
+	if (filename === null) {
 		// Run only with node.exe and the script
 		let cmd = "";
 		while (cmd !== "exit") {
 			cmd = reader.question(">>> ");
 			if (cmd !== "exit") {
-				let result = AshProcess(cmd, false, false, false);
+				let result = AshProcess(cmd, false, debug, false);
 				if (result !== notAnExpression) {
 					console.log(result);
 				}
