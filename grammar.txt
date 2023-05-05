@@ -9,34 +9,36 @@ const ID [TYPE] = EXPR
 
 if CONDITION then
     ACTION
-elsif CONDITION then
-    ACTION
-else
-    ACTION
+[elsif CONDITION then
+    ACTION]*
+[else
+    ACTION]
 end
 
-if CONDITION => ACTION
+ACTION if CONDITION
+
+EXPRESSION if CONDITION else EXPRESSION
 
 --
 
 while CONDITION do
     ACTION
-loop
+loop [label]
 
 for ID1[, ID2] in ITERABLE [while CONDITION] [do
     ACTION]
-loop
+loop [label]
 
 do
     ACTION
-until CONDITION loop
+until CONDITION loop [label]
 
 do
     ACTION
 loop
 
-break [break]
-next
+break [label]
+next [label]
 
 --
 
@@ -54,11 +56,17 @@ return [EXPR]
 
 class ID [< SUPER]
     [static const, static var, var] ID = EXPR
+    [static] fun or pro
+    pro init(@a int, b int)
+        @b = b
+    end
 end
+
+a = ID.new(param)
 
 --
 
-import (FILEPATH | ID) [ > ID1, ID2 ] ou require ?
+import (FILEPATH | ID) [ > ID1, ID2 ]
 
 module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
 
@@ -66,7 +74,9 @@ module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
 
 exception
 
-catch ID [TYPE]
+throw EXPR
+
+catch [ID] TYPE
 end
 
 --
@@ -81,4 +91,15 @@ and or not
 ${x} interpolation dans chaînes
 
 14/12/2022
+- import (FILEPATH | ID) [ > ID1, ID2 ] alternate require
 25/10/2022
+05/05/2023 d'après une révision du 02/05/2023
+- if CONDITION => ACTION changed to ACTION if CONDITION
+- EXPRESSION if CONDITION else EXPRESSION added
+- loop changed to loop [label]
+- until CONDITION loop changed to until CONDITION loop [label]
+- break [break] changed to break [label]
+- next changed to next [label]
+- fun[ction] ID (P1 [T1], P2 [T2]) TYPE alternate fun[ction] ID (P1 [T1], P2 [T2] -> TYPE)
+- throw added
+- catch ID [TYPE] changed to catch [ID] TYPE
