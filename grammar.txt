@@ -89,6 +89,7 @@ $ (string)
 and or not
 == != <= >= < >
 ${x} interpolation dans chaînes
+in
 
 14/12/2022
 - import (FILEPATH | ID) [ > ID1, ID2 ] alternate require
