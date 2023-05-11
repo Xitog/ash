@@ -35,14 +35,14 @@ until CONDITION loop [label]
 
 do
     ACTION
-loop
+loop [label]
 
 break [label]
 next [label]
 
 --
 
-fun[ction] ID (P1 [T1], P2 [T2]) TYPE
+fun[ction] ID (P1 [T1], P2 [T2] [> TYPE])
     ACTION
 end
 
@@ -74,7 +74,7 @@ module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
 
 exception
 
-throw EXPR
+raise EXPR
 
 catch [ID] TYPE
 end
@@ -84,6 +84,7 @@ end
 +  -  *  /  //  **  %
 += -= *= /= //= **= %=
 =
+<< >> (binary)
 # (length)
 $ (string)
 and or not
@@ -104,3 +105,7 @@ in
 - fun[ction] ID (P1 [T1], P2 [T2]) TYPE alternate fun[ction] ID (P1 [T1], P2 [T2] -> TYPE)
 - throw added
 - catch ID [TYPE] changed to catch [ID] TYPE
+11/05/2023
+- do action loop chand to do action loop [label]
+- fun[ction] ID (P1 [T1], P2 [T2]) TYPE changed to fun[ction] ID (P1 [T1], P2 [T2] [> TYPE])
+- throw change to raise
