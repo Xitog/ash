@@ -5,6 +5,19 @@
 [var] ID [TYPE] = EXPR
 const ID [TYPE] = EXPR
 
+[1, 2, 3]            list (dynamic size)
+{1: "abc", 2: "cde"} dict/table
+{1, 2, 3}            array (fixed size)
+true / false         boolean/bool
+1 2                  integer/int
+3.4                  number/num
+"abc" 'abc'          string/str
+class Point          object (fixed fields)/obj
+   x int
+   y int
+end
+nil                  null value
+
 --
 
 if CONDITION then
@@ -109,3 +122,4 @@ in
 - do action loop chand to do action loop [label]
 - fun[ction] ID (P1 [T1], P2 [T2]) TYPE changed to fun[ction] ID (P1 [T1], P2 [T2] [> TYPE])
 - throw change to raise
+- Added literals for list, dict, array, boolean, integer, number, str, obj, nil
