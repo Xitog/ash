@@ -255,8 +255,7 @@ class AshFunction {
 			} else {
 				if (param.def === nil) {
 					throw new Error(
-						`Not enough parameter: ${this} requires ${
-							this.paramList.length
+						`Not enough parameter: ${this} requires ${this.paramList.length
 						} parameters and ${argList.getSize()} were given.`
 					);
 				}
@@ -672,8 +671,7 @@ class AshParser extends AshInstrument {
 					n.value in language.precedences
 				) {
 					this.log(
-						`Test on ${n} with lvl=${current_level} got ${
-							language.precedences[n.value] * current_level
+						`Test on ${n} with lvl=${current_level} got ${language.precedences[n.value] * current_level
 						} and max=${max}`
 					);
 					// En cas d'égalité on prend le plus à gauche
@@ -787,6 +785,20 @@ class AshInterpreter extends AshInstrument {
 	constructor(debug = false, info = console.log, error = console.log) {
 		super(debug);
 		GlobalInterpreter = this;
+		document.addEventListener('keydown', (event) => {
+			let name = event.key;
+			let code = event.code;
+			// Alert the key name and key code on keydown
+			console.log(`Key down ${name} \r\n Key code value: ${code}`);
+			this.KEYS[code] = true;
+		}, false);
+		document.addEventListener('keyup', (event) => {
+			let name = event.key;
+			let code = event.code;
+			// Alert the key name and key code on keydown
+			console.log(`Key up ${name} \r\n Key code value: ${code}`);
+			this.KEYS[code] = false;
+		}, false);
 		if (info !== null) {
 			this.info = info;
 		} else {
@@ -799,6 +811,7 @@ class AshInterpreter extends AshInstrument {
 			this.error = console.log;
 			// Code non utilisé : error = console.log;
 		}
+		this.KEYS = {};
 		this.scope = {
 			a: 5,
 			b: 2,
@@ -887,6 +900,12 @@ class AshInterpreter extends AshInstrument {
 				let context = canvas.getContext("2d");
 				context.clearRect(0, 0, 640, 480);
 			},
+			keydown: function (args) {
+				console.log("function keydown", args);
+				let code = args.get(0);
+				console.log(GlobalInterpreter.KEYS);
+				return (code in GlobalInterpreter.KEYS && GlobalInterpreter.KEYS[code]);
+			},
 			line: function (args) {
 				console.log("function line", args);
 				let canvas = document.getElementById("screen");
@@ -925,6 +944,11 @@ class AshInterpreter extends AshInstrument {
 				}
 			},
 		};
+	}
+	async executeAsync(callback, node) {
+		this.log('Start execution');
+		const oath = Promise.resolve(this.execute(node));
+		oath.then(callback);
 	}
 	execute(node, symbol = false) {
 		this.log(`executing ${node}`);
@@ -1039,7 +1063,7 @@ class AshInterpreter extends AshInstrument {
 					});
 					throw new Error(
 						`${symbol} is not a function but a ${typeof this.scope[
-							symbol
+						symbol
 						]}.`
 					);
 				}
@@ -1160,7 +1184,9 @@ class AshInterpreter extends AshInstrument {
 			let security = 16384;
 			while (condition === true && security > 0) {
 				try {
-					last = this.execute(node.left);
+					if (node.left !== null) {
+						last = this.execute(node.left);
+					}
 				} catch (e) {
 					if (e.message === "break") {
 						break;
@@ -1170,6 +1196,9 @@ class AshInterpreter extends AshInstrument {
 				}
 				condition = this.execute(node.value);
 				security -= 1;
+			}
+			if (condition && security === 0) {
+				throw new Error("Infinite loop detected");
 			}
 			return last;
 		} else if (node.type === "import") {
@@ -1242,16 +1271,16 @@ let language = {
 			".",
 		],
 		/*
-        "%",
-        // Specials
-        "<<",
-        "#",
-        "$",
-        // Booleans
-        "not",
-        "in",
-        "is",
-    ],*/
+		"%",
+		// Specials
+		"<<",
+		"#",
+		"$",
+		// Booleans
+		"not",
+		"in",
+		"is",
+	],*/
 		sep: ["(", ")", "[", "]", ";", "\n"],
 		int: [/^[1-9]\d*$/, "0"],
 		float: [/^[1-9]\d*\.\d+$/],
@@ -1339,7 +1368,17 @@ function AshExecute(root, debug_execute = false, info = null, error = null) {
 	if (debug_execute) {
 		log(`Executing ${debug_execute}`);
 	}
-	return new AshInterpreter(debug_execute, info, error).execute(root, false);
+	return new AshInterpreter(debug_execute, info, error).execute(root);
+}
+
+function AshExecuteAsync(callback, root, debug_execute = false, info = null, error = null) {
+	if (debug_execute) {
+		log(`Executing async ${debug_execute}`);
+	}
+	console.log("Starting Async Exection");
+	let ai = new AshInterpreter(debug_execute, info, error);
+	console.log("Go!");
+	ai.executeAsync(callback, root);
 }
 
 function AshProcess(
@@ -1352,6 +1391,18 @@ function AshProcess(
 	let root = AshParse(nodes, debug_parse);
 	let result = AshExecute(root, debug_execute);
 	return result;
+}
+
+function AshProcessAsync(
+	callback,
+	code,
+	debug_lex = false,
+	debug_parse = false,
+	debug_execute = false
+) {
+	let nodes = AshLex(code, debug_lex);
+	let root = AshParse(nodes, debug_parse);
+	AshExecuteAsync(callback, root, debug_execute);
 }
 
 function AshTests(debug = false) {
@@ -1477,4 +1528,4 @@ if (node) {
 // Exports
 //-------------------------------------------------------------------------------
 
-export { AshLex, AshParse, AshExecute, AshProcess, AshTests, notAnExpression };
+export { AshLex, AshParse, AshExecute, AshExecuteAsync, AshProcess, AshProcessAsync, AshTests, notAnExpression };

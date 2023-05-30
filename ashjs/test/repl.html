@@ -152,10 +152,13 @@
 			}
 		</style>
 		<script type="module">
-			import { AshLex, AshParse, AshExecute, notAnExpression } from "./ash.mjs"; // tests
+			import { AshLex, AshParse, AshExecuteAsync, notAnExpression } from "./ash.mjs"; // tests
 
 			window.onload = main;
 
+			let result = null;
+			let ok = true;
+			let container = null;
 			let current_line = 1;
 			function globalDrawText(
 				s,
@@ -190,7 +193,6 @@
 
 			function iprocess(name, code) {
 				console.clear();
-				let output = document.getElementById("output");
 				let debug_lex = document.getElementById("debug_lex").checked;
 				let debug_parse =
 					document.getElementById("debug_parse").checked;
@@ -199,7 +201,7 @@
 
 				let nodes = AshLex(code, debug_lex);
 				// HTML Result
-				let container = document.createElement("div");
+				container = document.createElement("div");
 				// Title
 				let title = document.createElement("h1");
 				title.innerText = name;
@@ -212,8 +214,6 @@
 				container.appendChild(input);
 
 				// Parsing
-				let result = null;
-				let ok = true;
 				try {
 					let root = AshParse(nodes, debug_parse);
 					// Graphic output
@@ -223,7 +223,9 @@
 
 					// Executing
 					try {
-						result = AshExecute(root, debug_execute, info, error);
+						//result = AshExecute(root, debug_execute, info, error);
+						//iprocess_end();
+						AshExecuteAsync(iprocess_end, root, debug_execute, info, error);
 					} catch (exception) {
 						result = `EXECUTION ERROR: ${exception}`;
 						ok = false;
@@ -232,7 +234,14 @@
 					result = `PARSE ERROR: ${exception}`;
 					ok = false;
 				}
+			}
+
+			function iprocess_end(r) {
+				if (ok) {
+					result = r;
+				}
 				// Result
+				let output = document.getElementById("output");
 				let res = document.createElement("pre");
 				res.innerHTML = "Result = " + result;
 				container.appendChild(res);
@@ -243,7 +252,6 @@
 				} else {
 					error(result);
 				}
-
 				output.prepend(container); // appendChild
 				let boxres;
 				if (document.getElementById("expression").checked) {
