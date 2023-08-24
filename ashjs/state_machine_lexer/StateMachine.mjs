@@ -1,9 +1,11 @@
 import promptSync from 'prompt-sync';
+import { writeFileSync } from 'node:fs';
+
 const prompt = promptSync();
 
 function safe(v)
 {
-    return v.replace(/\n/g, '\\n');
+    return v.replace(/\n/g, ':NL').replace(/\0/g, ':VOID');
 }
 
 class StateMachine
@@ -41,16 +43,10 @@ class StateMachine
     }
 
     includes(v1, v2) {
-        if (v1 === '@' && /^[a-zA-Z]$/.test(v2)) {
-            return true;
-        } else if (v1 === '#' && /^[0-9]$/.test(v2)) {
-            return true;
-        } else if (v1 === '&' && /^[a-zA-Z0-9]$/.test(v2)) {
-            return true;
-        } else if (v1 === v2) {
-            return true;
-        }
-        return false;
+        return (v1 === '@' && /^[a-zA-Z]$/.test(v2)
+            || v1 === '#' && /^\d$/.test(v2)
+            || v1 === '&' && /^[a-zA-Z0-9]$/.test(v2)
+            || v1 === v2);
     }
 
     start(v)
@@ -63,8 +59,8 @@ class StateMachine
             if (state.transitions === null) {
                 continue;
             }
-            for (const [event1, goto1] of Object.entries(state.transitions)) {
-                for (const [event2, goto2] of Object.entries(state.transitions)) {
+            for (const event1 of Object.keys(state.transitions)) {
+                for (const event2 of Object.keys(state.transitions)) {
                     if (event1 === event2) {
                         continue;
                     }
@@ -122,19 +118,34 @@ class StateMachine
         }
         this.actual = this.states[name];
         if (!this.actual.end) {
-            console.log(`    ${this.iterations}: ${status} ${this.actual.name} word=|${this.word}| stack=${this.wordStack.map((x) => `|${x}|`).join(', ')}(${this.wordStack.length}) action=${action}`);
+            let prep = this.wordStack.map((x) => `|${x}|`).join(', ');
+            console.log(`    ${this.iterations}: ${status} ${this.actual.name} word=|${this.word}| stack=${prep}}(${this.wordStack.length}) action=${action}`);
         } else {
             console.log(`    ${this.iterations}: Ending on ${this.actual}`);
             this.tokens.push([v, this.actual.name]);
             this.actual = null;
         }
     }
-    
+
     lastRunResult()
     {
         for (let i = 0; i < this.tokens.length; i++) {
             console.log(`${i}. |${safe(this.tokens[i][0])}:${this.tokens[i][1]}|`);
         }
+    }
+
+    toGraphiviz()
+    {
+        let res = 'digraph StateMachine {\n';
+        for (const [name, state] of Object.entries(this.states)) {
+            if (state.transitions !== null) {
+                for (const trans of state.transitions) {
+                    res += `    "${name}" -> "${trans.getDestination()}" [label="|${safe(trans.getCondition())}| / ${trans.getEvent()}"];\n`
+                }
+            }
+        }
+        res += '}';
+        return res;
     }
 }
 
@@ -146,19 +157,19 @@ class Transition
         this.destination = destination;
         this.event = event;
     }
-    
+
     toString()
     {
         return `|${this.condition}| => ${this.destination} / ${this.event}`;
     }
-    
+
     test(v)
     {
         let res = false;
         if (this.condition === '@') {
             res = /^[a-zA-Z]$/.test(v);
         } else if (this.condition === '#') {
-            res = /^[0-9]$/.test(v);
+            res = /^\d$/.test(v);
         } else if (this.condition === '&') {
             res = /^[a-zA-Z0-9]$/.test(v);
         } else {
@@ -166,15 +177,20 @@ class Transition
         }
         return res;
     }
-    
+
     getEvent()
     {
         return this.event;
     }
-    
+
     getDestination()
     {
         return this.destination;
+    }
+
+    getCondition()
+    {
+        return this.condition;
     }
 }
 
@@ -184,7 +200,7 @@ class State
     {
         this.name = name;
         this.transitions = transitions;
-        this.end = transitions === null ? true : false;
+        this.end = transitions === null;
     }
 
     toString()
@@ -221,7 +237,7 @@ function t(c, d, e='')
 
 function main()
 {
-    let timeStart = console.time('Start');
+    console.time('Start');
     let start = new State('Start', [
         t('@', 'Identifier', 'Emit'),
         t('#', 'Number', 'Emit'),
@@ -240,7 +256,7 @@ function main()
         t('#', 'Number'),
         t(' ', 'Space', 'Emit'),
         t('\0', 'End', 'Emit'),
-        t('@', 'Error-Malformed number'), 
+        t('@', 'Error-Malformed number'),
         t('.', 'Ambiguity-Dot after number'),
         t('\n', 'Newline', 'Emit')
     ]));
@@ -273,9 +289,9 @@ function main()
     console.log('--------------------');
     sm.start();
     let test = "bonjour 25 123.5 666.hello\na 1\0";
-    for (let i = 0; i < test.length; i++) {
-        console.log(`--> |${test[i]}|`);
-        sm.run(test[i]);
+    for (let c of test) {
+        console.log(`--> |${c}|`);
+        sm.run(c);
     }
     if (!sm.isOver()) {
         throw new Error('State Machine was not terminated correctly');
@@ -283,9 +299,11 @@ function main()
     console.log(`\nResult for |${safe(test)}|:`);
     sm.lastRunResult();
     console.timeEnd('Start');
+    console.log('Writing graph in out.txt');
+    writeFileSync("out.txt", sm.toGraphiviz());
 }
 
 main();
 
-//const cmd = prompt(">>> ");
-//console.log(cmd);
+const cmd = prompt(">>> ");
+console.log(cmd);
