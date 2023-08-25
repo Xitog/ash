@@ -8,6 +8,29 @@ function safe(v)
     return v.replace(/\n/g, ':NL').replace(/\0/g, ':VOID');
 }
 
+class Token
+{
+    constructor(type, value=null)
+    {
+        this.type = type;
+        this.value = value;
+    }
+
+    toString()
+    {
+        if (this.value !== null && this.value !== '') {
+            return `{${this.type}:${safe(this.value)}}`;
+        } else {
+            return `{${this.type}}`;
+        }
+    }
+
+    toJson()
+    {
+        return {'type': this.type, 'value': this.value};
+    }
+}
+
 class StateMachine
 {
     constructor(initial)
@@ -102,14 +125,14 @@ class StateMachine
         }
         let action = selectedTrans.getEvent();
         if (action === 'Emit') {
-            this.tokens.push([this.wordStack.shift(), this.actual.name]);
+            this.tokens.push(new Token(this.actual.name, this.wordStack.shift()));
         } else if (action.startsWith('Emit')) {
             let types = action.substring(5).split('-'); // Remove Emit-
             console.log(types);
             console.log(this.wordStack);
             let count = 0;
             while (this.wordStack.length > 0) {
-                this.tokens.push([this.wordStack.shift(), types[count]]);
+                this.tokens.push(new Token(types[count], this.wordStack.shift()));
                 count += 1;
             }
         } else if (action === 'Merge') {
@@ -122,15 +145,25 @@ class StateMachine
             console.log(`    ${this.iterations}: ${status} ${this.actual.name} word=|${this.word}| stack=${prep}}(${this.wordStack.length}) action=${action}`);
         } else {
             console.log(`    ${this.iterations}: Ending on ${this.actual}`);
-            this.tokens.push([v, this.actual.name]);
+            this.tokens.push(new Token(this.actual.name));
             this.actual = null;
         }
     }
 
-    lastRunResult()
+    lastRunResult(output='display', filter=null)
     {
-        for (let i = 0; i < this.tokens.length; i++) {
-            console.log(`${i}. |${safe(this.tokens[i][0])}:${this.tokens[i][1]}|`);
+        if (output === 'display') {
+            for (let i = 0; i < this.tokens.length; i++) {
+                console.log(`${i}. ${this.tokens[i]}`);
+            }
+        } else if (output === 'json') {
+            return this.tokens.map((x) => x.toJson());
+        } else if (output === 'token') {
+            if (filter == null) {
+                return this.tokens;
+            } else {
+                return this.tokens.filter((t) => !(t.type in filter));
+            }
         }
     }
 
@@ -301,6 +334,11 @@ function main()
     console.timeEnd('Start');
     console.log('Writing graph in out.txt');
     writeFileSync("out.txt", sm.toGraphiviz());
+    console.log('Writing JSON in tokens.json');
+    console.log(sm.lastRunResult('json'));
+    writeFileSync("tokens.json", JSON.stringify(sm.lastRunResult('json'), null, '    ').toString());
+    console.log('Tokens:');
+    console.log(sm.lastRunResult('tokens', ['Space']));
 }
 
 main();

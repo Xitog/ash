@@ -1,3 +1,34 @@
+24 Mots clés :
+    2: var?, const
+    5: if, then, else, elsif, end
+    3: while, do, loop
+    2: for, in
+    1: until?
+    2: break, next
+    3: fun, pro, return
+    1: import
+    2: raise?, catch? => replace by if/return
+    3: and, or, not
+Si on ne considère pas les "?" (=> fusion exception, flux normal) on tombe à 20.
+Manque : static, enum
+
+Opérateurs :
+    1 > extraction d'import, type de retour des fonctions
+    1 < héritage
+    1 = affectation
+    6 +=, -=, *=, **=, /=, //= affectation+mathématique
+    6 +, -, *, **, /, // mathématiques
+    1 . call
+    6 ==, !=, >, >=, <=, < comparaison
+
+Séparateurs :
+    2 {, } dictionnaire
+    2 (, ) appel de fonction
+    2 [, ] liste
+
+Dans les dict : ou = ?
+Typage : avec ou sans : ?
+
 -- comment
 --[[ multiline
 --]]
@@ -17,6 +48,14 @@ class Point          object (fixed fields)/obj
    y int
 end
 nil                  null value
+@attr                instance attribute
+$attr                class attribute (en Ruby pour global et @@ pour class)
+
+expression :
+    exp op exp
+    op exp
+    exp if cond else exp
+    [exp for id in exp if cond] ou [for id in exp if cond return exp]
 
 --
 
@@ -34,19 +73,19 @@ EXPRESSION if CONDITION else EXPRESSION
 
 --
 
-while CONDITION do
+[label] while CONDITION do
     ACTION
 loop [label]
 
-for ID1[, ID2] in ITERABLE [while CONDITION] [do
+[label] for ID1[, ID2] in ITERABLE [if CONDITION] [while CONDITION] [do
     ACTION]
 loop [label]
 
-do
+[label] do
     ACTION
 until CONDITION loop [label]
 
-do
+[label] do
     ACTION
 loop [label]
 
@@ -55,7 +94,7 @@ next [label]
 
 --
 
-fun[ction] ID (P1 [T1], P2 [T2] [> TYPE])
+fun[ction] ID (P1 [T1], P2 [T2] [> TYPE]) ou multitypes?
     ACTION
 end
 
@@ -79,7 +118,7 @@ a = ID.new(param)
 
 --
 
-import (FILEPATH | ID) [ > ID1, ID2 ]
+ID [module] = import (FILEPATH | ID) [ > ID1, ID2 ]
 
 module ID (en tête de fichier, pas de fin) (plutôt que package ou namespace)
 
@@ -105,6 +144,8 @@ and or not
 ${x} interpolation dans chaînes
 in
 
+Un label : |label| ou :label:
+
 14/12/2022
 - import (FILEPATH | ID) [ > ID1, ID2 ] alternate require
 25/10/2022
@@ -123,3 +164,5 @@ in
 - fun[ction] ID (P1 [T1], P2 [T2]) TYPE changed to fun[ction] ID (P1 [T1], P2 [T2] [> TYPE])
 - throw change to raise
 - Added literals for list, dict, array, boolean, integer, number, str, obj, nil
+01/08/2023
+- Fusionner le flux normal avec celui des exceptions. Vu le 25/08 que CLU fait ainsi
