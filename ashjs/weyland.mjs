@@ -1,120 +1,4 @@
-// This file provides several languages definitions :
-//   text
-//   bnf
-//   hamill
-//   game
-//   ash
-//   json
-//   lua
-//   python
-//   line
-//   test
-
-class Test
-{
-    constructor(lexer, text, result)
-    {
-        this.lexer = lexer;
-        this.text = text;
-        this.result = result;
-        if (this.result === null || this.result === undefined)
-        {
-            throw new Error(`No expected results for test ${text}`);
-        }
-    }
-
-    test(num=0, debug=false)
-    {
-        let tokens = this.lexer.lex(this.text, null, debug);
-        if (tokens.length !== this.result.length)
-        {
-            console.log('Difference of length, dumping:')
-            let longuest = Math.max(tokens.length, this.result.length);
-            for (let index = 0; index < longuest; index++)
-            {
-                if (index < tokens.length && index < this.result.length)
-                {
-                    let cmp = (this.result[index] === tokens[index].getType());
-                    console.log(`${index}. ${cmp} Expected=${this.result[index]} vs ${tokens[index].getType()} (${ln(tokens[index].getValue())})`);
-                } else if (index < tokens.length) {
-                    console.log(`${index}. Expected=null [null] vs ${tokens[index].getType()}`, ln(tokens[index].getValue()));
-                } else if (index < this.result.length) {
-                    console.log(`${index}. Expected=${this.result[index]} vs null`);
-                }
-            }
-            throw new Error(`Error: expected ${this.result.length} tokens and got ${tokens.length}`);
-        }
-        for (const [index, r] of this.result.entries())
-        {
-            if (tokens[index].getType() !== r)
-            {
-                throw new Error(`Error: expected ${r} and got ${tokens[index].getType()} in ${this.text}`);
-            }
-        }
-        console.log(`[SUCCESS] Test n°${num} Lang : ${this.lexer.getLanguage()}\nText : |${ln(this.text)}|\nResult:`);
-        for (const tok of tokens)
-        {
-            console.log(tok);
-        }
-    }
-}
-
-
 const LANGUAGES = {
-    'ash': new Language('ash',
-        {
-            'keyword' : ['if', 'then', 'elif', 'else', 'end',
-                'while', 'do', 'for',
-                'break', 'next', 'return',
-                'var', 'fun', 'sub', 'get', 'set', 'class',
-                'import', 'from', 'as',
-                'try', 'catch', 'finally', 'raise', 'const'],
-            'special': ['writeln', 'write'],
-            'boolean' : ['false', 'true'],
-            'operator' : ['-', 'not', '#', '~', 'and', 'or', // boolean
-                'in', // belongs to
-                '\\+', '-', '\\*', '/', '//', '\\*\\*', '%', // mathematical
-                '&', '\\|', '~', '>>', '<<', // bitwise
-                '<', '<=', '>', '>=', '==', '!=', // comparison
-                '\\.'], // call
-            'identifier' : PATTERNS["IDENTIFIER"],
-            // Old
-            'affectation' : ['='],
-            'combined_affectation' : ['\\+=', '-=', '\\*=', '/=', '//=', '\\*\\*=', '%='],
-            'type' : [':', '->'],
-            'fast' : ['=>'],
-            'label' : ['::'],
-            // 'unary_operator' : ['-', 'not', r'\#', '~'],
-            // New
-            'integer' : PATTERNS["INTEGER"].concat(PATTERNS["INTEGER_BIN"]).concat(PATTERNS["INTEGER_HEXA"]),
-            'number' : PATTERNS["FLOAT"],
-            'nil': ['nil'],
-            // 'binary_operator' : ['and', 'or', # boolean
-            'separator': ['\\{', '\\}', '\\(', '\\)', '\\[', '\\]', ',', ';'],
-            'wrong_int' : PATTERNS["WRONG_INTEGER"],
-            'blank': PATTERNS["BLANKS"],
-            'newline' : PATTERNS["NEWLINES"],
-            'comment': ['--[^\n]*'],
-            'string' : PATTERNS["STRINGS"],
-        },
-        ['wrong_int'],
-        // Special
-        {
-            'ante_identifier': ['var', 'const', 'function', 'procedure', 'fun', 'pro', 'class', 'module'],
-        }
-    ),
-    'bnf': new Language('bnf',
-        {
-            'keyword': ['<[\\w- ]+>'],  // non-terminal
-            'identifier': ['expansion', 'A', 'B', 'C', 'D', 'nom'], // expansion
-            'operator': ['::=', '\\|', '\\.\\.\\.', '=', '-', '\\?', '\\*', '\\+', '@', '\\$', '_'],
-            'separator': ['\\(', '\\)', '\\[', '\\]', '\\{', '\\}', ',', ';'],
-            'string' : ['"[\\w- <>:=,;\\|\']*"', "'[\\w- <>:=,;\\|\"]*'"], // terminal
-            'blank': PATTERNS['BLANKS'],
-            'comment': ['#[^\n]*\n'],
-            'newline' : PATTERNS['NEWLINES'],
-        }
-    ),
     'bnf-mini': new Language('bnf-mini',
         {
             'keyword': ['<[\\w- ]+>'],   // non-terminal
@@ -130,108 +14,6 @@ const LANGUAGES = {
             'word': ['[a-zA-ZéàèùâêîôûëïüÿçœæÉÀÈÙÂÊÎÔÛËÏÜŸÇŒÆ]+'],
             'punct': [',', '\\.', ':', ';', '-', '\\(', '\\)', '!', '\\?', "'", '"'],
             'blank': [' ', '\n', '\t']
-        }
-    ),
-    'game': new Language('game',
-        {
-            'number': ['\\d+'],
-            'normal': ['\\w[\\w\'-]*'], // Total Annihilation => 2 tokens, Baldur's => 1, Half-life => 1
-            'blank': PATTERNS['BLANKS'],
-            'wrong_int' : PATTERNS['WRONG_INTEGER'],
-            'newline' : ['\n'],
-            'operator': [':'] // FarCry:
-        }
-    ),
-    'hamill' : new Language('hamill',
-        {
-            'keyword': ['var', 'const', 'include', 'require', 'css', 'html'],
-            'newline' : PATTERNS["NEWLINES"],
-            'comment': ['§§.*(\n|$)'],
-            'bold': ['\\*\\*'],
-            'italic': ["''"],
-            'special': ['\\*', "'"],
-            'normal': ["([^\\\\*'§\n]|\\\\\\*\\*|\\\\\\*|\\\\''|\\\\')+"]
-        },
-        ['wrong_int'],
-        // Special
-        {
-            'ante_identifier': ['var', 'const'],
-            'string_markers': [],
-        },
-        function(tokens)
-        {
-            let res = [];
-            // Première passe, fusion des speciaux
-            for (const [index, tok] of tokens.entries())
-            {
-                if (tok.getType() === 'special')
-                {
-                    if (index > 0 && res.length > 0 && res[res.length - 1].getType() === 'normal')
-                    {
-                        res[res.length - 1].value += tok.getValue();
-                    }
-                    else if (index + 1 < tokens.length && tokens[index + 1].getType() === 'normal')
-                    {
-                        tokens[index + 1].value = tok.getValue() + tokens[index + 1].value;
-                        tokens[index + 1].start -= tok.getValue().length;
-                    }
-                } else {
-                    res.push(tok);
-                }
-            }
-            // Seconde passe, fusion des normaux
-            let res2 = [];
-            let index = 0;
-            while (index < res.length)
-            {
-                let tok = res[index];
-                if (tok.getType() === 'normal')
-                {
-                    let futur = index + 1;
-                    let merged_value = tok.getValue();
-                    while (futur < res.length && res[futur].getType() === 'normal')
-                    {
-                        merged_value += res[futur].getValue();
-                        futur += 1;
-                    }
-                    tok.value = merged_value;
-                    res2.push(tok);
-                    index = futur;
-                }
-                else
-                {
-                    res2.push(tok);
-                    index+=1;
-                }
-            }
-            return res2;
-        }
-    ),
-    'json': new Language('json',
-        {
-            'boolean': ['true', 'false'],
-            'identifier' : PATTERNS['IDENTIFIER'],
-            'number' : PATTERNS['INTEGER'].concat(PATTERNS['FLOAT']),
-            'string' : PATTERNS['STRINGS'],
-            'nil': [],
-            'keyword': ['null'],
-            'operator': [],
-            'separator': ['\\{', '\\}', '\\(', '\\)', '\\[', '\\]', ',', ':', "\\."],
-            'comment' : [],
-            'newline' : PATTERNS['NEWLINES'],
-            'blank': PATTERNS['BLANKS'],
-            'wrong_int' : PATTERNS['WRONG_INTEGER'],
-        },
-        ['wrong_int'],
-        // Special
-        {
-            'ante_identifier': [],
-        }
-    ),
-    // Un langage qui divise simplement en lignes
-    'line': new Language('line',
-        {
-            'line': ['.*(\n|$)']
         }
     ),
     'lua': new Language('lua',
@@ -329,8 +111,7 @@ const LEXERS = {
     'text': new Lexer(LANGUAGES['text'], ['blank']),
 }
 
-const TESTS = [
-    new Test(LEXERS['line'], "bonjour\ntoi qui\nvient de loin", ['line', 'line', 'line']),
+let a = [
     new Test(LEXERS['fr'], "bonjour l'ami !", ['word', 'word', 'punct', 'word', 'punct']),
     new Test(LEXERS['text'], "je suis là", ['normal', 'normal', 'normal']),
     new Test(LEXERS['game'], "Baldur's Gate\nTotal Annihilation\nHalf-Life\nFar Cry: Blood Dragon",
@@ -357,7 +138,6 @@ const TESTS = [
     new Test(LEXERS['lua'], '--[[Ceci est un\nz--]]', ['comment']),
     new Test(LEXERS['lua'], '--[[Ceci est un\ncommentaire multiligne--]]', ['comment']),
 
-    new Test(LEXERS['ash'], "a ** 5", ['identifier', 'operator', 'integer']),
     new Test(LEXERS['ash'], 'writeln("hello")', ['special', 'separator', 'string', 'separator']),
     new Test(LEXERS['ash'], 'if a == 5 then\n    writeln("hello")\nend',
                 ['keyword', 'identifier', 'operator', 'integer', 'keyword', 'newline',
@@ -366,29 +146,8 @@ const TESTS = [
 
     new Test(LEXERS['hamill'], "**bold * \\** text**", ['bold', 'normal', 'bold']),
     new Test(LEXERS['hamill'], "**bold ''text''**", ['bold', 'normal', 'italic', 'normal', 'italic', 'bold']),
-    new Test(LEXERS['ash'], 'a = 5', ['identifier', 'affectation', 'integer']),
-]
 
-function tests(debug=false)
-{
-    const text = "if a == 5 then\nprintln('hello')\nend\nendly = 5\na = 2.5\nb = 0xAE\nc = 2.5.to_i()\nd = 2.to_s()\n"; //5A";
-    let lexer = new Lexer(LANGUAGES['test'], ['blank']);
-    let tokens = lexer.lex(text);
-    console.log('Text:', text);
-    for (const [index, tok] of tokens.entries())
-    {
-        console.log(`${index.toString().padStart(4)}  ` + tok.toString());
-    }
+];
 
-    for (const [index, t] of TESTS.entries())
-    {
-        t.test(index + 1, debug);
-    }
-
-    console.log("\n--- Test of to_html ------------------------------------------\n");
-    console.log(LEXERS['lua'].to_html("if a >= 5 then println('hello') end", null, ['blank']));
-}
-
-tests(false);
 
 

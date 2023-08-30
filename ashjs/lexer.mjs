@@ -103,7 +103,7 @@ class Language
         this.name = name;
         if (typeof definitions !== 'object')
         {
-            throw new Error("Tokens should be an object of {type: [regex]} and it is a " + typeof definitions);
+            throw new Error(`For lang |${name}|, definitions should be an object and it is a ` + typeof definitions);
         }
         this.definitions = definitions;
         for (const [type, patterns] of Object.entries(definitions))
@@ -317,7 +317,7 @@ class Lexer
         {
             console.log(tokens);
             console.log(word.charCodeAt(0));
-            throw new Error(`Text not lexed at the end: ${word}`);
+            throw new Error(`Text not lexed at the end: |${word}|`);
         }
         return tokens;
     }
@@ -434,17 +434,112 @@ let LANGUAGES = {}
 // Tests
 //-------------------------------------------------------------------------------
 
+class Test
+{
+    constructor(language, text, result)
+    {
+        this.language = language;
+        this.text = text;
+        this.result = result;
+        if (this.result === null || this.result === undefined)
+        {
+            throw new Error(`No expected results for test ${text}`);
+        }
+    }
+
+    test(lexer, num=0, debug=false)
+    {
+        let tokens = lexer.lex(this.text, null, debug);
+        if (tokens.length !== this.result.length)
+        {
+            console.log('Difference of length, dumping:')
+            let longuest = Math.max(tokens.length, this.result.length);
+            for (let index = 0; index < longuest; index++)
+            {
+                if (index < tokens.length && index < this.result.length)
+                {
+                    let cmp = (this.result[index] === tokens[index].getType());
+                    console.log(`${index}. ${cmp} Expected=${this.result[index]} vs ${tokens[index].getType()} (${ln(tokens[index].getValue())})`);
+                } else if (index < tokens.length) {
+                    console.log(`${index}. Expected=null [null] vs ${tokens[index].getType()}`, ln(tokens[index].getValue()));
+                } else if (index < this.result.length) {
+                    console.log(`${index}. Expected=${this.result[index]} vs null`);
+                }
+            }
+            throw new Error(`Error: expected ${this.result.length} tokens and got ${tokens.length}`);
+        }
+        for (const [index, r] of this.result.entries())
+        {
+            if (tokens[index].getType() !== r)
+            {
+                throw new Error(`Error: expected ${r} and got ${tokens[index].getType()} in ${this.text}`);
+            }
+        }
+        console.log(`[SUCCESS] Test n°${num} Lang : ${lexer.getLanguage()}\nText : |${ln(this.text)}|\nResult:`);
+        for (const tok of tokens)
+        {
+            console.log(tok);
+        }
+    }
+}
+
+const TESTS = [
+    new Test(
+        'line',
+        "bonjour\ntoi qui\nvient de loin",
+        ['line', 'newline', 'line', 'newline', 'line']
+    ),
+    new Test(
+        'line',
+        "Et où commence la beauté du jour?\nSi ce n'est à l'aube et bien après minuit\nAnonyme.",
+        ['line', 'newline', 'line', 'newline', 'line']
+    ),
+    new Test(
+        'ash',
+        "const a = 20 + 5 ; 'hello'",
+        ['keyword', 'blank', 'identifier', 'blank', 'affectation', 'blank', 'integer', 'space', 'operator', 'space',
+        'integer', 'blank', 'separator', 'blank', 'string']
+    ),
+    new Test(
+        'ash',
+        'a = 5',
+        ['identifier', 'blank', 'affectation', 'blank', 'integer']
+    ),
+    new Test(
+        'ash',
+        "a ** 5",
+        ['identifier', 'blank', 'operator', 'blank', 'integer']
+    ),
+    //new Test(
+    //    'ash', "if a == 5 then\nprintln('hello')\nend\nendly = 5\na = 2.5\nb = 0xAE\nc = 2.5.to_i()\nd = 2.to_s()\n"
+    //),
+    new Test(
+        'game',
+        "Baldur's Gate (1998), Far Cry: Blood Dragon",
+        ['game', 'blank', 'year', 'sepator', 'game']
+    ),
+];
+
 function testTokens() {
     let tok = new Token('identifier', 'a', 0, 1);
     console.log(tok.toString());
     console.log(tok.toString(10));
 }
 
-function testLexer() {
-    let lexer = new Lexer('line');
-    let tokens = lexer.lex("Et où commence la beauté du jour?\nSi ce n'est à l'aube et bien après minuit\nAnonyme.");
-    console.log('Tokens:');
-    tokens.forEach(x => { console.log(`    ${x}`);});
+function tests(debug=false)
+{
+    let index = 1;
+    for (const test of TESTS)
+    {
+        console.log(`Test ${index} of lang |${test.language}| for text |${test.text}|:`)
+        let lexer = new Lexer(LANGUAGES[test.language]);
+        let tokens = lexer.lex(test.text);
+        tokens.forEach(x => { console.log(`    ${x.toString(12)}`);});
+        //t.test(index + 1, debug);
+        index += 1;
+    }
+    //console.log("\n--- Test of to_html ------------------------------------------\n");
+    //console.log(LEXERS['lua'].to_html("if a >= 5 then println('hello') end", null, ['blank']));
 }
 
 console.log('Tests tokens');
@@ -452,6 +547,6 @@ testTokens();
 console.log('Read definitions');
 console.log(Language.readDefinition());
 console.log('Test lexer');
-testLexer();
+tests(false);
 
 export {Token, Language, Lexer, LANGUAGES, PATTERNS}; // LEXERS

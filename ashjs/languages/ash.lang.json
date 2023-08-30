@@ -1,0 +1,52 @@
+{
+    "name": "ash",
+    "definitions": {
+        "keyword" : [
+            "if", "then", "elif", "else", "end",
+            "while", "do", "for",
+            "break", "next", "return",
+            "var", "fun", "sub", "get", "set", "class",
+            "import", "from", "as",
+            "try", "catch", "finally", "raise", "const"
+        ],
+        "special": [
+            "writeln", "write"
+        ],
+        "boolean" : [
+            "false", "true"
+        ],
+        "operator" : [
+            "-", "not", "#", "~", "and", "or",
+            "in",
+            "\\+", "-", "\\*", "/", "//", "\\*\\*", "%",
+            "&", "\\|", "~", ">>", "<<",
+            "<", "<=", ">", ">=", "==", "!=",
+            "\\."
+        ],
+        "identifier" : ["[a-zA-Z]\\w*"],
+        "affectation" : ["=", "\\+=", "-=", "\\*=", "/=", "//=", "\\*\\*=", "%="],
+        "type" : [":", "->"],
+        "fast" : ["=>"],
+        "label" : ["::"],
+        "integer" : [
+            "\\d+",
+            "0[xX][\\dABCDEFabcdef]+",
+            "0[bB][01]+"
+        ],
+        "number" : [
+            "\\d+\\.\\d+",
+            "\\d+[eE]-\\d+",
+            "\\d+\\.\\d+[eE]-?\\d+"
+        ],
+        "nil": ["nil"],
+        "separator": ["\\{", "\\}", "\\(", "\\)", "\\[", "\\]", ",", ";"],
+        "wrong_int" : ["\\d+\\."],
+        "blank": ["[ \u00A0\\t]+"],
+        "newline" : ["\n", "\n\r", "\r\n"],
+        "comment": ["--[^\n]*"],
+        "string" : ["'([^\\\\']|\\\\['nt])*'", "\"([^\\\\\"]|\\\\[\"nt])*\""]
+    },
+    "wrong": [
+        "wrong_int"
+    ]
+}
