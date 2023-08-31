@@ -16,35 +16,6 @@ const LANGUAGES = {
             'blank': [' ', '\n', '\t']
         }
     ),
-    'lua': new Language('lua',
-        {
-            'keyword': ['and', 'break', 'do', 'else', 'elseif', 'end', 'for',
-                        'function', 'goto', 'if', 'in', 'local', 'not', 'or',
-                        'repeat', 'return', 'then', 'until', 'while'],
-            'special': ['ipairs', 'pairs', '\\?', 'print'], // ? is here for demonstration only */
-            'boolean': ['true', 'false'],
-            'nil' : ['nil'],
-            'identifier' : PATTERNS['IDENTIFIER'],
-            'number' : ['\\d+', '\\d+\\.\\d+'],
-            'string' : PATTERNS['STRINGS'],
-            'operator': ['==', '~=', '<', '<=', '>', '>=',
-                         '=',
-                         '\\+', '\\*', '-', '/', '%', '\\^',
-                         '&', '\\|', '~', '>>', '<<',
-                         '\\.', '\\.\\.',
-                         '#', ':'],
-            'separator': ['\\{', '\\}', '\\(', '\\)', '\\[', '\\]', ',', ';'],
-            'comment': ['--(?!\\[\\[).*(\n|$)', '--\\[\\[[\\s\\S]*--\\]\\](\n|$)'],
-            'intermediate_comment': ['--\\[\\[[\\s\\S]*'],
-            'newline' : PATTERNS['NEWLINES'],
-            'blank': PATTERNS['BLANKS'],
-            'wrong_int' : PATTERNS['WRONG_INTEGER'],
-        },
-        ['wrong_integer'],
-        {
-            'ante_identifier': ['function'],
-        }
-    ),
     'python': new Language('python',
         {
             'keyword' : ['await', 'else', 'import', 'pass', 'break', 'except', 'in',
@@ -97,20 +68,6 @@ const LANGUAGES = {
         }),
 }
 
-const LEXERS = {
-    'ash': new Lexer(LANGUAGES['ash'], ['blank']),
-    'bnf': new Lexer(LANGUAGES['bnf'], ['blank']),
-    'bnf-mini': new Lexer(LANGUAGES['bnf-mini'], ['blank']),
-    'fr': new Lexer(LANGUAGES['fr'], ['blank']),
-    'game': new Lexer(LANGUAGES['game'], ['blank', 'newline']),
-    'hamill': new Lexer(LANGUAGES['hamill'], ['blank']),
-    'json': new Lexer(LANGUAGES['json'], ['blank', 'newline']),
-    'line': new Lexer(LANGUAGES['line']),
-    'lua': new Lexer(LANGUAGES['lua'], ['blank']),
-    'python': new Lexer(LANGUAGES['python']),
-    'text': new Lexer(LANGUAGES['text'], ['blank']),
-}
-
 let a = [
     new Test(LEXERS['fr'], "bonjour l'ami !", ['word', 'word', 'punct', 'word', 'punct']),
     new Test(LEXERS['text'], "je suis là", ['normal', 'normal', 'normal']),
@@ -127,16 +84,12 @@ let a = [
               'blank', 'special', 'separator', 'string', 'separator']),
 
     new Test(LEXERS['hamill'], "§§ ceci est un commentaire\n§§ ceci est un autre", ['comment', 'comment']),
-    new Test(LEXERS['lua'], '3+5', ['number', 'operator', 'number']),
-    new Test(LEXERS['lua'], 'a = 5', ['identifier', 'operator', 'number']),
     new Test(LEXERS['lua'], 't = { ["k1"] = 5 }', ['identifier', 'operator', 'separator', 'separator', 'string', 'separator', 'operator', 'number', 'separator']),
     new Test(LEXERS['lua'], 't = { ["k1"] = 5, ["k2"] = "v", [4] = 6 } -- Définition\nprint(t["k1"]) -- Accès\nprint(t.k1) -- Accès avec sucre syntaxique',
             ['identifier', 'operator', 'separator', 'separator', 'string', 'separator', 'operator', 'number', 'separator',
              'separator', 'string', 'separator', 'operator', 'string', 'separator', 'separator', 'number', 'separator', 'operator', 'number',
              'separator', 'comment', 'special', 'separator', 'identifier', 'separator', 'string', 'separator', 'separator', 'comment',
              'special', 'separator', 'identifier', 'operator', 'identifier', 'separator', 'comment']),
-    new Test(LEXERS['lua'], '--[[Ceci est un\nz--]]', ['comment']),
-    new Test(LEXERS['lua'], '--[[Ceci est un\ncommentaire multiligne--]]', ['comment']),
 
     new Test(LEXERS['ash'], 'writeln("hello")', ['special', 'separator', 'string', 'separator']),
     new Test(LEXERS['ash'], 'if a == 5 then\n    writeln("hello")\nend',
@@ -146,8 +99,4 @@ let a = [
 
     new Test(LEXERS['hamill'], "**bold * \\** text**", ['bold', 'normal', 'bold']),
     new Test(LEXERS['hamill'], "**bold ''text''**", ['bold', 'normal', 'italic', 'normal', 'italic', 'bold']),
-
 ];
-
-
-

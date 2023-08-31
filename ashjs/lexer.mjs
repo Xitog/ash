@@ -459,9 +459,9 @@ class Test
                 if (index < tokens.length && index < this.result.length)
                 {
                     let cmp = (this.result[index] === tokens[index].getType());
-                    console.log(`${index}. ${cmp} Expected=${this.result[index]} vs ${tokens[index].getType()} (${ln(tokens[index].getValue())})`);
+                    console.log(`${index}. ${cmp} Expected=${this.result[index]} vs ${tokens[index].getType()} (${tokens[index].getValue()})`);
                 } else if (index < tokens.length) {
-                    console.log(`${index}. Expected=null [null] vs ${tokens[index].getType()}`, ln(tokens[index].getValue()));
+                    console.log(`${index}. Expected=null [null] vs ${tokens[index].getType()}`, tokens[index].getValue());
                 } else if (index < this.result.length) {
                     console.log(`${index}. Expected=${this.result[index]} vs null`);
                 }
@@ -475,11 +475,9 @@ class Test
                 throw new Error(`Error: expected ${r} and got ${tokens[index].getType()} in ${this.text}`);
             }
         }
-        console.log(`[SUCCESS] Test n°${num} Lang : ${lexer.getLanguage()}\nText : |${ln(this.text)}|\nResult:`);
-        for (const tok of tokens)
-        {
-            console.log(tok);
-        }
+        console.log(`[SUCCESS] Test n°${num} language : |${lexer.getLanguage().getName()}|\nText :\n    |${this.text.replace('/\n/g', '<NL>')}|\nResult:`);
+        tokens.forEach(tok => { console.log(`    ${tok.toString(12)}`);});
+        console.log('\n');
     }
 }
 
@@ -487,17 +485,17 @@ const TESTS = [
     new Test(
         'line',
         "bonjour\ntoi qui\nvient de loin",
-        ['line', 'newline', 'line', 'newline', 'line']
+        ['line', 'line', 'line']
     ),
     new Test(
         'line',
         "Et où commence la beauté du jour?\nSi ce n'est à l'aube et bien après minuit\nAnonyme.",
-        ['line', 'newline', 'line', 'newline', 'line']
+        ['line', 'line', 'line']
     ),
     new Test(
         'ash',
         "const a = 20 + 5 ; 'hello'",
-        ['keyword', 'blank', 'identifier', 'blank', 'affectation', 'blank', 'integer', 'space', 'operator', 'space',
+        ['keyword', 'blank', 'identifier', 'blank', 'affectation', 'blank', 'integer', 'blank', 'operator', 'blank',
         'integer', 'blank', 'separator', 'blank', 'string']
     ),
     new Test(
@@ -513,10 +511,15 @@ const TESTS = [
     //new Test(
     //    'ash', "if a == 5 then\nprintln('hello')\nend\nendly = 5\na = 2.5\nb = 0xAE\nc = 2.5.to_i()\nd = 2.to_s()\n"
     //),
+    new Test('lua', '3+5', ['number', 'operator', 'number']),
+    new Test('lua', 'a = 5', ['identifier', 'blank', 'operator', 'blank', 'number']),
+    new Test('lua', '-- Ceci est un commentaire\nabc', ['comment', 'identifier']),
+    new Test('lua', '--[[Ceci est un\ncommentaire multiligne--]]', ['comment']),
+
     new Test(
         'game',
         "Baldur's Gate (1998), Far Cry: Blood Dragon",
-        ['game', 'blank', 'year', 'sepator', 'game']
+        ['game', 'blank', 'year', 'separator', 'blank', 'game']
     ),
 ];
 
@@ -531,11 +534,8 @@ function tests(debug=false)
     let index = 1;
     for (const test of TESTS)
     {
-        console.log(`Test ${index} of lang |${test.language}| for text |${test.text}|:`)
         let lexer = new Lexer(LANGUAGES[test.language]);
-        let tokens = lexer.lex(test.text);
-        tokens.forEach(x => { console.log(`    ${x.toString(12)}`);});
-        //t.test(index + 1, debug);
+        test.test(lexer, index, debug);
         index += 1;
     }
     //console.log("\n--- Test of to_html ------------------------------------------\n");
