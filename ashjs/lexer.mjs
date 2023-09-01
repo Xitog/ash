@@ -52,6 +52,23 @@ class Token
         return ok_value && ok_type && ok_start;
     }
 
+    toHTML(lang, raw=false, debug=false)
+    {
+        let val = this.getValue();
+        if (!raw) {
+            val = val.replace('&', '&amp;');
+            val = val.replace('>', '&gt;');
+            val = val.replace('<', '&lt;');
+            if (debug) {
+                return `${val}<sub>${this.type}</sub>`;
+            } else {
+                return `<span class=${lang}-${this.type}>${val}</span>`
+            }
+        } else {
+            return val;
+        }
+    }
+
     getType()
     {
         return this.type;
@@ -322,72 +339,10 @@ class Lexer
         return tokens;
     }
 
-    to_html(text=null, tokens=null, raws=[], enumerate=false)
+    toHTML(tokens, raws=[], debug=false)
     {
-        if (text === null && tokens === null)
-        {
-            throw new Error("Nothing send to to_html");
-        } else if (text !== null && tokens !== null) {
-            throw new Error("Send to to_html text OR tokens, not both!");
-        }
-        if (text !== null)
-        {
-            tokens = this.lex(text, []) // don't discard anything, we will produce raws instead
-        }
-        for (const tok of tokens)
-        {
-            console.log('to_html', tok);
-        }
-        let output = '';
-        let nb = 0;
-        for (let i = 0; i < tokens.length; i++)
-        {
-            const tok = tokens[i];
-            const next = (i + 1 < tokens.length) ? tokens[i+1] : null;
-            if (raws.includes(tok.getType()))
-            {
-                output += tok.getValue();
-            } else {
-                let val = tok.getValue();
-                val = val.replace('&', '&amp;');
-                val = val.replace('>', '&gt;');
-                val = val.replace('<', '&lt;');
-                output += `<span class="${this.lang.getName()}-${tok.getType()}" title="token n°${nb} : ${tok.getType()}">${val}</span>`;
-                if (enumerate)
-                {
-                    console.log(tok);
-                    if (['integer', 'number', 'identifier', 'boolean'].includes(tok.getType()))
-                    {
-                        if (next != null && ['operator', 'keyword'].includes(next.getType()))
-                        {
-                            output += ' ';
-                        }
-                    }
-                    else if (['keyword'].includes(tok.getType()))
-                    {
-                        if (!(['next', 'break', 'return'].includes(tok.getValue())))
-                        {
-                            output += ' ';
-                        }
-                    }
-                    else if (next != null && ['affectation', 'combined_affectation'].includes(next.getType()))
-                    {
-                            output = ' '  + output + ' ';
-                    }
-                    else if (tok.is(',', 'separator'))
-                    {
-                        output += ' ';
-                    }
-                    else if (tok.is(null, 'operator'))
-                    {
-                        output += ' ';
-                    }
-                    // Ceci peut-être ajouté : output += `<sup class='info'>${nb}</sup><span> </span>`;
-                }
-            }
-            nb += 1;
-        }
-        return output;
+        let html = tokens.map(tok => tok.toHTML(this.lang.getName(), raws.includes(tok.getType()), debug));
+        return html.join('');
     }
 }
 
@@ -688,8 +643,30 @@ function tests(debug=false)
         test.test(lexer, index, debug);
         index += 1;
     }
-    //console.log("\n--- Test of to_html ------------------------------------------\n");
-    //console.log(LEXERS['lua'].to_html("if a >= 5 then println('hello') end", null, ['blank']));
+    console.log("\n--- Test of to_html ------------------------------------------\n");
+    let lexer = new Lexer(LANGUAGES['lua']);
+    let text = "if a >= 5 then println('hello') end";
+    let tokens = lexer.lex(text);
+    let expectedNormal = "<span class=lua-keyword>if</span> <span class=lua-identifier>a</span> <span class=lua-operator>&gt;=</span> <span class=lua-number>5</span> <span class=lua-keyword>then</span> <span class=lua-identifier>println</span><span class=lua-separator>(</span><span class=lua-string>'hello'</span><span class=lua-separator>)</span> <span class=lua-keyword>end</span>";
+    let expectedDebug = "if<sub>keyword</sub> a<sub>identifier</sub> &gt;=<sub>operator</sub> 5<sub>number</sub> then<sub>keyword</sub> println<sub>identifier</sub>(<sub>separator</sub>'hello'<sub>string</sub>)<sub>separator</sub> end<sub>keyword</sub>";
+    let resNormal = lexer.toHTML(tokens, ['blank']);
+    let resDebug = lexer.toHTML(tokens, ['blank'], true);
+    if (resNormal !== expectedNormal) {
+        console.log('[ERROR]');
+        console.log(text);
+        console.log(`Expected: ${expectedNormal}`);
+        console.log(`Got: ${resNormal}`);
+    } else {
+        console.log('[SUCESS] expectedNormal');
+    }
+    if (resDebug !== expectedDebug) {
+        console.log('[ERROR]');
+        console.log(text);
+        console.log(`Expected: ${expectedDebug}`);
+        console.log(`Got: ${resDebug}`);
+    } else {
+        console.log('[SUCESS] expectedDebug');
+    }
 }
 
 console.log('Tests tokens');
