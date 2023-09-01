@@ -78,7 +78,7 @@ class Token
         if (pad === null) {
             return `{${this.type} |${val}|(${this.value.length}) @${this.start},L${this.line}}`;
         } else {
-            return `{Token ${this.type.padEnd(pad)} |${(val + '|').padEnd(pad)}(${this.value.length}) @${this.start},L${this.line}`;
+            return `{Token ${this.type.padEnd(pad)} |${(val + '|').padEnd(pad*2)}(${this.value.length}) @${this.start},L${this.line}`;
         }
     }
 }
@@ -436,7 +436,7 @@ let LANGUAGES = {}
 
 class Test
 {
-    constructor(language, text, result)
+    constructor(language, text, result, discards=[])
     {
         this.language = language;
         this.text = text;
@@ -445,6 +445,17 @@ class Test
         {
             throw new Error(`No expected results for test ${text}`);
         }
+        this.discards = discards;
+    }
+
+    getDiscards()
+    {
+        return this.discards;
+    }
+
+    getLanguage()
+    {
+        return this.language;
     }
 
     test(lexer, num=0, debug=false)
@@ -475,13 +486,24 @@ class Test
                 throw new Error(`Error: expected ${r} and got ${tokens[index].getType()} in ${this.text}`);
             }
         }
-        console.log(`[SUCCESS] Test n°${num} language : |${lexer.getLanguage().getName()}|\nText :\n    |${this.text.replace('/\n/g', '<NL>')}|\nResult:`);
+        console.log(`[SUCCESS] Test n°${num} language : |${lexer.getLanguage().getName()}|`);
+        if (this.discards.length > 0) {
+            console.log(`Discarded: ${this.discards.join(', ')}`);
+        }
+        let val = this.text.replace(/\n/g, '<NL>');
+        console.log(`Text :\n    |${val}|`);
+        console.log(`Result:`);
         tokens.forEach(tok => { console.log(`    ${tok.toString(12)}`);});
         console.log('\n');
     }
 }
 
 const TESTS = [
+
+    //---------------------------------------------------------------
+    // Language: Line
+    //---------------------------------------------------------------
+
     new Test(
         'line',
         "bonjour\ntoi qui\nvient de loin",
@@ -492,6 +514,11 @@ const TESTS = [
         "Et où commence la beauté du jour?\nSi ce n'est à l'aube et bien après minuit\nAnonyme.",
         ['line', 'line', 'line']
     ),
+
+    //---------------------------------------------------------------
+    // Language: Ash
+    //---------------------------------------------------------------
+
     new Test(
         'ash',
         "const a = 20 + 5 ; 'hello'",
@@ -511,16 +538,139 @@ const TESTS = [
     //new Test(
     //    'ash', "if a == 5 then\nprintln('hello')\nend\nendly = 5\na = 2.5\nb = 0xAE\nc = 2.5.to_i()\nd = 2.to_s()\n"
     //),
+    new Test(
+        'ash',
+        'writeln("hello")',
+        ['special', 'separator', 'string', 'separator'],
+        ['blank']
+    ),
+    new Test(
+        'ash',
+        'if a == 5 then\n    writeln("hello")\nend',
+        [
+            'keyword', 'identifier', 'operator', 'integer', 'keyword', 'newline',
+            'special', 'separator', 'string', 'separator', 'newline', 'keyword'
+        ],
+        ['blank']
+    ),
+
+    //---------------------------------------------------------------
+    // Language: BNF et BNF-mini
+    //---------------------------------------------------------------
+
+    new Test(
+        'bnf',
+        "<rule 1> ::= 'terminal1' 'terminal2'",
+        ['non-terminal', 'operator', 'terminal', 'terminal'],
+        ['blank']
+    ),
+    new Test(
+        'bnf-mini',
+        "<rule xtrem> ::= 'terminal xtrem'",
+        ['non-terminal', 'operator', 'terminal'],
+        ['blank']
+    ),
+
+    //---------------------------------------------------------------
+    // Language: Lua
+    //---------------------------------------------------------------
+
     new Test('lua', '3+5', ['number', 'operator', 'number']),
     new Test('lua', 'a = 5', ['identifier', 'blank', 'operator', 'blank', 'number']),
+    new Test('lua', 'a = 5', ['identifier', 'operator', 'number'], ['blank']),
     new Test('lua', '-- Ceci est un commentaire\nabc', ['comment', 'identifier']),
     new Test('lua', '--[[Ceci est un\ncommentaire multiligne--]]', ['comment']),
+    new Test(
+        'lua',
+        't = { ["k1"] = 5 }',
+        [
+            'identifier', 'operator', 'separator', 'separator', 'string', 'separator', 'operator', 'number', 'separator'
+        ],
+        ['blank']
+    ),
+    new Test(
+        'lua',
+        't = { ["k1"] = 5, ["k2"] = "v", [4] = 6 } -- Définition\nprint(t["k1"]) -- Accès\nprint(t.k1) -- Accès avec sucre syntaxique',
+        [
+            'identifier', 'operator', 'separator', 'separator', 'string', 'separator', 'operator', 'number',
+            'separator', 'separator', 'string', 'separator', 'operator', 'string', 'separator', 'separator', 'number',
+            'separator', 'operator', 'number', 'separator', 'comment', 'special', 'separator', 'identifier',
+            'separator', 'string', 'separator', 'separator', 'comment', 'special', 'separator', 'identifier',
+            'operator', 'identifier', 'separator', 'comment'
+        ],
+        ['blank']
+    ),
+
+    //---------------------------------------------------------------
+    // Language: Python
+    //---------------------------------------------------------------
+
+    new Test(
+        'python',
+        "def a():\n\tif a == 5:\n\t\tprint('hello')",
+        [
+            'keyword', 'blank', 'identifier', 'separator', 'separator', 'operator', 'newline',
+            'blank', 'keyword', 'blank', 'identifier', 'blank', 'operator', 'blank', 'integer', 'operator', 'newline',
+            'blank', 'special', 'separator', 'string', 'separator'
+        ]
+    ),
+
+    //---------------------------------------------------------------
+    // Language: Game
+    //---------------------------------------------------------------
 
     new Test(
         'game',
         "Baldur's Gate (1998), Far Cry: Blood Dragon",
         ['game', 'blank', 'year', 'separator', 'blank', 'game']
     ),
+    new Test(
+        'game',
+        "Baldur's Gate (1998), Far Cry: Blood Dragon",
+        ['game', 'year', 'separator', 'game'],
+        ['blank']
+    ),
+    new Test(
+        'game',
+        "Baldur's Gate\nTotal Annihilation\nHalf-Life\nFar Cry: Blood Dragon",
+        ['game', 'newline', 'game', 'newline', 'game', 'newline', 'game']
+    ),
+
+    //---------------------------------------------------------------
+    // Language: FR
+    //---------------------------------------------------------------
+
+    new Test(
+        'fr',
+        "On n'habite pas un pays, on habite une langue. Une patrie, c'est cela et rien d'autre.",
+        ['word', 'word', 'punct', 'word', 'word', 'word', 'word', 'punct', 'word', 'word', 'word', 'word', 'punct',
+        // On     n       '        habite pas     un      pays     ,        on      habite une     langue   .
+         'word', 'word', 'punct', 'word', 'punct', 'word', 'word', 'word', 'word', 'word', 'punct', 'word', 'punct'],
+        // Une   patrie  ,        c        '        est     cela    et     rien     d       '        autre   .
+        ['blank']
+    ),
+    new Test('fr', "bonjour l'ami !", ['word', 'word', 'punct', 'word', 'punct'], ['blank']),
+
+    //---------------------------------------------------------------
+    // Language: Test
+    //---------------------------------------------------------------
+
+    new Test(
+        'text',
+        "je suis là",
+        ['normal', 'blank', 'normal', 'blank', 'normal']
+    ),
+
+    //---------------------------------------------------------------
+    // Language: JSON
+    //---------------------------------------------------------------
+
+    new Test(
+        'json',
+        "{'alpharius': 20, 'heretic': true}",
+        ['separator', 'string', 'separator', 'number', 'separator', 'string', 'separator', 'boolean', 'separator'],
+        ['blank']),
+
 ];
 
 function testTokens() {
@@ -534,7 +684,7 @@ function tests(debug=false)
     let index = 1;
     for (const test of TESTS)
     {
-        let lexer = new Lexer(LANGUAGES[test.language]);
+        let lexer = new Lexer(LANGUAGES[test.getLanguage()], test.getDiscards());
         test.test(lexer, index, debug);
         index += 1;
     }
