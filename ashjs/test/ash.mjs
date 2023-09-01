@@ -1,40 +1,3 @@
-// -----------------------------------------------------------
-// MIT Licence (Expat License Wording)
-// -----------------------------------------------------------
-// Copyright © 2020, Damien Gouteux
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
-// For more information about my projects see:
-// https://xitog.github.io/dgx (in French)
-
-//-------------------------------------------------------------------------------
-// Imports
-//-------------------------------------------------------------------------------
-
-const node =
-	typeof process !== "undefined" &&
-	process !== null &&
-	typeof process.version !== "undefined" &&
-	process.version !== null &&
-	typeof process.version === "string";
-
 //-----------------------------------------------------------------------------
 // Classes
 //-----------------------------------------------------------------------------
@@ -60,39 +23,6 @@ class NodeList {
 	}
 	toString() {
 		return `NodeList of ${this.nodes.length} elements`;
-	}
-}
-
-class Token {
-	constructor(type, value, line) {
-		this.type = type;
-		this.value = value;
-		this.line = line;
-	}
-
-	// equals("keyword", "if") or equals("keyword", ["if", "while"])
-	equals(t, v) {
-		if (Array.isArray(v)) {
-			return this.type === t && v.includes(this.value);
-		}
-		return this.type === t && this.value === v;
-	}
-
-	toString() {
-		let val = this.value !== "\n" ? this.value : "\\n";
-		return `Token(t=${this.type}, v=${val}, @${this.line})`;
-	}
-
-	toHTML() {
-		return `${this.value}<sub>${this.type}</sub>`;
-	}
-
-	toHTMLTree(isRoot = false) {
-		if (isRoot) {
-			return `<ul class="monotree"><li data-type="${this.type}"><code>${this.value}</code><ul>`;
-		} else {
-			return `<code data-type="${this.type}">${this.value}</code>`;
-		}
 	}
 }
 
@@ -252,14 +182,12 @@ class AshFunction {
 						}
 					}
 				}
-			} else {
-				if (param.def === nil) {
-					throw new Error(
-						`Not enough parameter: ${this} requires ${this.paramList.length
-						} parameters and ${argList.getSize()} were given.`
-					);
-				}
-			}
+			} else if (param.def === nil) {
+                throw new Error(
+                    `Not enough parameter: ${this} requires ${this.paramList.length
+                    } parameters and ${argList.getSize()} were given.`
+                );
+            }
 		}
 		if (typeof this.code === "function") {
 			return this.code(argList);
@@ -279,105 +207,6 @@ class AshInstrument {
 		if (this.debug) {
 			console.log(s);
 		}
-	}
-}
-
-class AshLexer extends AshInstrument {
-	constructor(debug = false) {
-		super(debug);
-	}
-	lex(code) {
-		let nodes = [];
-		let word = "";
-		let matches = [];
-		let old_matches = [];
-		let line = 1;
-		for (let index = 0; index < code.length; index += 1) {
-			this.log(index);
-			if (index > 200) {
-				throw new Error("too much");
-			}
-			let c = code[index];
-			word += c;
-			let safeWord = word.replace(/\n/g, "\\n");
-			this.log(`Word is |${safeWord}|`);
-			matches = [];
-			for (const [t, elems] of Object.entries(language.tokens)) {
-				for (const e of elems) {
-					if (e instanceof RegExp) {
-						if (e.test(word)) {
-							this.log(`matched ${t} with ${e} for ${safeWord}`);
-							matches.push(new Token(t, word, line));
-							break;
-						}
-					} else if (e === word) {
-						this.log(`matched ${t}`);
-						matches.push(new Token(t, word, line));
-						break;
-					}
-				}
-			}
-			this.log(
-				`Matches: ${matches.length} and old: ${old_matches.length}`
-			);
-			if (matches.length === 0 && old_matches.length > 0) {
-				this.log(`Adding node! ${old_matches[0]}`);
-				nodes.push(old_matches[0]);
-				word = "";
-				index -= 1;
-			}
-			old_matches = matches;
-			if (c === "\n") {
-				line += 1;
-			}
-		}
-		this.log(`Matches: ${matches.length} and old: ${old_matches.length}`);
-		if (word.length > 0) {
-			if (old_matches.length > 0) {
-				nodes.push(old_matches[0]);
-			} else {
-				throw new Error(`Unlexed string: |${word}|`);
-			}
-		}
-		// filter blanks & comments
-		let nn = [];
-		for (const n of nodes) {
-			if (n.type !== "blank" && n.type !== "comment") {
-				nn.push(n);
-			}
-		}
-		nodes = nn;
-		// retag nodes
-		for (const [i, n] of nodes.entries()) {
-			if (n.type === "op") {
-				n.type = "binop";
-				if (n.value === "not") {
-					n.type = "unaop";
-				} else if (n.value === "-") {
-					if (i == 0) {
-						n.type = "unaop";
-						n.value = "una-";
-					} else if (i - 1 >= 0) {
-						if (
-							["sep", "binop", "unaop"].includes(
-								nodes[i - 1].type
-							)
-						) {
-							n.type = "unaop";
-							n.value = "una-";
-						}
-					}
-				}
-			} else if (n.type === "sep" && n.value === "(") {
-				if (i - 1 >= 0) {
-					if (nodes[i - 1].type === "id") {
-						n.type = "binop";
-					}
-				}
-			}
-		}
-		this.log("End of lexing", code);
-		return nodes;
 	}
 }
 
@@ -1233,109 +1062,6 @@ class AshInterpreter extends AshInstrument {
 //-----------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------
-
-let language = {
-	tokens: {
-		op: [
-			// Maths
-			"+",
-			"-",
-			"*",
-			"/",
-			"//",
-			"**",
-			"%",
-			// Booleans
-			"not",
-			"and",
-			"or",
-			// Affectation
-			"=",
-			"*=",
-			"/=",
-			"//=",
-			"**=",
-			"%=",
-			"+=",
-			"-=",
-			// Comparisons
-			"==",
-			"!=",
-			"<",
-			"<=",
-			">=",
-			">",
-			// List
-			",",
-			// Access
-			".",
-		],
-		/*
-		"%",
-		// Specials
-		"<<",
-		"#",
-		"$",
-		// Booleans
-		"not",
-		"in",
-		"is",
-	],*/
-		sep: ["(", ")", "[", "]", ";", "\n"],
-		int: [/^[1-9]\d*$/, "0"],
-		float: [/^[1-9]\d*\.\d+$/],
-		wrong_float: [/^[1-9]\d*\.$/],
-		bool: ["true", "false"],
-		keyword: [
-			"if",
-			"then",
-			"end",
-			"while",
-			"do",
-			"loop",
-			"function",
-			"procedure",
-			"break",
-			"import",
-		],
-		id: [/^[a-zA-Z_]\w*$/],
-		string: [/^"[\w:/\.\- !?#]*"$/],
-		blank: [" ", "\t"],
-		comment: [/^--[^\n]*\n$/],
-		wrong_string: [/^"[\w:/\.\- !?#]*$/],
-		wrong_comment: [/^--[^\n]*$/],
-	},
-	precedences: {
-		".": 9.5,
-		"(": 9,
-		"una-": 8,
-		"*": 7,
-		"/": 7,
-		"//": 7,
-		"**": 7,
-		"%": 7,
-		"+": 6,
-		"-": 6,
-		">": 5,
-		"<": 5,
-		">=": 5,
-		"<=": 5,
-		"==": 5,
-		"!=": 5,
-		not: 4,
-		and: 3,
-		or: 3,
-		",": 2,
-		"*=": 1,
-		"/=": 1,
-		"//=": 1,
-		"**=": 1,
-		"%=": 1,
-		"+=": 1,
-		"-=": 1,
-		"=": 1,
-	},
-};
 
 const nil = new NilClass();
 const notAnExpression = new NotAnExpression();

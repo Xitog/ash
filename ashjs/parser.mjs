@@ -1,8 +1,69 @@
-//-----------------------------------------------------------------------------
-// AST
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------
+// MIT Licence (Expat License Wording)
+// -----------------------------------------------------------
+// Copyright © 2020, Damien Gouteux
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+// For more information about my projects see:
+// https://xitog.github.io/dgx (in French)
 
-class Node
+//-------------------------------------------------------------------------------
+// Import
+//-------------------------------------------------------------------------------
+
+import { Token } from "./lexer.mjs";
+
+function ashPostLexing(tokens)
+{
+    // retag nodes
+    for (const [i, n] of tokens.entries()) {
+        if (n.type === "op") {
+            n.type = "binop";
+            if (n.value === "not") {
+                n.type = "unaop";
+            } else if (n.value === "-") {
+                if (i == 0) {
+                    n.type = "unaop";
+                    n.value = "una-";
+                } else if (i - 1 >= 0) {
+                    if (
+                        ["sep", "binop", "unaop"].includes(
+                            nodes[i - 1].type
+                        )
+                    ) {
+                        n.type = "unaop";
+                        n.value = "una-";
+                    }
+                }
+            }
+        } else if (n.type === "sep" && n.value === "(") {
+            if (i - 1 >= 0) {
+                if (nodes[i - 1].type === "id") {
+                    n.type = "binop";
+                }
+            }
+        }
+    }
+}
+
+class Node extends Token
 {
     display(level=0)
     {
@@ -93,6 +154,7 @@ class Parameter extends Node
 {
     constructor(param, next)
     {
+        super();
         this.param = param;
         this.next = next;
     }
@@ -246,50 +308,46 @@ class Parser
         {
             let tok = this.tokens[this.index];
             let next = (this.index + 1) < this.tokens.length ? this.tokens[this.index+1] : null;
-            if (tok.is('if'))
+            if (tok.equals("keywords", 'if'))
             {
                 b.add(this.parse_if());
             }
-            else if (tok.is(null, 'comment') || tok.is(null, 'newline'))
+            else if (tok.equals('comment') || tok.equals('newline'))
             {
                 this.index += 1;
             }
-            else if (tok.is('break'))
+            else if (tok.equals('keyword', 'break'))
             {
                 this.index += 1;
                 b.add(new Break());
             }
-            else if (tok.is('next'))
+            else if (tok.equals('keyword', 'next'))
             {
                 this.index += 1;
                 b.add(new Next());
             }
-            else if (tok.is('while'))
+            else if (tok.equals('keyword', 'while'))
             {
                 b.add(this.parse_while());
             }
-            else if (tok.is('for'))
+            else if (tok.equals('keyword', 'for'))
             {
                 b.add(this.parse_for());
             }
-            else if (tok.is(null, 'identifier')
+            else if (tok.equals('identifier')
                      && next !== null
-                     && (next.is(null, 'affectation') || next.is(null, 'combined_affectation')))
+                     && (next.equals('affectation') || next.equals('combined_affectation')))
             {
                 b.add(this.parse_affectation());
             }
-            else if (tok.is(null, 'identifier') ||
-                     tok.is(null, 'string')     ||
-                     tok.is(null, 'integer')    ||
-                     tok.is(null, 'number')     ||
-                     tok.is(null, 'special')    ||
-                     tok.is(null, 'boolean'))
+            else if (tok.equals('identifier') ||
+                     tok.equals('string')     ||
+                     tok.equals('integer')    ||
+                     tok.equals('number')     ||
+                     tok.equals('special')    ||
+                     tok.equals('boolean'))
             {
                 b.add(this.parse_expr());
-            }
-            else if (tok.is(null, 'newline'))
-            {
-                index += 1;
             }
             else
             {
@@ -313,7 +371,7 @@ class Parser
         }
         // Token check on value and/or type
         const tok = this.tokens[this.index];
-        if (!tok.is(value, type))
+        if (!tok.equals(type, value))
         {
             if (!optional)
             {
@@ -396,7 +454,7 @@ class Parser
         console.log('    '.repeat(this.level) + `${this.level}. parse add or sub at ${this.index}`);
         let expr = this.parse_mul_div_mod();
         let tok = this.tokens[this.index];
-        while (tok != null && (tok.is('+') || tok.is('-')))
+        while (tok != null && (tok.equals('operator', '+') || tok.equals('operator', '-')))
         {
             let operator = this.parse_lit();
             let right = this.parse_mul_div_mod();
@@ -418,7 +476,12 @@ class Parser
         console.log('    '.repeat(this.level) + `${this.level}. parse mul, div, intdiv or mod at ${this.index}`);
         let expr = this.parse_pow();
         let tok = this.tokens[this.index];
-        while (tok != null && (tok.is('*') || tok.is('/') || tok.is('//') || tok.is('%')))
+        while (tok != null && (
+                tok.equals('operator', '*')
+                || tok.equals('operator', '/')
+                || tok.equals('operator', '//')
+                || tok.equals('operator', '%')
+            ))
         {
             let operator = this.parse_lit();
             let right = this.parse_pow();
@@ -441,7 +504,7 @@ class Parser
         console.log('    '.repeat(this.level) + `${this.level}. parse pow ${this.index}`);
         let expr = this.parse_call();
         let tok = this.tokens[this.index];
-        while (tok != null && tok.is('**'))
+        while (tok?.equals('operator', '**'))
         {
             let operator = this.parse_lit();
             let right = this.parse_pow();
@@ -465,21 +528,21 @@ class Parser
         if (this.index < this.tokens.length)
         {
             let tok = this.tokens[this.index];
-            if (tok.is("("))
+            if (tok.equals("separator", "("))
             {
                 let parameters = new ExpressionList();
                 this.read("(", "separator");
                 tok = this.tokens[this.index];
-                while (!tok.is(")")) // function call without parameter
+                while (!tok.equals("separator", ")")) // function call without parameter
                 {
                     let param = this.parse_expr();
                     parameters.add(param);
                     tok = this.tokens[this.index];
-                    if (tok.is(","))
+                    if (tok.equals("separator", ","))
                     {
                         this.read(",", "separator");
                         tok = this.tokens[this.index];
-                    } else if (!tok.is(")")) {
+                    } else if (!tok.equals("separator", ")")) {
                         throw new Error("Syntax error in parameters");
                     }
                 }
@@ -548,4 +611,4 @@ class Parser
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList, If, While};
+export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList};

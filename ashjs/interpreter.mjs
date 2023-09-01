@@ -22,7 +22,7 @@ class Interpreter
         console.log("    do for node : " + node.constructor.name);
         if (node instanceof Expression)
         {
-            if (node.operator.token.is(null, 'affectation') || node.operator.token.is(null, 'combined_affectation'))
+            if (node.operator.token.equals('affectation') || node.operator.token.equals('combined_affectation'))
             {
                 let identifier = node.left.token.getValue();
                 let value = this.do(node.right);
@@ -90,7 +90,7 @@ class Interpreter
                         throw new Error("Not handled affectation operator : " + node.operator.token.getValue());
                 }
                 return this.root[identifier];
-            } else if (node.operator.token.is(null, 'operator')) {
+            } else if (node.operator.token.equals('operator')) {
                 let left = this.do(node.left);
                 let right = this.do(node.right);
                 switch (node.operator.token.getValue())
@@ -187,9 +187,9 @@ class Interpreter
         } else if (node instanceof ExpressionList) {
             let res = [];
             let nodes = node.get();
-            for (let i = 0; i < nodes.length; i++)
+            for (let node of nodes)
             {
-                res.push(this.do(nodes[i]));
+                res.push(this.do(node));
             }
             return res;
         } else if (node instanceof Literal) {
@@ -242,15 +242,10 @@ class Interpreter
                 last = this.do(statement);
             }
             return last;
+        } else if (node === undefined || node === null) {
+            throw new Error("Node is null");
         } else {
-            if (node === undefined || node === null)
-            {
-                throw new Error("Node is null");
-            }
-            else
-            {
-                throw new Error("Not handled Node type : " + node.constructor.name);
-            }
+            throw new Error("Not handled Node type : " + node.constructor.name);
         }
     }
 }

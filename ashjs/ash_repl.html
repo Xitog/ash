@@ -3,7 +3,7 @@
     <head>
         <title>Ash REPL</title>
         <meta charset="utf8">
-        <script type="module" src="./weyland.mjs"></script>
+        <script type="module" src="./lexer.mjs"></script>
         <script type="module" src="./parser.mjs"></script>
         <script type="module" src="./interpreter.mjs"></script>
         <script type="module" stc="./translator.mjs"></script>
@@ -11,7 +11,7 @@
             //-----------------------------------------------------------------
             // Imports
             //-----------------------------------------------------------------
-            import { Lexer } from "./lexer.mjs";
+            import { Lexer, Language } from "./lexer.mjs";
             import { Parser } from "./parser.mjs";
             import { Interpreter } from "./interpreter.mjs";
             import { Translator} from "./translator.mjs";
@@ -86,7 +86,7 @@
             {
                 console.clear();
                 let code = $("code");
-                let lex = new Lexer('ash', ['blank']);
+                let lex = new Lexer(Language.LANGUAGES['ash'], ['blank']);
                 console.log(lex);
                 let tokens = [];
                 let output_ast = $("ast");
@@ -115,15 +115,13 @@
                     console.log('Input text   |' + text + '|');
                     // Tokenizing
                     tokens = lex.lex(text);
-                    let html = '<div>' + lex.to_html(null, tokens, ['blank', 'newline'], true).replaceAll('\n', '</div><div>')  + '</div>';
+                    let html = '<div>' + lex.toHTML(tokens, ['blank', 'newline'], true).replaceAll('\n', '</div><div>')  + '</div>';
                     code.innerHTML = html;
                     console.log('HTML         |' + html + '|');
-                    //output.innerHTML = lex.to_html(code.innerText, null, ['blank'], true).replaceAll('\n', '<br>');
                     console.log('Tokens       :');
-                    //for (let tok of tokens)
                     for (const [index, tok] of tokens.entries())
                     {
-                        console.log('    ' + index.toString().padStart(3) + ". " + tok.info());
+                        console.log('    ' + index.toString().padStart(3) + `. ${tok}`);
                     }
                 } catch (error) {
                     alert(error);
@@ -132,7 +130,7 @@
                 console.log('Parsing :');
                 let p = new Parser();
                 let ast = p.parse(tokens);
-                //console.log('AST :');
+                console.log('AST :');
                 let tree = ast.display();
                 console.log('Interpreter :');
                 let interpreter = new Interpreter(write, screen);
@@ -176,7 +174,13 @@
 
             document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
             document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
-            //setInterval(analyse, 35);
+
+            let data;
+            await fetch('./languages/ash.lang.json').then(response => response.json().then(
+                data =>
+                    Language.readDefinition(data)
+                ));
+            Language.readDefinition(data);
         </script>
         <link href="https://xitog.github.io/dgx/css/flashy.css" rel="stylesheet">
         <style>
@@ -229,11 +233,11 @@
     <body width="100%">
         <div class="grid-container">
             <div class="grid-child">
-                <button class="_reset">Reset</button>
-                <button class="_analyse">Parse</button>
+                <button class="_reset">Clear</button>
+                <button class="_analyse">Execute</button>
                 <div id="code" contenteditable="true"></div>
-                <button class="_reset">Reset</button>
-                <button class="_analyse">Parse</button>
+                <button class="_reset">Clear</button>
+                <button class="_analyse">Execute</button>
             </div>
             <div class="grid-child">
                 <div>

@@ -25,10 +25,20 @@
 // https://xitog.github.io/dgx (in French)
 
 //-------------------------------------------------------------------------------
-// Import
+// Environment & imports
 //-------------------------------------------------------------------------------
-import * as fs from 'fs';
-import * as path from 'path';
+
+const node =
+	typeof process !== "undefined" &&
+	process !== null &&
+	typeof process.version !== "undefined" &&
+	process.version !== null &&
+	typeof process.version === "string";
+
+const fs = node ? await import("fs") : null;
+const path = node ? await import("path") : null;
+
+const main = (node) ? path.basename(process.argv[1]) === 'lexer.mjs': false;
 
 //-------------------------------------------------------------------------------
 // Classes
@@ -44,10 +54,14 @@ class Token
         this.line = line;
     }
 
-    is(value, type=null, start=null)
+	// equals("keyword", "if") or equals("keyword", ["if", "while"])
+    equals(type, value=null, start=null)
     {
+        let ok_type  = this.type  === type;
         let ok_value = (value === null ? true : this.value === value);
-        let ok_type  = (type  === null ? true : this.type  === type);
+        if (value !== null && Array.isArray(value)) {
+            ok_value = value.includes(this.value);
+        }
         let ok_start = (start === null ? true : this.start === start);
         return ok_value && ok_type && ok_start;
     }
@@ -68,6 +82,18 @@ class Token
             return val;
         }
     }
+
+	toHTMLTree(isRoot = false) {
+        let val = this.getValue();
+        val = val.replace('&', '&amp;');
+        val = val.replace('>', '&gt;');
+        val = val.replace('<', '&lt;');
+		if (isRoot) {
+			return `<ul class="monotree"><li data-type="${this.type}"><code>${val}</code><ul>`;
+		} else {
+			return `<code data-type="${this.type}">${val}</code>`;
+		}
+	}
 
     getType()
     {
@@ -91,7 +117,7 @@ class Token
 
     toString(pad=null)
     {
-        let val = this.value.replace(/\n/g, '<NL>');
+        let val = this.value.replace(/\n/g, '\\n');
         if (pad === null) {
             return `{${this.type} |${val}|(${this.value.length}) @${this.start},L${this.line}}`;
         } else {
@@ -102,17 +128,28 @@ class Token
 
 class Language
 {
-    static readDefinition()
+    static LANGUAGES = [];
+
+    static readDefinition(raw=null)
     {
-        return fs.readdirSync('languages').map(fileName => {
-            let raw = JSON.parse(fs.readFileSync(path.join('languages', fileName), 'utf8'));
+        if (fs !== null) {
+            return fs.readdirSync('languages').map(fileName => {
+                let raw = JSON.parse(fs.readFileSync(path.join('languages', fileName), 'utf8'));
+                let wrong = [];
+                if ('wrong' in raw) {
+                    wrong = raw['wrong'];
+                }
+                Language.LANGUAGES[raw['name']] = new Language(raw['name'], raw['definitions'], wrong);
+                return Language.LANGUAGES[raw['name']];
+            });
+        } else if (raw !== null) {
             let wrong = [];
             if ('wrong' in raw) {
                 wrong = raw['wrong'];
             }
-            LANGUAGES[raw['name']] = new Language(raw['name'], raw['definitions'], wrong);
-            return LANGUAGES[raw['name']];
-        });
+            Language.LANGUAGES[raw['name']] = new Language(raw['name'], raw['definitions'], wrong);
+            return Language.LANGUAGES[raw['name']];
+        }
     }
 
     constructor(name, definitions, wrong=[])
@@ -200,7 +237,7 @@ class Match
 
     toString()
     {
-        return `Match type=${type} elem=${elem} start=${start} line=${line}`;
+        return `Match type=${this.type} elem=${this.elem} start=${this.start} line=${this.line}`;
     }
 }
 
@@ -210,13 +247,14 @@ class Lexer
     {
         if (typeof lang === "string")
         {
-            this.lang = LANGUAGES[lang];
+            this.lang = Language.LANGUAGES[lang];
         } else if (typeof lang === "object" && lang instanceof Language) {
             this.lang = lang;
         } else {
-            throw new Exception(`Lang |${lang}| must be a recognized language or an instance of Language`);
+            throw new Error(`Lang |${lang}| must be a recognized language or an instance of Language`);
         }
         this.discards = discards;
+        this.debug = false;
     }
 
     getLanguage()
@@ -227,13 +265,14 @@ class Lexer
     match(start, line, word, debug=false)
     {
         let matches = [];
+        let safeWord = word.replace(/\n/g, "\\n");
         for (const [type, patterns] of this.lang.getTypeDefinitions())
         {
             for (let elem of patterns)
             {
                 if (elem.test(word))
                 {
-                    if (debug) console.log('    Match: ' + type + ' : ' + patterns + ' => ' + elem.test(word));
+                    this.log(`    Match: ${type} with ${elem} for ${safeWord}`);
                     matches.push(new Match(type, elem, start, line));
                 }
             }
@@ -241,12 +280,20 @@ class Lexer
         return matches;
     }
 
+    log(s)
+    {
+        if (this.debug) {
+            console.log(s);
+        }
+    }
+
     lex(text, discards=null, debug=false)
     {
+        this.debug = debug;
         discards = discards === null ? this.discards : discards;
         let word = '';
-        let old = null;
-        let matched = [];
+        let matches = [];
+        let oldMatches = [];
         let tokens = [];
         let start = 0;
         let line = 1;
@@ -254,81 +301,63 @@ class Lexer
         while (index < text.length)
         {
             word += text[index];
-            if (debug)
-            {
-                console.log(start, `${index}. @start |${word.replace(/\n/g, '<NL>')}|`);
-            }
-            matched = this.match(start, line, word, debug);
+            let safeWord = word.replace(/\n/g, "\\n");
+            this.log(`${index}. Word is |${safeWord}|`);
+            matches = this.match(start, line, word, debug);
             if (text[index] === '\n') {
                 line += 1;
             }
-            if (debug && matched.length === 0)
-            {
-                console.log('    no match this turn');
-            }
 
-            if (matched.length === 0 && (old === null || old.length === 0))
-            {
-                // Nothing, we try to add the maximum
-                //throw new Error("Impossible to map the language.");
-            } else if (matched.length === 0) {
-                // Visions: trying to see if there is something after
-                if (index + 1 < text.length)
-                {
-                    let future_index = index + 1;
-                    let future_word = word + text[future_index];
-                    matched = this.match(start, line, future_word, debug);
-                    if (debug && matched.length > 0)
+            if (matches.length === 0) {
+                this.log('    No match this turn');
+                if (oldMatches === null || oldMatches.length === 0) {
+                    // Nothing, we try to add the maximum
+                    //throw new Error("Impossible to map the language.");
+                } else {
+                    // Visions: trying to see if there is something after
+                    if (index + 1 < text.length)
                     {
-                        console.log('    vision of the future OK');
-                    }
-                }
-                // Si et seulement si dans le futur on n'aura rien on fait un jeton, sinon on continue
-                if (matched.length === 0)
-                {
-                    let content =  word.substring(0, word.length-1);
-                    if (debug)
-                    {
-                        console.log(`pour le mot |${content}| nous avons :`);
-                        for (let res of old)
+                        let future_index = index + 1;
+                        let future_word = word + text[future_index];
+                        matches = this.match(start, line, future_word, debug);
+                        if (debug && matches.length > 0)
                         {
-                            console.log('    ' + res.type + ' : ' + res.elem + ' @' + res.start);
+                            console.log('    Vision of the future OK');
                         }
                     }
-                    if (this.lang.isWrong(old[0].type))
+                    // Si et seulement si dans le futur on n'aura rien on fait un jeton, sinon on continue
+                    if (matches.length === 0)
                     {
-                        throw new Error(`A wrong token definition ${old[0].type} : ${old[0].elem} has been validated by the lexer: ${content}`);
+                        let content =  word.substring(0, word.length-1);
+                        this.log(`pour le mot |${content}| nous avons : ${oldMatches.map(x => x.toString()).join("\n")}`);
+                        if (this.lang.isWrong(oldMatches[0].type))
+                        {
+                            throw new Error(`A wrong token definition ${oldMatches[0].type} : ${oldMatches[0].elem} has been validated by the lexer: ${content}`);
+                        }
+                        if (!discards.includes(oldMatches[0].type))
+                        {
+                            tokens.push(new Token(oldMatches[0].type, content, oldMatches[0].start, oldMatches[0].line));
+                        }
+                        word = '';
+                        index -= 1;
+                        start = oldMatches[0].start + content.length;
                     }
-                    if (!discards.includes(old[0].type))
-                    {
-                        tokens.push(new Token(old[0].type, content, old[0].start, old[0].line));
-                    }
-                    word = '';
-                    index -= 1;
-                    start = old[0].start + content.length;
                 }
             }
-            old = matched;
+            oldMatches = matches;
             index += 1;
         }
-        if (old !== null && old.length > 0)
+        if (oldMatches !== null && oldMatches.length > 0)
         {
             let content =  word;
-            if (debug)
+            this.log(`pour le mot |${content}| nous avons : ${oldMatches.map(x => x.toString()).join("\n")}`);
+            if (this.lang.isWrong(oldMatches[0].type))
             {
-                console.log('pour le mot ' + content + ' nous avons :');
-                for (let res of old)
-                {
-                    console.log('    ' + res.type + ' : ' + res.start);
-                }
+                throw new Error(`A wrong token definition ${oldMatches[0].type} : ${oldMatches[0].elem} has been validated by the lexer: ${content}`);
             }
-            if (this.lang.isWrong(old[0].type))
+            if (!discards.includes(oldMatches[0].type))
             {
-                throw new Error(`A wrong token definition ${old[0].type} : ${old[0].elem} has been validated by the lexer: ${content}`);
-            }
-            if (!discards.includes(old[0].type))
-            {
-                tokens.push(new Token(old[0].type, content, old[0].start, old[0].line));
+                tokens.push(new Token(oldMatches[0].type, content, oldMatches[0].start, oldMatches[0].line));
             }
         } else if (word.length > 0)
         {
@@ -382,8 +411,6 @@ const SHORTCUTS = {
     'float': 'flt',
     'string': 'str',
 }
-
-let LANGUAGES = {}
 
 //-------------------------------------------------------------------------------
 // Tests
@@ -445,7 +472,7 @@ class Test
         if (this.discards.length > 0) {
             console.log(`Discarded: ${this.discards.join(', ')}`);
         }
-        let val = this.text.replace(/\n/g, '<NL>');
+        let val = this.text.replace(/\n/g, '\\n');
         console.log(`Text :\n    |${val}|`);
         console.log(`Result:`);
         tokens.forEach(tok => { console.log(`    ${tok.toString(12)}`);});
@@ -474,6 +501,18 @@ const TESTS = [
     // Language: Ash
     //---------------------------------------------------------------
 
+    new Test(
+        'ash',
+        "a = 1.2",
+        ['identifier', 'affectation', 'float'],
+        ['blank']
+    ),
+    new Test(
+        'ash',
+        "a = 1.to_f",
+        ['identifier', 'affectation', 'integer', 'operator', 'identifier'],
+        ['blank']
+    ),
     new Test(
         'ash',
         "const a = 20 + 5 ; 'hello'",
@@ -639,12 +678,12 @@ function tests(debug=false)
     let index = 1;
     for (const test of TESTS)
     {
-        let lexer = new Lexer(LANGUAGES[test.getLanguage()], test.getDiscards());
+        let lexer = new Lexer(Language.LANGUAGES[test.getLanguage()], test.getDiscards());
         test.test(lexer, index, debug);
         index += 1;
     }
     console.log("\n--- Test of to_html ------------------------------------------\n");
-    let lexer = new Lexer(LANGUAGES['lua']);
+    let lexer = new Lexer(Language.LANGUAGES['lua']);
     let text = "if a >= 5 then println('hello') end";
     let tokens = lexer.lex(text);
     let expectedNormal = "<span class=lua-keyword>if</span> <span class=lua-identifier>a</span> <span class=lua-operator>&gt;=</span> <span class=lua-number>5</span> <span class=lua-keyword>then</span> <span class=lua-identifier>println</span><span class=lua-separator>(</span><span class=lua-string>'hello'</span><span class=lua-separator>)</span> <span class=lua-keyword>end</span>";
@@ -669,11 +708,13 @@ function tests(debug=false)
     }
 }
 
-console.log('Tests tokens');
-testTokens();
-console.log('Read definitions');
-console.log(Language.readDefinition());
-console.log('Test lexer');
-tests(false);
+if (node && main) {
+    console.log('Tests tokens');
+    testTokens();
+    console.log('Read definitions');
+    console.log(Language.readDefinition());
+    console.log('Test lexer');
+    tests(false);
+}
 
-export {Token, Language, Lexer, LANGUAGES, PATTERNS}; // LEXERS
+export {Token, Language, Lexer};
