@@ -34,7 +34,7 @@ function ashPostLexing(tokens)
 {
     // retag nodes
     for (const [i, n] of tokens.entries()) {
-        if (n.type === "op") {
+        if (n.type === "operator") {
             n.type = "binop";
             if (n.value === "not") {
                 n.type = "unaop";
@@ -53,7 +53,7 @@ function ashPostLexing(tokens)
                     }
                 }
             }
-        } else if (n.type === "sep" && n.value === "(") {
+        } else if (n.type === "separator" && n.value === "(") {
             if (i - 1 >= 0) {
                 if (nodes[i - 1].type === "id") {
                     n.type = "binop";
@@ -257,105 +257,9 @@ class Expression extends Node
     }
 }
 
-//-----------------------------------------------------------------------------
-// Parser
-//-----------------------------------------------------------------------------
-
-
-class Parser
-{
-    constructor()
-    {
-        this.index = 0;
-        this.level = 0;
-        this.tokens = [];
-    }
-
-    parse(tokens)
-    {
-        this.tokens = tokens;
-        let res = this.parse_block();
-        while (this.index < this.tokens.length)
-        {
-            const tok = this.tokens[this.index];
-            console.log(`Unhandled token ${tok}`);
-            this.index += 1;
-        }
-        return res;
-    }
-
     parse_scope()
     {
-        // function
-        // procedure
-    }
-
-    parse_block()
-    {
-        // if
-        // while
-        // for
-        // break
-        // next
-        // expression
-        // affectation
-        // comment
-        // newline
-        let b = new Block();
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse block at ${this.index}`);
-        while (this.index < this.tokens.length)
-        {
-            let tok = this.tokens[this.index];
-            let next = (this.index + 1) < this.tokens.length ? this.tokens[this.index+1] : null;
-            if (tok.equals("keywords", 'if'))
-            {
-                b.add(this.parse_if());
-            }
-            else if (tok.equals('comment') || tok.equals('newline'))
-            {
-                this.index += 1;
-            }
-            else if (tok.equals('keyword', 'break'))
-            {
-                this.index += 1;
-                b.add(new Break());
-            }
-            else if (tok.equals('keyword', 'next'))
-            {
-                this.index += 1;
-                b.add(new Next());
-            }
-            else if (tok.equals('keyword', 'while'))
-            {
-                b.add(this.parse_while());
-            }
-            else if (tok.equals('keyword', 'for'))
-            {
-                b.add(this.parse_for());
-            }
-            else if (tok.equals('identifier')
-                     && next !== null
-                     && (next.equals('affectation') || next.equals('combined_affectation')))
-            {
-                b.add(this.parse_affectation());
-            }
-            else if (tok.equals('identifier') ||
-                     tok.equals('string')     ||
-                     tok.equals('integer')    ||
-                     tok.equals('number')     ||
-                     tok.equals('special')    ||
-                     tok.equals('boolean'))
-            {
-                b.add(this.parse_expr());
-            }
-            else
-            {
-                break;
-            }
-        }
-        this.level -= 1;
-        return b;
+        // function, procedure
     }
 
     read(value, type='keyword', optional=false)

@@ -371,60 +371,6 @@ class AshParser extends AshInstrument {
 		}
 	}
 
-	parse(nodes, debug = null) {
-		this.index = 0;
-		this.nodes = nodes;
-		if (debug !== null) {
-			this.debug = debug;
-		}
-		this.current = this.nodes[this.index];
-		this.level = 0;
-		this.log(nodes);
-		return this.parseStart();
-	}
-
-	parseStart(until = null) {
-		this.level += 1;
-		until = until === null ? this.nodes.length : until;
-		this.log(`>>> parseStart from ${this.index} max ${until}`);
-		let root = null;
-		let suite = null;
-		while (this.index < until) {
-			let res = null;
-			if (this.current.equals("sep", "\n")) {
-				this.shift();
-				continue;
-			}
-			if (this.current.equals("keyword", "if")) {
-				res = this.parseIf(until);
-			} else if (this.current.equals("keyword", "while")) {
-				res = this.parseWhile(until);
-			} else if (this.current.equals("keyword", "import")) {
-				res = this.parseImport(until);
-			} else if (
-				this.current.equals("keyword", ["function", "procedure"])
-			) {
-				res = this.parseSubProgram(until);
-			} else {
-				res = this.parseExpression(until);
-			}
-			// Check
-			if (res === null || res === undefined) {
-				throw new Error("Something went wrong in parsing. Aborting.");
-			}
-			if (suite === null) {
-				suite = new Node("suite");
-				root = suite;
-			} else {
-				suite.right = new Node("suite");
-				suite = suite.right;
-			}
-			suite.left = res;
-		}
-		this.level -= 1;
-		return root;
-	}
-
 	parseIf(until) {
 		this.level += 1;
 		let res = this.delimiteIf(until);
