@@ -257,6 +257,8 @@ class Expression extends Node
     }
 }
 
+class Parser
+{
     parse_scope()
     {
         // function, procedure
@@ -352,55 +354,6 @@ class Expression extends Node
         return res;
     }
 
-    parse_add_sub()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse add or sub at ${this.index}`);
-        let expr = this.parse_mul_div_mod();
-        let tok = this.tokens[this.index];
-        while (tok != null && (tok.equals('operator', '+') || tok.equals('operator', '-')))
-        {
-            let operator = this.parse_lit();
-            let right = this.parse_mul_div_mod();
-            expr = new Expression(expr, operator, right);
-            if (this.index < this.tokens.length)
-            {
-                tok = this.tokens[this.index];
-            } else {
-                tok = null;
-            }
-        }
-        this.level -= 1;
-        return expr;
-    }
-
-    parse_mul_div_mod()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse mul, div, intdiv or mod at ${this.index}`);
-        let expr = this.parse_pow();
-        let tok = this.tokens[this.index];
-        while (tok != null && (
-                tok.equals('operator', '*')
-                || tok.equals('operator', '/')
-                || tok.equals('operator', '//')
-                || tok.equals('operator', '%')
-            ))
-        {
-            let operator = this.parse_lit();
-            let right = this.parse_pow();
-            expr = new Expression(expr, operator, right);
-            if (this.index < this.tokens.length)
-            {
-                tok = this.tokens[this.index];
-            } else {
-                tok = null;
-            }
-        }
-        this.level -= 1;
-        return expr;
-    }
-
     // /!\ Right to left associative
     parse_pow()
     {
@@ -456,16 +409,6 @@ class Expression extends Node
         }
         this.level -= 1;
         return expr;
-    }
-
-    parse_lit()
-    {
-        this.level += 1;
-        const tok = this.tokens[this.index];
-        console.log('    '.repeat(this.level) + `${this.level}. parse literal at ${this.index} : ${tok}`);
-        this.index += 1;
-        this.level -= 1;
-        return new Literal(tok);
     }
 
     parse_while()
