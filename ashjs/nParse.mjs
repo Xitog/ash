@@ -6,7 +6,7 @@
 import { Token, Lexer, Language } from "./lexer.mjs";
 
 class Node extends Token {
-    constructor(type, value=null, start=null, line=null, left=null, right=null) {
+    constructor(type, value = null, start = null, line = null, left = null, right = null) {
         super(type, value, start, line);
         this.left = left;
         this.right = right;
@@ -18,7 +18,7 @@ class Node extends Token {
 
     toString(level = 0, right = null) {
         let content = '';
-        if (['Affectation', 'Identifier', 'Integer', 'Float', 'BinaryOp'].includes(this.type)) {
+        if (['Affectation', 'Identifier', 'Integer', 'Float', 'Boolean', 'BinaryOp'].includes(this.type)) {
             content = ` (${this.value})`;
         }
         let sigil = 'L';
@@ -40,6 +40,16 @@ class Node extends Token {
 //-----------------------------------------------------------------------------
 // Parser
 //-----------------------------------------------------------------------------
+
+let precedence = [
+    ['=', '+=', '-=', '*=', '/=', '//=', '%='],
+    ['and', 'or'],
+    ['<', '<=', '>=', '>', '==', '!='],
+    ['<<', '>>'],
+    ['+', '-'],
+    ['*', '/', '//', '%'],
+    ['**'], // /!\ Right to left associative
+];
 
 class Parser {
     constructor() {
@@ -118,84 +128,43 @@ class Parser {
         return root;
     }
 
-    parseExpression()
-    {
+    parseExpression() {
         this.level += 1;
         this.log(`>>> parseExpression at ${this.index}`);
-        let res = this.parseAffectation();
+        let res = this.parseBinaryOp();
         this.level -= 1;
         return res;
     }
 
-    parseAffectation()
-    {
-        this.level += 1;
-        this.log(`>>> parseAffectation at ${this.index}`);
-        let left = this.parseAddSub();
-        if (left === null) {
-            return null;
+    parseBinaryOp(opLevel=0) {
+        if (opLevel === precedence.length) {
+            return this.parseLiteral();
         }
-        let current = this.read();
-        if (current?.equals("affectation")) {
-            this.advance();
-            let right = this.parseExpression();
+        this.level += 1;
+        let name = precedence[opLevel].map(x => this.uFirst(x)).join(", ");
+        let right = null;
+        let node = null;
+        this.log(`>>> parsing ${name} (operator ${opLevel+1}/${precedence.length}) at ${this.index}`);
+        node = this.parseBinaryOp(opLevel + 1);
+        // On peut faire un while ici pour traiter les suites en chaînant avec expr = new Expression(expr, operator, right);
+        if (this.test('operator', precedence[opLevel])) {
+            let op = this.advance();
+            right = this.parseBinaryOp(opLevel);
             if (right === null) {
-                throw new Error("No expression on the right of an affectation at " + current.getLine());
+                throw new Error("No expression on the right of a binary operator at " + current.getLine());
             }
-            this.level -= 1;
-            return new Node('Affectation', current.getValue(), current.getStart(), current.getLine(), left, right);
+            node = new Node('BinaryOp', op.getValue(), op.getStart(), op.getLine(), node, right);
         }
         this.level -= 1;
-        return left;
+        return node;
     }
 
-    parseAddSub()
-    {
-        this.level += 1;
-        this.log(`>>> parseAffectation at ${this.index}`);
-        let left = this.parseMulDivMod();
-        let current = this.read();
-        // On peut faire un while ici pour traiter les suites en chaînant avec expr = new Expression(expr, operator, right);
-        if (current?.equals("operator", ["+", "-"])) {
-            this.advance();
-            let right = this.parseExpression();
-            if (right === null) {
-                throw new Error("No expression on the right of a binary operator at " + current.getLine());
-            }
-            this.level -= 1;
-            return new Node('BinaryOp', current.getValue(), current.getStart(), current.getLine(), left, right);
-        } else {
-            this.level -= 1;
-            return left;
-        }
-    }
-
-    parseMulDivMod()
-    {
-        this.level += 1;
-        this.log(`>>> parseMulDivDivIntMod at ${this.index}`);
-        let left = this.parseLiteral();
-        let current = this.read();
-        if (current?.equals("operator", ["*", "/", "//", "%"])) {
-            this.advance();
-            let right = this.parseExpression();
-            if (right === null) {
-                throw new Error("No expression on the right of a binary operator at " + current.getLine());
-            }
-            this.level -= 1;
-            return new Node('BinaryOp', current.getValue(), current.getStart(), current.getLine(), left, right);
-        } else {
-            this.level -= 1;
-            return left;
-        }
-    }
-
-    parseLiteral()
-    {
+    parseLiteral() {
         this.level += 1;
         this.log(`>>> parseLiteral at ${this.index}`);
         let current = this.read();
-        if (current !== null && ['identifier', 'integer', 'float'].includes(current.type)) {
+        if (current !== null && ['identifier', 'integer', 'float', 'boolean'].includes(current.type)) {
+            this.log('Reading: ' + current);
             this.advance();
             this.level -= 1;
             return new Node(this.uFirst(current.getType()), current.getValue(), current.getStart(), current.getLine());
@@ -204,7 +173,7 @@ class Parser {
         return null;
     }
 
-    read(type=null, value=null) {
+    read(type = null, value = null) {
         const token = (this.index < this.tokens.length) ? this.tokens[this.index] : null;
         if (value !== null) {
             if (token !== null && !token.equals(type, value)) {
@@ -216,15 +185,15 @@ class Parser {
         return token;
     }
 
-    next(type=null, value=null) {
-        this.index += 1;
-        let token = this.read(type, value);
-        this.index -= 1;
-        return token;
+    test(type = null, value = null) {
+        const token = (this.index < this.tokens.length) ? this.tokens[this.index] : null;
+        return token?.equals(type, value);
     }
 
     advance() {
+        let current = this.index < this.tokens.length ? this.tokens[this.index] : null
         this.index += 1;
+        return current;
     }
 
     abort() {
@@ -234,10 +203,108 @@ class Parser {
 
 // tokens.slice(start).find(token => token.value === target)
 
+let scope = {};
+
+function miniExec(node, level=0) {
+    if (node.type === 'Block') {
+        let val = miniExec(node.left, level + 1);
+        if (node.right !== null) {
+            val = miniExec(node.right, level + 1);
+        }
+        console.log('    '.repeat(level) + `Block ${val}`);
+        return val;
+    } else if (node.type === 'BinaryOp') {
+        if (node.value === '=') {
+            let identifier =  miniExec(node.left, level+1);
+            let val = miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Affectation ${identifier} ${node.value} ${val}`);
+            if (val === '=') {
+                scope[identifier] = val;
+            }
+            return val;
+        } else if (node.value === '+') {
+            let val = miniExec(node.left, level+1) + miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Binaryop(+) ${val}`);
+            return val;
+        } else if (node.value === '*') {
+            let val = miniExec(node.left, level+1) * miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Binaryop(*) ${val}`);
+            return val;
+        } else if (node.value === '**') {
+            let val = Math.pow(miniExec(node.left, level+1), miniExec(node.right, level+1));
+            console.log('    '.repeat(level) + `Binaryop(*) ${val}`);
+            return val;
+        } else if (node.value === 'and') {
+            let val = miniExec(node.left, level+1) && miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
+            return val;
+        } else if (node.value === 'or') {
+            let val = miniExec(node.left, level+1) || miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
+            return val;
+        } else if (node.value === '>') {
+            let val = miniExec(node.left, level+1) > miniExec(node.right, level+1);
+            console.log('    '.repeat(level) + `Binaryop(>) ${val}`);
+            return val;
+        } else {
+            throw new Error(`ERROR2 : ${node}`)
+        }
+    } else if (node.type === 'Integer') {
+        let val = parseInt(node.value);
+        console.log('    '.repeat(level) + `Integer ${val}`);
+        return val;
+    } else if (node.type === 'Boolean') {
+        let val = node.value === 'true';
+        console.log('    '.repeat(level) + `Boolean ${val}`);
+        return val;
+    } else if (node.type === 'Identifier') {
+        console.log('    '.repeat(level) + `Identifier ${node.value}`);
+        return node.value;
+    } else {
+        throw new Error(`ERROR1 : ${node}`);
+    }
+}
+
 Language.readDefinition();
-let tokens = new Lexer('ash').lex("a = 5 + 2 * 3");
-console.log('Tokens:');
-console.log(tokens.filter(x=> !x.equals("blank")));
-let res = new Parser().parse(tokens, true);
-console.log('AST:');
-console.log(res.toString());
+function makeTree(text, expected=null) {
+    let tokens = new Lexer('ash').lex(text);
+    console.log('Tokens:');
+    console.log(tokens.filter(x => !x.equals("blank")));
+    let res = new Parser().parse(tokens, true);
+    console.log(text);
+    console.log('AST:');
+    console.log(res.toString());
+    console.log('Result:');
+    let finalRes = miniExec(res);
+    console.log(finalRes);
+    if (expected !== null) {
+        if (expected === finalRes) {
+            console.log(`[SUCCESS] |${text}| got ${finalRes}`);
+        } else {
+            throw new Error(`[ERROR] expected ${expected} got ${finalRes}`); // ${text}
+        }
+    }
+}
+
+console.log("----------------------------------------------------");
+console.log("----------------------------------------------------");
+console.log("----------------------------------------------------");
+console.log("----------------------------------------------------");
+console.log("----------------------------------------------------");
+
+makeTree("5", 5);
+makeTree("2 + 3", 5);
+makeTree("5 + 2 * 3", 11);
+makeTree("2 * 4 + 6", 14);
+makeTree("true and false", false);
+makeTree("true or false", true);
+makeTree("5 > 2", true);
+makeTree("a = 5", 5);
+makeTree("b = true or false and true", true);
+makeTree("2 ** 3 ** 2", 512);
+
+//-----------------------------------------------------------------------------
+// Exports
+//-----------------------------------------------------------------------------
+
+export {Parser, Node};

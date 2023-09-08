@@ -1,35 +1,3 @@
-// -----------------------------------------------------------
-// MIT Licence (Expat License Wording)
-// -----------------------------------------------------------
-// Copyright © 2020, Damien Gouteux
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
-// For more information about my projects see:
-// https://xitog.github.io/dgx (in French)
-
-//-------------------------------------------------------------------------------
-// Import
-//-------------------------------------------------------------------------------
-
-import { Token } from "./lexer.mjs";
-
 function ashPostLexing(tokens)
 {
     // retag nodes
@@ -60,38 +28,6 @@ function ashPostLexing(tokens)
                 }
             }
         }
-    }
-}
-
-class Node extends Token
-{
-    display(level=0)
-    {
-        return '    '.repeat(level) + "Node";
-    }
-}
-
-class Block extends Node
-{
-    constructor()
-    {
-        super();
-        this.statements = [];
-    }
-
-    add(node)
-    {
-        this.statements.push(node);
-    }
-
-    display(level=0)
-    {
-        let out = '    '.repeat(level) + "Block\n";
-        for (let sta of this.statements)
-        {
-            out += sta.display(level + 1) + "\n";
-        }
-        return out;
     }
 }
 
@@ -150,30 +86,6 @@ class ExpressionList extends Node
     }
 }
 
-class Parameter extends Node
-{
-    constructor(param, next)
-    {
-        super();
-        this.param = param;
-        this.next = next;
-    }
-}
-
-class Literal extends Node
-{
-    constructor(tok)
-    {
-        super();
-        this.token = tok;
-    }
-
-    display(level)
-    {
-        return '    '.repeat(level) + this.token.toString() + "\n";
-    }
-}
-
 class If extends Node
 {
     constructor(cond, block, elseblock)
@@ -222,48 +134,8 @@ class While extends Node
     }
 }
 
-class For extends Node
-{
-
-}
-
-class Break extends Node
-{
-
-}
-
-class Next extends Node
-{
-
-}
-
-class Expression extends Node
-{
-    constructor(left, operator, right)
-    {
-        super();
-        this.left = left;
-        this.operator = operator;
-        this.right = right;
-    }
-
-    display(level)
-    {
-        let out = '    '.repeat(level) + "Expression\n";
-        out += '    '.repeat(level + 1) + 'left:  ' + this.left.display(level + 1);
-        out += '    '.repeat(level + 1) + 'op:    ' + this.operator.display(level + 1);
-        out += '    '.repeat(level + 1) + 'right: ' + this.right.display(level + 1);
-        return out;
-    }
-}
-
 class Parser
 {
-    parse_scope()
-    {
-        // function, procedure
-    }
-
     read(value, type='keyword', optional=false)
     {
         // Length check
@@ -296,85 +168,6 @@ class Parser
         // Forward
         this.index += 1;
         return true;
-    }
-
-    parse_expr()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse expr at ${this.index}`);
-        let node = this.parse_bool();
-        this.level -= 1;
-        return node;
-    }
-
-    parse_bool()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse bool at ${this.index}`);
-        let expr = this.parse_test();
-        if (this.index < this.tokens.length)
-        {
-            const tok = this.tokens[this.index];
-            if(['and', 'or'].includes(tok.getValue()))
-            {
-                let operator = this.parse_lit();
-                let right = this.parse_test();
-                expr = new Expression(expr, operator, right);
-            }
-        }
-        this.level -= 1;
-        return expr;
-    }
-
-    parse_test()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse test at ${this.index}`); // with operator at ${this.index} : ${tok}`);
-        let expr = this.parse_shift();
-        if (this.index < this.tokens.length)
-        {
-            const tok = this.tokens[this.index];
-            if (['==', '!=', '<', '<=', '>=', '>'].includes(tok.getValue()))
-            {
-                let operator = this.parse_lit();
-                let right = this.parse_shift();
-                expr = new Expression(expr, operator, right);
-            }
-        }
-        this.level -= 1;
-        return expr;
-    }
-
-    parse_shift()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse shift at ${this.index}`);
-        let res = this.parse_add_sub();
-        this.level -= 1;
-        return res;
-    }
-
-    // /!\ Right to left associative
-    parse_pow()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse pow ${this.index}`);
-        let expr = this.parse_call();
-        let tok = this.tokens[this.index];
-        while (tok?.equals('operator', '**'))
-        {
-            let operator = this.parse_lit();
-            let right = this.parse_pow();
-            expr = new Expression(expr, operator, right);
-            if (this.index < this.tokens.length)
-            {
-                tok = this.tokens[this.index];
-            } else {
-                tok = null;
-            }
-        }
-        this.level -= 1;
-        return expr;
     }
 
     parse_call()
@@ -442,20 +235,4 @@ class Parser
         return new If(cond, block, else_block);
     }
 
-    parse_affectation()
-    {
-        this.level += 1;
-        console.log('    '.repeat(this.level) + `${this.level}. parse affectation at ${this.index}`);
-        let id = this.parse_lit();
-        let op = this.parse_lit(); // Read = += -=  *= /= //= **= %=
-        let expr = this.parse_expr();
-        return new Expression(id, op, expr);
-    }
-
 }
-
-//-----------------------------------------------------------------------------
-// Exports
-//-----------------------------------------------------------------------------
-
-export {Parser, Node, Block, If, While, For, Break, Next, Expression, Literal, Call, ExpressionList};
