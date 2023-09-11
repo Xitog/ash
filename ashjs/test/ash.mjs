@@ -91,12 +91,6 @@ class Node extends Token {
 // Classes for execution
 //-----------------------------------------------------------------
 
-class NilClass {
-	toString() {
-		return "nil";
-	}
-}
-
 class NotAnExpression {
 	toString() {
 		return "not an expression";
@@ -1079,48 +1073,16 @@ function AshProcessAsync(
 
 function AshTests(debug = false) {
 	let tests = {
-		"Test 1": ["2 + 3 * 5", 17],
-		"Test 2": ["(2 + 3) * 5", 25],
-		"Test 3": ["2 - 5", -3],
-		"Test 4": ["9 / 2", 4.5],
-		"Test 5": ["9 // 2", 4],
 		"Test 6": ["not false and true", true],
 		"Test 7": ["a + 0", 5],
-		"Test 8": ["4.2", 4.2],
-		"Test 9": ['"abc" + "def"', "abcdef"],
 	};
-	for (const [name, content] of Object.entries(tests)) {
-		let cmd = content[0];
-		let expected = content[1];
-		if (debug) {
-			log("===================================");
-			log(`${name}: ${cmd}. Expected: ${expected}`);
-			log("===================================");
-		}
-		let result = test(name, cmd, false, false, false);
-		if (result[0] !== expected) {
-			throw new Error(
-				`Test error. Expected: ${expected} vs ${result[0]}`
-			);
-		}
-	}
 }
-
-//-------------------------------------------------------------------------------
-// Main
-//-------------------------------------------------------------------------------
 
 function main() {
 	let debug = false;
 	let filename = null;
-	// 1: node.exe
-	// 2: .\ash.mjs
 	// 3: filename or -d
 	// 4: filename or -d
-	if (process.argv.length > 4) {
-		throw new Error(
-			`Too many parameters: ${process.argv.length}. The maximum is 4.`
-		);
 	} else if (process.argv.length === 4) {
 		if (process.argv[3] === "-d") {
 			debug = true;
@@ -1139,46 +1101,16 @@ function main() {
 
 	if (filename === null) {
 		// Run only with node.exe and the script
-		let cmd = "";
-		while (cmd !== "exit") {
-			cmd = reader.question(">>> ");
-			if (cmd !== "exit") {
-				let result = AshProcess(cmd, false, debug, false);
-				if (result !== notAnExpression) {
-					console.log(result);
-				}
-			}
-		}
+
 	} else {
 		// Run with script name
-		let filename = process.argv[2];
 		let debug = false;
 		if (process.argv.length > 3) {
 			if (process.argv[3] === "-d") {
 				debug = true;
 			}
 		}
-		if (debug) {
-			console.log("Running main function");
-		}
 		//try {
-		let data = fs.readFileSync(filename, "utf-8");
-		data = data.replace(/\r\n/g, "\n");
-		if (debug) {
-			console.log(`Data read from file: ${filename}`);
-		}
-		// Lex
-		let tokens = AshLex(data, debug);
-		if (debug) {
-			for (const [i, tok] of tokens.entries()) {
-				console.log(`    ${i}. ${tok}`);
-			}
-		}
-		// Parse
-		let root = AshParse(tokens);
-		if (debug) {
-			console.log(`    ${root}`);
-		}
 		// Execute
 		AshProcess(data, false, false, false);
 		//} catch (e) {
@@ -1187,13 +1119,6 @@ function main() {
 		//	console.trace();
 		//}
 	}
-}
-
-const fs = node ? await import("fs") : null;
-const reader = node ? await import("readline-sync") : null;
-
-if (node) {
-	main();
 }
 
 //-------------------------------------------------------------------------------

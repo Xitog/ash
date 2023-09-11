@@ -9,7 +9,8 @@
     1: import
     2: raise?, catch? => replace by if/return
     3: and, or, not
-Si on ne considère pas les "?" (=> fusion exception, flux normal) on tombe à 20.
+    3: true, false, nil
+Si on ne considère pas les "?" (=> fusion exception, flux normal) on tombe à 23.
 Manque : static, enum
 
 Opérateurs :
