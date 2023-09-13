@@ -70,7 +70,7 @@ class Node extends Token {
 
     toString(level = 0, sigil = 'root') {
         let content = '';
-        if (['Affectation', 'Identifier', 'Integer', 'Float', 'Boolean', 'BinaryOp'].includes(this.type)) {
+        if (['Affectation', 'Identifier', 'Integer', 'Float', 'Boolean', 'BinaryOp', 'UnaryOp'].includes(this.type)) {
             content = ` (${this.value})`;
         }
         let base = '    '.repeat(level) + `${level}. (${sigil}) ${this.type}${content}\n`;
@@ -205,7 +205,7 @@ class Parser {
 
     parseBinaryOp(opLevel=0) {
         if (opLevel === precedence.length) {
-            return this.parseCall();
+            return this.parseUnary();
         }
         this.level += 1;
         let name = precedence[opLevel].map(x => this.uFirst(x)).join(", ");
@@ -222,6 +222,22 @@ class Parser {
                 throw new Error("No expression on the right of a binary operator at " + current.getLine());
             }
             node = new Node('BinaryOp', op.getValue(), op.getStart(), op.getLine(), node, right);
+        }
+        this.level -= 1;
+        return node;
+    }
+
+    parseUnary() {
+        this.level += 1;
+        let node = null;
+        if (this.test('operator', ['not', '-'])) {
+            let op = this.read();
+            this.advance();
+            this.log(`>>> ${this.level} PARSING UnaryOperator(${op.getValue()}) at ${this.index}`);
+            node = this.parseCall();
+            node = new Node('UnaryOp', op.getValue(), op.getStart(), op.getLine(), node);
+        } else {
+            node = this.parseCall();
         }
         this.level -= 1;
         return node;
@@ -379,6 +395,18 @@ function miniExec(node, level=0, evalId=true) {
             miniExec(node.right, level + 1);
         }
         return nil;
+    } else if (node.type === 'UnaryOp') {
+        if (node.value === '-') {
+            let val = -miniExec(node.left, level+1);
+            console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
+            return val;
+        } else if (node.value === 'not') {
+            let val = !miniExec(node.left, level+1);
+            console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
+            return val;
+        }  else {
+            throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
+        }
     } else if (node.type === 'BinaryOp') {
         if (['=', '-='].includes(node.value)) {
             // Left side
@@ -416,11 +444,15 @@ function miniExec(node, level=0, evalId=true) {
             console.log('    '.repeat(level) + `Binaryop(//) ${val}`);
             return val;
         } else if (node.value === 'and') {
-            let val = miniExec(node.left, level+1) && miniExec(node.right, level+1);
+            let val1 = miniExec(node.left, level+1);
+            let val2 = miniExec(node.right, level+1);
+            let val = val1 && val2;
             console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
             return val;
         } else if (node.value === 'or') {
-            let val = miniExec(node.left, level+1) || miniExec(node.right, level+1);
+            let val1 = miniExec(node.left, level+1);
+            let val2 = miniExec(node.right, level+1);
+            let val = val1 || val2;
             console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
             return val;
         } else if (node.value === '==') {
@@ -433,7 +465,7 @@ function miniExec(node, level=0, evalId=true) {
             console.log('    '.repeat(level) + `Binaryop(>) ${val}`);
             return val;
         } else {
-            throw new Error(`ERROR2 : ${node}`)
+            throw new Error(`[ERROR] Unknown Binary Op: ${node}`)
         }
     } else if (node.type === 'Integer') {
         let val = parseInt(node.value);
