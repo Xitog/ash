@@ -151,6 +151,8 @@ class Parser {
                 continue;
             } else if (this.test("keyword", ["end", "loop"])) {
                 break;
+            } else if (current.equals("keyword", "import")) {
+                res = this.parseImport();
             } else if (current.equals("keyword", "if")) {
                 res = this.parseIf();
             } else if (current.equals("keyword", "while")) {
@@ -285,6 +287,19 @@ class Parser {
         return null;
     }
 
+    parseImport() {
+        this.level += 1;
+        this.log(`>>> ${this.level} PARSING Import at ${this.index}`);
+        let importtoken = this.read('keyword', 'import');
+        this.advance();
+        let left = this.parseLiteral();
+        if (left.type !== 'Identifier' && left.type !== 'String') {
+            throw new Error("Can only import string and identifier");
+        }
+        this.level -= 1;
+        return new Node('Import', null, importtoken.getStart(), importtoken.getLine(), left);
+    }
+
     parseWhile() {
         this.level += 1;
         this.log(`>>> ${this.level} PARSING While at ${this.index}`);
@@ -372,6 +387,9 @@ function miniExec(node, level=0, evalId=true) {
         }
         console.log('    '.repeat(level) + `Block ${val}`);
         return val;
+    } else if (node.type === 'Import') {
+        console.log('Importing: ' + miniExec(node.left, level + 1, false));
+        return nil;
     } else if (node.type === 'Call') {
         let idFun = miniExec(node.left, level + 1, false);
         if (idFun === 'log') {
@@ -456,7 +474,6 @@ function miniExec(node, level=0, evalId=true) {
             console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
             return val;
         } else if (node.value === '==') {
-            console.log('ZZZ', miniExec(node.left, level+1), miniExec(node.right, level+1))
             let val = miniExec(node.left, level+1) === miniExec(node.right, level+1);
             console.log('    '.repeat(level) + `Binaryop(==) ${val}`);
             return val;

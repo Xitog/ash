@@ -365,21 +365,6 @@ class AshParser extends AshInstrument {
 		}
 	}
 
-	parseIf(until) {
-		this.level += 1;
-		let res = this.delimiteIf(until);
-		this.log(
-			`>>> parseIf from ${this.index} to ${res.end}, then at=${res.then} (max=${until})`
-		);
-		this.shift(); // remove if
-		let condition = this.parseExpression(res.then);
-		this.shiftTo(res.then + 1); // remove then
-		let action = this.parseStart(res.end - 1);
-		this.shiftTo(res.end + 1); // remove end
-		this.level -= 1;
-		return new Node("if", condition, action); // Promoting node from keyword to if
-	}
-
 	parseWhile(until) {
 		this.level += 1;
 		let res = this.delimiteLoop(until);
@@ -407,15 +392,6 @@ class AshParser extends AshInstrument {
 		this.shiftTo(res.end + 1); // remove end
 		this.level -= 1;
 		return new Node(type, name, null, action);
-	}
-
-	parseImport(until) {
-		this.level += 1;
-		this.log(`>>> parseImport from ${this.index} to ${until}`);
-		this.shift(); // remove import
-		let name = this.shift();
-		this.level -= 1;
-		return new Node("import", name, null, null);
 	}
 
 	parseExpression(until) {
@@ -1003,7 +979,6 @@ class AshInterpreter extends AshInstrument {
 // Globals
 //-----------------------------------------------------------------
 
-const nil = new NilClass();
 const notAnExpression = new NotAnExpression();
 
 let resources = {};
