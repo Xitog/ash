@@ -365,21 +365,6 @@ class AshParser extends AshInstrument {
 		}
 	}
 
-	parseWhile(until) {
-		this.level += 1;
-		let res = this.delimiteLoop(until);
-		this.log(
-			`>>> parseWhile from ${this.index} to ${res.end}, do at=${res.do} (max=${until})`
-		);
-		this.shift(); // remove while
-		let condition = this.parseExpression(res.do);
-		this.shiftTo(res.do + 1); // remove do
-		let action = this.parseStart(res.end - 1); // Don't include loop
-		this.shiftTo(res.end + 1); // remove loop
-		this.level -= 1;
-		return new Node("while", condition, action); // Promoting node from keyword to while
-	}
-
 	parseSubProgram(until) {
 		this.level += 1;
 		let res = this.delimiteSubProgram(until);
