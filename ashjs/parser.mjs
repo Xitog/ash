@@ -45,13 +45,11 @@ const node =
 	process.version !== null &&
 	typeof process.version === "string";
 
-const fs = node ? await import("fs") : null;
 const path = node ? await import("path") : null;
-const reader = node ? await import("readline-sync") : null;
 
 const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
-import { Token, Lexer, Language } from "./lexer.mjs";
+import { Token } from "./lexer.mjs";
 
 //-------------------------------------------------------------------------------
 // Classes
@@ -88,6 +86,42 @@ class Node extends Token {
         }
         return `${base}${value}${left}${right}`;
     }
+
+    toHTMLTree(isRoot = false) {
+		let cls = "";
+		if (isRoot) {
+			cls = ' class="tree"';
+		}
+		let val = "";
+		if (this.type === "expr") {
+			val = this.value.value;
+		} else if (["function", "procedure"].includes(this.type)) {
+			val = `${this.type} <b>${this.value.value}</b>`;
+		} else {
+			val = this.type;
+		}
+		let type = this.type;
+		if (
+			["import", "while", "if", "function", "procedure"].includes(
+				this.type
+			)
+		) {
+			type = "keyword";
+		}
+		let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
+		if (["import", "while", "if"].includes(this.type)) {
+			s += "<li>" + this.value.toHTMLTree() + "</li>";
+		}
+		if (this.left !== null) {
+			// only during the time that functions don't have parameter
+			s += "<li>" + this.left.toHTMLTree() + "</li>";
+		}
+		if (this.right !== null) {
+			s += "<li>" + this.right.toHTMLTree() + "</li>";
+		}
+		s += "</ul></li></ul>";
+		return s;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -162,8 +196,6 @@ class Parser {
             } else if (current.equals("keyword", ["break", "next"])) {
                 res = new Node(this.uFirst(current.getType()), null, current.getStart(), current.getLine());
                 this.advance();
-            } else if (current.equals("keyword", "import")) {
-                res = this.parseImport();
             } else if (current.equals("keyword", ["function", "procedure"])) {
                 res = this.parseSubProgram();
             } else if (this.test("separator", ["\n", ";"])) {
@@ -275,7 +307,6 @@ class Parser {
             this.advance();
             return node;
         }
-        //this.log(`>>> parseLiteral at ${this.index}`);
         let current = this.read();
         if (current !== null && ['identifier', 'integer', 'float', 'boolean', 'string'].includes(current.type)) {
             this.log(`>>> ${this.level} PARSING literal at ${this.index} : ${current}`);
@@ -368,262 +399,12 @@ class Parser {
     }
 }
 
-// tokens.slice(start).find(token => token.value === target)
-
-let scope = {};
-
-class NilClass {
-	toString() {
-		return "nil";
-	}
-}
-const nil = new NilClass();
-
-function miniExec(node, level=0, evalId=true) {
-    if (node.type === 'Block') {
-        let val = miniExec(node.left, level + 1);
-        if (node.right !== null) {
-            val = miniExec(node.right, level + 1);
-        }
-        console.log('    '.repeat(level) + `Block ${val}`);
-        return val;
-    } else if (node.type === 'Import') {
-        console.log('Importing: ' + miniExec(node.left, level + 1, false));
-        return nil;
-    } else if (node.type === 'Call') {
-        let idFun = miniExec(node.left, level + 1, false);
-        if (idFun === 'log') {
-            console.log(miniExec(node.right, level + 1));
-            return nil;
-        } else {
-            throw new Error(`Unknown function ${idFun}`)
-        }
-    } else if (node.type === 'While') {
-        let cond = miniExec(node.value, level + 1);
-        while (cond) {
-            miniExec(node.left, level + 1);
-            cond = miniExec(node.value, level + 1);
-        }
-        return nil;
-    } else if (node.type === 'If') {
-        let cond = miniExec(node.value, level + 1);
-        if (cond) {
-            miniExec(node.left, level + 1);
-        } else if (node.right !== null) {
-            miniExec(node.right, level + 1);
-        }
-        return nil;
-    } else if (node.type === 'UnaryOp') {
-        if (node.value === '-') {
-            let val = -miniExec(node.left, level+1);
-            console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
-            return val;
-        } else if (node.value === 'not') {
-            let val = !miniExec(node.left, level+1);
-            console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
-            return val;
-        }  else {
-            throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
-        }
-    } else if (node.type === 'BinaryOp') {
-        if (['=', '-='].includes(node.value)) {
-            // Left side
-            let identifier =  miniExec(node.left, level+1, false);
-            let val = miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Affectation ${identifier} ${node.value} ${val}`);
-            if (node.value === '=') {
-                scope[identifier] = val;
-            } else if (node.value === '-=') {
-                scope[identifier] -= val;
-            }
-            return val;
-        } else if (node.value === '+') {
-            let val = miniExec(node.left, level+1) + miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(+) ${val}`);
-            return val;
-        } else if (node.value === '-') {
-            let val = miniExec(node.left, level+1) - miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(-) ${val}`);
-            return val;
-        } else if (node.value === '*') {
-            let val = miniExec(node.left, level+1) * miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(*) ${val}`);
-            return val;
-        } else if (node.value === '/') {
-            let val = miniExec(node.left, level+1) / miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(/) ${val}`);
-            return val;
-        } else if (node.value === '**') {
-            let val = Math.pow(miniExec(node.left, level+1), miniExec(node.right, level+1));
-            console.log('    '.repeat(level) + `Binaryop(*) ${val}`);
-            return val;
-        } else if (node.value === '//') {
-            let val = Math.floor(miniExec(node.left, level+1) / miniExec(node.right, level+1));
-            console.log('    '.repeat(level) + `Binaryop(//) ${val}`);
-            return val;
-        } else if (node.value === 'and') {
-            let val1 = miniExec(node.left, level+1);
-            let val2 = miniExec(node.right, level+1);
-            let val = val1 && val2;
-            console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
-            return val;
-        } else if (node.value === 'or') {
-            let val1 = miniExec(node.left, level+1);
-            let val2 = miniExec(node.right, level+1);
-            let val = val1 || val2;
-            console.log('    '.repeat(level) + `Binaryop(and) ${val}`);
-            return val;
-        } else if (node.value === '==') {
-            let val = miniExec(node.left, level+1) === miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(==) ${val}`);
-            return val;
-        } else if (node.value === '>') {
-            let val = miniExec(node.left, level+1) > miniExec(node.right, level+1);
-            console.log('    '.repeat(level) + `Binaryop(>) ${val}`);
-            return val;
-        } else {
-            throw new Error(`[ERROR] Unknown Binary Op: ${node}`)
-        }
-    } else if (node.type === 'Integer') {
-        let val = parseInt(node.value);
-        console.log('    '.repeat(level) + `Integer ${val}`);
-        return val;
-    } else if (node.type === 'Float') {
-        let val = parseFloat(node.value);
-        console.log('    '.repeat(level) + `Float ${val}`)
-        return val;
-    } else if (node.type === 'Boolean') {
-        let val = node.value === 'true';
-        console.log('    '.repeat(level) + `Boolean ${val}`);
-        return val;
-    } else if (node.type === 'Identifier') {
-        if (evalId) {
-            if (!(node.value in scope)) {
-                console.log('ERROR Scope = ');
-                console.log(scope);
-                throw new Error(`Unknown identifier=${node.value} in current scope`);
-            }
-            console.log('    '.repeat(level) + `Identifier ${node.value} as value  ${scope[node.value]}`);
-            return scope[node.value];
-        } else {
-            console.log('    '.repeat(level) + `Identifier ${node.value} as identifier`);
-            return node.value;
-        }
-    } else if (node.type === 'String') {
-        console.log('    '.repeat(level) + `String ${node.value}`);
-        return node.value.slice(1, node.value.length - 1);
-    } else {
-        throw new Error(`ERROR1 : ${node}`);
-    }
-}
-
-Language.readDefinition();
-
-function makeTree(text) {
-    let tokens = new Lexer('ash').lex(text);
-    console.log('Tokens:');
-    let filtered = tokens.filter(x => !x.equals("blank"));
-    for (let i = 0; i < filtered.length; i++) {
-        console.log(`    ${i}. ${filtered[i]}`);
-    }
-    let res = new Parser().parse(tokens, true);
-    console.log(text);
-    console.log('AST:');
-    console.log(res.toString());
-    console.log('Result:');
-    let finalRes = miniExec(res);
-    console.log(finalRes);
-    return finalRes;
-}
-
-//-------------------------------------------------------------------------------
-// Tests
-//-------------------------------------------------------------------------------
-
-function testsMain(debug) {
-    console.log("----------------------------------------------------");
-    console.log("Running tests");
-    console.log("----------------------------------------------------");
-
-    const tests = [
-        ["5", 5],
-        ["2 + 3", 5],
-        ["5 + 2 * 3", 11],
-        ["2 * 4 + 6", 14],
-        ["2 + 3 * 5", 17],
-        ["true and false", false],
-        ["true or false", true],
-        ["5 > 2", true],
-        ["a = 5", 5],
-        ["b = true or false and true", true],
-        ["2 ** 3 ** 2", 512],
-        ["(5 + 2) * 3", 21],
-        ["5 * (2 + 4)", 30],
-        ["(2 + 3) * 5", 25],
-        ["2 - 5", -3],
-        ["9 / 2", 4.5],
-        ["9 // 2", 4],
-        ["4.2", 4.2],
-        ['"abc" + "def"', "abcdef"],
-        ["2 + 5 ; 4 + 8", 12]
-    ];
-
-    for (let i = 0; i < tests.length; i++) {
-        let cmd = tests[i][0];
-        let expected = tests[i][1];
-        if (debug) {
-            console.log("===================================");
-            console.log(`${i}: ${cmd}. Expected: ${expected}`);
-            console.log("===================================");
-            let result = makeTree(cmd);
-            if (expected === result) {
-                console.log(`[SUCCESS] ${i}. cmd=|${cmd}| got ${result}`);
-            } else {
-                throw new Error(`[ERROR] ${i}. cmd=|${cmd}| expected ${expected} got ${result}`);
-            }
-        }
-    }
-}
-
 //-------------------------------------------------------------------------------
 // Main
 //-------------------------------------------------------------------------------
 
 function nodeMain(debug = true) {
-    console.log(`Running nodeMain of ${FILENAME}`);
-    console.log(`Parameters (${process.argv.length}):`);
-    process.argv.forEach(x => console.log('    ' + x));
-    // 1: node.exe
-    // 2: filename.mjs
-    if (process.argv.length === 3 && process.argv[2] === 'tests') {
-        testsMain(debug);
-    } else if (process.argv.length === 3 && fs.existsSync(process.argv[2])) {
-        let filename = process.argv[2];
-        console.log(`Running file ${filename}`);
-        let data = fs.readFileSync(filename, "utf-8");
-        data = data.replace(/\r\n/g, "\n").replace(/\n\r/g, "\n");
-        if (debug) {
-			console.log(`Data read from file: ${filename}`);
-		}
-        let res = makeTree(data);
-        console.log("Final Res: " + res);
-    } else if (process.argv.length > 4) {
-        throw new Error(
-			`Too many parameters: ${process.argv.length}. The maximum is 4.`
-		);
-    } else {
-        console.log('Running REPL:');
-        let cmd = "";
-        while (cmd !== "exit") {
-            cmd = reader.question(">>> ");
-            if (cmd !== "exit") {
-                let result = makeTree(cmd);
-                if (result !== null) { // notAnExpression
-                    console.log(result);
-                }
-            }
-        }
-    }
+    console.log("No code to run as main");
 }
 
 if (node && main) {
