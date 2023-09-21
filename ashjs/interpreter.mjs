@@ -417,4 +417,4 @@ if (node && main) {
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Interpreter};
+export {Interpreter, nil};

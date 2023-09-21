@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Ash Live</title>
+    <meta charset="utf8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
+    <link href="http://fonts.googleapis.com/css?family=Lobster" rel="stylesheet" type="text/css" />
+    <link href="ash.css" rel="stylesheet" />
+    <script type="module" src="./lexer.mjs"></script>
+    <script type="module" src="./parser.mjs"></script>
+    <script type="module" src="./interpreter.mjs"></script>
+    <script type="module" stc="./translator.mjs"></script>
+    <script>
+        function openOrClose() {
+            let elements = document.querySelectorAll('#parametersPanel > fieldset');
+            elements.forEach(e => {
+                if (e.style.display === 'none') {
+                    e.style.display = 'block';
+                } else {
+                    e.style.display = 'none';
+                }
+            });
+        }
+    </script>
+    <script type="module">
+        //-----------------------------------------------------------------
+        // Imports
+        //-----------------------------------------------------------------
+        import { Lexer, Language } from "./lexer.mjs";
+        import { Parser } from "./parser.mjs";
+        import { Interpreter, nil } from "./interpreter.mjs";
+        //import { Translator} from "./translator.mjs";
+
+        //-----------------------------------------------------------------
+        // Functions
+        //-----------------------------------------------------------------
+        function $(element) {
+            let obj = document.getElementById(element);
+            if (obj === null) {
+                let msg = "No element found: " + element;
+                alert(msg);
+                throw new Error(msg);
+            }
+            return obj;
+        }
+
+        function react(event) {
+            if (event.key === 'Enter') {
+                console.log('do validate')
+                let tx = $("code");
+                tx.value = tx.value + '\n    ';
+                event.preventDefault();
+            }
+        }
+
+        function reset() {
+            let code = $("code");
+            code.innerText = "";
+        }
+
+        function find(tokens, start, value, type, before_end_of_line = false) {
+            const NOT_FOUND = -1;
+            for (let i = start; i < tokens.length; i++) {
+                if (tokens[i].is(value, type)) {
+                    return i;
+                }
+                if (before_end_of_line && tokens[i].is(null, 'newline')) {
+                    return NOT_FOUND;
+                }
+            }
+            return NOT_FOUND;
+        }
+
+        function write(params) {
+            if (!Array.isArray(params)) {
+                throw new Error("Params should be an array and is: " + typeof (params));
+            }
+            let output_console = $("console");
+            let ret = null;
+            for (let param of params) {
+                let neo = document.createElement("span");
+                neo.innerText = param;
+                output_console.appendChild(neo);
+                ret = param.length;
+            }
+            return ret;
+        }
+
+        function analyse() {
+            console.clear();
+            let code = $("code");
+            let lex = new Lexer(Language.LANGUAGES['ash'], ['blank']);
+            console.log(lex);
+            let tokens = [];
+            let output_ast = $("ast");
+            let output_console = $("console");
+            let output_result = $("result");
+            let output_javascript = $("javascript");
+            let output_javascript_result = $("javascript-result");
+            output_ast.innerHTML = '';
+            output_console.innerHTML = '';
+            output_result.innerHTML = '';
+            output_javascript.innerHTML = '';
+            output_javascript_result.innerHTML = '';
+            let screen = $("screen");
+            let ctx = screen.getContext("2d");
+            ctx.clearRect(0, 0, screen.width, screen.height);
+            try {
+                // Get the code as HTML
+                let text = code.innerHTML;
+                // Removing all <sup>X</sup>
+                text = text.replace(/<sup class="info">[^<]+<\/sup>/gi, "");
+                // Put back the HTML inside the code
+                code.innerHTML = text;
+                // Get again the code but as text (delete all html markup)
+                text = code.innerText.trim();
+                console.log('Input text   |' + text + '|');
+                // Tokenizing
+                tokens = lex.lex(text);
+                let html = '<div>' + lex.toHTML(tokens, ['blank', 'newline'], true).replaceAll('\n', '</div><div>') + '</div>';
+                code.innerHTML = html;
+                console.log('HTML         |' + html + '|');
+                console.log('Tokens       :');
+                for (const [index, tok] of tokens.entries()) {
+                    console.log('    ' + index.toString().padStart(3) + `. ${tok}`);
+                }
+            } catch (error) {
+                alert(error);
+                return;
+            }
+            console.log('Parsing :');
+            let p = new Parser();
+            let ast = p.parse(tokens);
+            console.log('AST :');
+            let tree = ast.display();
+            console.log('Interpreter :');
+            let interpreter = new Interpreter(write, screen);
+            let result = interpreter.do(ast);
+            if (result === null) {
+                result = 'nil';
+            }
+            console.log('End of execution');
+            console.log('AST: ', ast);
+            console.log('Scope: ', interpreter.root);
+
+            let translator = new Translator();
+            let output = translator.do(ast);
+            let res_translated = eval(output);
+
+            output_ast.innerHTML = tree;
+            output_result.innerHTML = result;
+            output_javascript.innerHTML = output;
+            output_javascript_result.innerHTML = res_translated;
+        }
+
+        function open_or_close(elem_id) {
+            let elem = $(elem_id);
+            if (elem.style.display === "none") {
+                elem.style.display = "block";
+            } else {
+                elem.style.display = "none";
+            }
+        }
+
+        document.getElementById("ast-title").addEventListener('click', () => { open_or_close('ast') });
+        document.getElementById("screen-title").addEventListener('click', () => { open_or_close('screen') });
+        document.getElementById("console-title").addEventListener('click', () => { open_or_close('console') });
+        document.getElementById("result-title").addEventListener('click', () => { open_or_close('result') });
+        document.getElementById("javascript-title").addEventListener('click', () => { open_or_close('javascript') });
+        document.getElementById("javascript-result-title").addEventListener('click', () => { open_or_close('javascript-result') });
+
+        document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
+        document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
+
+        let data;
+        await fetch('./languages/ash.lang.json').then(response => response.json().then(
+            data =>
+                Language.readDefinition(data)
+        ));
+        Language.readDefinition(data);
+
+        let container = null;
+        let result = null;
+        let ok = true;
+        let GlobalInterpreter = new Interpreter();
+
+        function reset_form() {
+            let exprchk = document.getElementById("expression").checked;
+
+            let expr = document.getElementById("fieldset_expr");
+            let inst = document.getElementById("fieldset_inst");
+
+            if (exprchk) {
+                expr.style.display = "block";
+                inst.style.display = "none";
+            } else {
+                expr.style.display = "none";
+                inst.style.display = "block";
+            }
+
+            console.clear();
+        }
+
+        let current_line = 1;
+        function globalDrawText(
+            s,
+            color = "#000000",
+            size = 16,
+            font = "Courier"
+        ) {
+            let canvas = document.getElementById("screen");
+            let context = canvas.getContext("2d");
+            context.font = `${size}px ${font}`;
+            context.fillStyle = color;
+            context.fillText(s, 10, current_line * 20);
+            current_line += 1;
+        }
+
+        function info(s) {
+            globalDrawText(s);
+        }
+        function error(s) {
+            globalDrawText(s, "#ff0000");
+        }
+
+        function iprocess(name, code) {
+            console.clear();
+            let debug_lex = document.getElementById("debug_lex").checked;
+            let debug_parse =
+                document.getElementById("debug_parse").checked;
+            let debug_execute =
+                document.getElementById("debug_execute").checked;
+
+            let tokens = new Lexer('ash').lex(code);
+
+            // HTML Result
+            container = document.createElement("div");
+            container.classList.add('result');
+            // Title
+            let title = document.createElement("h1");
+            title.innerText = name;
+            container.appendChild(title);
+            // Input nodes
+            let input = document.createElement("pre");
+            input.innerHTML = tokens
+                .map((x, index) => index + " " + x.toHTML())
+                .join(" "); //.join(", ");
+            container.appendChild(input);
+
+            // Parsing
+            try {
+                let root = new Parser().parse(tokens, true);
+                // Graphic output
+                let graph = document.createElement("div");
+                graph.innerHTML = root.toHTMLTree();
+                container.appendChild(graph);
+                // Executing
+                try {
+                    result = GlobalInterpreter.do(root);
+                    console.log('>>>', result);
+                    // Result
+                    let output = document.getElementById("output");
+                    let res = document.createElement("pre");
+                    res.innerHTML = "Result = " + result;
+                    container.appendChild(res);
+                    if (result !== nil) {
+                        info(result);
+                    } else {
+                        error(result);
+                    }
+                    output.prepend(container); // appendChild
+                    let boxres;
+                    if (document.getElementById("expression").checked) {
+                        boxres = document.getElementById("res_expr");
+                    } else {
+                        boxres = document.getElementById("res_inst");
+                    }
+                    boxres.value = result;
+                } catch (exception) {
+                    result = `EXECUTION ERROR: ${exception}`;
+                }
+            } catch (exception) {
+                result = `PARSE ERROR: ${exception}`;
+            }
+        }
+
+        function clickprocess() {
+            let code;
+            if (document.getElementById("expression").checked) {
+                code = document.main.expr.value;
+            } else {
+                code = document.main.inst.value; //.replaceAll("\n", "");
+            }
+            iprocess(">>>", code);
+        }
+
+        function main() {
+            let input = document.getElementById("expr");
+            input.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    document.getElementById("go_expr").click();
+                }
+            });
+            let go = document.getElementById("go_expr");
+            go.onclick = clickprocess;
+            go = document.getElementById("go_inst");
+            go.onclick = clickprocess;
+            //tests(false);
+            let expr = document.getElementById("expression");
+            let inst = document.getElementById("instructions");
+
+            expr.addEventListener("change", reset_form);
+            inst.addEventListener("change", reset_form);
+
+            reset_form();
+        }
+
+        window.onload = main;
+    </script>
+    <style>
+        #code {
+            width: 95%;
+            height: 90%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            border: 1px black solid;
+            padding: 12px;
+            overflow: auto;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 5px;
+            height: 100%;
+        }
+
+        div.grid-child:nth-child(2) {
+            margin-top: 30px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        span[class$=identifier] {
+            color: rgb(2, 155, 238);
+            /*rgb(156, 220, 254);*/
+        }
+
+        span[class$=separator] {
+            color: rgb(255, 201, 17);
+            /* 197 121 145 */
+        }
+
+        pre {
+            border: 1px #e7e7e7 solid;
+            background: #f0f0f0;
+            padding: 0.5em;
+            margin-top: 0;
+        }
+
+        div.title {
+            /*width: 100%;*/
+            border: 1px #a1a1a1 solid;
+            background: #f0f0f0;
+            padding-left: 1em;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        div.title:hover {
+            background: #add8e6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ash</h1>
+    <form name="main">
+        <fieldset id="parametersPanel">
+            <legend id="parametersButton" onclick="openOrClose()">Parameters</legend>
+            <fieldset>
+                <legend>Layout</legend>
+                <input id="column" name="layout" type="radio" checked />
+                <label for="column">Column</label>
+                <input id="sidebyside" name="layout" type="radio" />
+                <label for="sidebyside">Side by side</label>
+            </fieldset>
+            <fieldset>
+                <legend>Choose</legend>
+                <input id="expression" name="mode" type="radio" checked />
+                <label for="expression">Expression</label>
+                <input id="instructions" name="mode" type="radio" />
+                <label for="instructions">Instructions</label>
+            </fieldset>
+            <fieldset>
+                <legend>Debug</legend>
+                <input id="debug_lex" name="debug_lex" type="checkbox" onchange="console.clear()" />
+                <label for="debug_lex">Lex</label>
+                <input id="debug_parse" name="debug_parse" type="checkbox" onchange="console.clear()" />
+                <label for="debug_parse">Parse</label>
+                <input id="debug_execute" name="debug_execute" type="checkbox" onchange="console.clear()" />
+                <label for="debug_execute">Execute</label>
+            </fieldset>
+        </fieldset>
+        <fieldset id="fieldset_expr">
+            <legend id="legend_expr">Type your expression</legend>
+            <input id="expr" name="expr" type="text" size="60" />
+            <input id="go_expr" type="button" value="Run" />
+            <input id="res_expr" type="text" disabled style="background-color: gainsboro" />
+        </fieldset>
+        <fieldset id="fieldset_inst" style="display: none">
+            <legend id="legend_instr">Type your instructions</legend>
+            <textarea id="inst" name="inst" rows="5" cols="80" autofocus placeholder="Enter your code here"
+                spellcheck="false" required autocomplete="false" style="resize: none"></textarea>
+            <br /><br />
+            <input id="go_inst" type="button" value="Run" />
+            <input id="res_inst" type="text" disabled style="background-color: gainsboro" />
+        </fieldset>
+    </form>
+    <div class="grid-container">
+        <div class="grid-child">
+            <button class="_reset">Clear</button>
+            <button class="_analyse">Execute</button>
+            <div id="code" contenteditable="true"></div>
+            <button class="_reset">Clear</button>
+            <button class="_analyse">Execute</button>
+        </div>
+        <div class="grid-child">
+            <div>
+                <div id="ast-title" class="title">Abstract Syntax tree</div>
+                <pre id="ast"></pre>
+            </div>
+            <div>
+                <div id="screen-title" class="title">Screen</div>
+                <canvas id="screen" width="640px" height="480px"></canvas>
+            </div>
+            <div>
+                <div id="console-title" class="title">Console</div>
+                <pre id="console"></pre>
+            </div>
+            <div>
+                <div id="result-title" class="title">Result</div>
+                <pre id="result"></pre>
+            </div>
+            <div>
+                <div id="javascript-title" class="title">JavaScript</div>
+                <pre id="javascript"></pre>
+            </div>
+            <div>
+                <div id="javascript-result-title" class="title">JavaScript Result</div>
+                <pre id="javascript-result"></pre>
+            </div>
+        </div>
+    </div>
+    <canvas id="screen" width="640" height="480" style="border: 1px solid black; margin-top: 1em"></canvas>
+    <div id="output"></div>
+    <p><a href="https://github.com/Xitog/ash">Source & docs</a></p>
+</body>
+
+</html>

@@ -87,37 +87,40 @@ class Node extends Token {
         return `${base}${value}${left}${right}`;
     }
 
-    toHTMLTree(isRoot = false) {
+    toHTMLTree(isRoot = true) {
 		let cls = "";
 		if (isRoot) {
 			cls = ' class="tree"';
 		}
 		let val = "";
+        if (this.type === "Integer") {
+            return `<ul><li><code>Integer (${this.value})</code></li></ul>`;
+        }
 		if (this.type === "expr") {
 			val = this.value.value;
-		} else if (["function", "procedure"].includes(this.type)) {
+		} else if (["Function", "Procedure"].includes(this.type)) {
 			val = `${this.type} <b>${this.value.value}</b>`;
 		} else {
 			val = this.type;
 		}
 		let type = this.type;
 		if (
-			["import", "while", "if", "function", "procedure"].includes(
+			["Import", "While", "If", "Function", "Procedure"].includes(
 				this.type
 			)
 		) {
 			type = "keyword";
 		}
 		let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
-		if (["import", "while", "if"].includes(this.type)) {
-			s += "<li>" + this.value.toHTMLTree() + "</li>";
+		if (["Import", "While", "If"].includes(this.type)) {
+			s += "<li>" + this.value.toHTMLTree(false) + "</li>";
 		}
 		if (this.left !== null) {
 			// only during the time that functions don't have parameter
-			s += "<li>" + this.left.toHTMLTree() + "</li>";
+			s += "<li>" + this.left.toHTMLTree(false) + "</li>";
 		}
 		if (this.right !== null) {
-			s += "<li>" + this.right.toHTMLTree() + "</li>";
+			s += "<li>" + this.right.toHTMLTree(false) + "</li>";
 		}
 		s += "</ul></li></ul>";
 		return s;

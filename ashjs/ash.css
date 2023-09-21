@@ -1,0 +1,152 @@
+/* Original tree view css from Ross Angus
+   https://codepen.io/ross-angus/pen/VwLWqdL
+ */
+body {
+    font-family: "Courier New", Courier, monospace;
+    width: 100%;
+    text-align: center;
+    padding-top: 4em;
+    padding-bottom: 4em;
+}
+
+/* It's supposed to look like a tree diagram */
+.tree,
+.tree ul,
+.tree li,
+.monotree,
+.monotree ul,
+.monotree li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.tree,
+.monotree {
+    margin: 0 0 1em;
+    text-align: center;
+}
+.tree,
+.tree ul,
+.monotree,
+.monotree ul {
+    display: table;
+}
+.tree ul,
+.monotree ul {
+    width: 100%;
+}
+.tree li,
+.monotree li {
+    display: table-cell;
+    padding: 0.5em 0;
+    vertical-align: top;
+}
+/* _________ */
+.tree li:before,
+.monotree li:before {
+    outline: solid 1px #666;
+    content: "";
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+.tree li:first-child:before,
+.monotree li:first-child:before {
+    left: 50%;
+}
+.tree li:last-child:before,
+.monotree li:last-child:before {
+    right: 50%;
+}
+
+.tree code,
+.tree span,
+.monotree code {
+    border: solid 0.1em #666;
+    border-radius: 0.2em;
+    display: inline-block;
+    margin: 0 0.2em 0.5em;
+    padding: 0.2em 0.5em;
+    position: relative;
+}
+/* If the tree represents DOM structure */
+.tree code,
+.monotree code {
+    font-family: monaco, Consolas, "Lucida Console", monospace;
+}
+
+/* | */
+.tree ul:before,
+.tree code:before,
+.tree span:before {
+    outline: solid 1px #666;
+    content: "";
+    height: 0.5em;
+    left: 50%;
+    position: absolute;
+}
+.tree ul:before {
+    top: -0.5em;
+}
+.tree code:before,
+.tree span:before {
+    top: -0.55em;
+}
+
+/* The root node doesn't connect upwards */
+.tree > li {
+    margin-top: 0;
+}
+.tree > li:before,
+.tree > li:after,
+.tree > li > code:before,
+.tree > li > span:before {
+    outline: none;
+}
+
+code[data-type="keyword"] {
+    font-weight: bold;
+    color: orange;
+}
+code[data-type="expr"] {
+    background-color: #ffcccb;
+}
+code[data-type="id"] {
+    color: purple;
+}
+code[data-type="int"] {
+    color: red;
+}
+
+h1 {
+    font-family: "Lobster", cursive, monospace, "Consolas",
+        "Century Gothic";
+    color: #4087e4;
+    font-size: 32px;
+}
+
+fieldset {
+    width: 620px;
+    margin: auto;
+}
+
+#fieldset_expr {
+    margin-top: 2em;
+}
+
+#parametersButton {
+    text-decoration: underline;
+    cursor: pointer;
+}
+#parametersButton:hover {
+    background-color: black;
+    color: white;
+}
+
+div.result {
+    margin: auto;
+    max-width: 800px;
+}
