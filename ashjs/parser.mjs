@@ -39,11 +39,11 @@
 const FILENAME = "parser.mjs";
 
 const node =
-	typeof process !== "undefined" &&
-	process !== null &&
-	typeof process.version !== "undefined" &&
-	process.version !== null &&
-	typeof process.version === "string";
+    typeof process !== "undefined" &&
+    process !== null &&
+    typeof process.version !== "undefined" &&
+    process.version !== null &&
+    typeof process.version === "string";
 
 const path = node ? await import("path") : null;
 
@@ -88,43 +88,30 @@ class Node extends Token {
     }
 
     toHTMLTree(isRoot = true) {
-		let cls = "";
-		if (isRoot) {
-			cls = ' class="tree"';
-		}
-		let val = "";
-        if (this.type === "Integer") {
-            return `<ul><li><code>Integer (${this.value})</code></li></ul>`;
+        let cls = "";
+        if (isRoot) {
+            cls = ' class="tree"';
         }
-		if (this.type === "expr") {
-			val = this.value.value;
-		} else if (["Function", "Procedure"].includes(this.type)) {
-			val = `${this.type} <b>${this.value.value}</b>`;
-		} else {
-			val = this.type;
-		}
-		let type = this.type;
-		if (
-			["Import", "While", "If", "Function", "Procedure"].includes(
-				this.type
-			)
-		) {
-			type = "keyword";
-		}
-		let s = `<ul ${cls}><li><code data-type="${type}">${val}</code><ul>`;
-		if (["Import", "While", "If"].includes(this.type)) {
-			s += "<li>" + this.value.toHTMLTree(false) + "</li>";
-		}
-		if (this.left !== null) {
-			// only during the time that functions don't have parameter
-			s += "<li>" + this.left.toHTMLTree(false) + "</li>";
-		}
-		if (this.right !== null) {
-			s += "<li>" + this.right.toHTMLTree(false) + "</li>";
-		}
-		s += "</ul></li></ul>";
-		return s;
-	}
+        let starter = `<ul${cls}><li><code data-type="${this.type}">${this.type}`;
+        if (["Integer", "BinaryOp"].includes(this.type)) {
+            starter += ` (${this.value})`;
+        }
+        if (["Integer"].includes(this.type)) {
+            starter += '</code></li></ul>';
+        } else if (["BinaryOp", "Block"].includes(this.type)) {
+            starter += '</code><ul>';
+            if (this.left !== null) {
+                starter += "<li>" + this.left.toHTMLTree(false) + "</li>";
+            }
+            if (this.right !== null) {
+                starter += "<li>" + this.right.toHTMLTree(false) + "</li>";
+            }
+            starter += "</ul></li></ul>";
+        } else {
+            throw new Error(`Unknow node type: ${node.type}`);
+        }
+        return starter;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -210,7 +197,7 @@ class Parser {
                     if (this.test("separator", [";", ",", ")"]) || this.test("newline", "\n")) {
                         this.advance();
                     } else if (!this.test("keyword", ["end", "loop"])) {
-                        throw new Error(`Unfinished Expression at ${this.tokens[this.index]} after ${this.tokens[this.index-1]}`);
+                        throw new Error(`Unfinished Expression at ${this.tokens[this.index]} after ${this.tokens[this.index - 1]}`);
                     }
                 }
             }
@@ -240,7 +227,7 @@ class Parser {
         return res;
     }
 
-    parseBinaryOp(opLevel=0) {
+    parseBinaryOp(opLevel = 0) {
         if (opLevel === precedence.length) {
             return this.parseUnary();
         }
@@ -248,12 +235,12 @@ class Parser {
         let name = precedence[opLevel].map(x => this.uFirst(x)).join(", ");
         let node = null;
         let right = null;
-        this.log(`>>> ${this.level} START ${name} (operator ${opLevel+1}/${precedence.length}) at ${this.index}`);
+        this.log(`>>> ${this.level} START ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
         node = this.parseBinaryOp(opLevel + 1);
         // On peut faire un while ici pour traiter les suites en chaînant avec expr = new Expression(expr, operator, right);
         if (this.test('operator', precedence[opLevel])) {
             let op = this.advance();
-            this.log(`>>> ${this.level} PARSING ${name} (operator ${opLevel+1}/${precedence.length}) at ${this.index}`);
+            this.log(`>>> ${this.level} PARSING ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
             right = this.parseBinaryOp(opLevel);
             if (right === null) {
                 throw new Error("No expression on the right of a binary operator at " + current.getLine());
@@ -411,11 +398,11 @@ function nodeMain(debug = true) {
 }
 
 if (node && main) {
-	nodeMain();
+    nodeMain();
 }
 
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
 
-export {Parser, Node};
+export { Parser, Node };

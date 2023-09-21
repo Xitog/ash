@@ -247,7 +247,8 @@
             // Input nodes
             let input = document.createElement("pre");
             input.innerHTML = tokens
-                .map((x, index) => index + " " + x.toHTML())
+                .filter(token => token.type != "blank")
+                .map((x, index) => index + ". |" + x.toHTML('ash') + "|")
                 .join(" "); //.join(", ");
             container.appendChild(input);
 
