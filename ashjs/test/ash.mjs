@@ -256,12 +256,6 @@ class AshInterpreter extends AshInstrument {
 				node.right
 			);
 			return nil;
-		} else if (node.type === "int") {
-			return parseInt(node.value);
-		} else if (node.type === "float") {
-			return parseFloat(node.value);
-		} else if (node.type === "bool") {
-			return node.value === "true";
 		} else if (node.type === "id") {
 			if (!symbol) {
 				// Function call without parameters
@@ -366,65 +360,6 @@ class AshInterpreter extends AshInstrument {
 					this.log("Creating new NodeList", right);
 				}
 				return right;
-			}
-			// String ---------------------------------------
-			if (typeof left === "string") {
-				if (op === "+") {
-					if (typeof right !== "string") {
-						throw new Error("Can only add a string to a string");
-					}
-					return left + right;
-				} else if (op === "*") {
-					if (typeof right !== "number") {
-						throw new Error("Can only repeat a string by a number");
-					}
-					return left.repeat(Math.floor(right));
-				} else {
-					throw new Error(`Unsupported operator ${op} for string`);
-				}
-			} else if (typeof left === "number") {
-				if (op === "+") {
-					return left + right;
-				} else if (op === "-") {
-					return left - right;
-				} else if (op === "*") {
-					return left * right;
-				} else if (op === "/") {
-					return left / right;
-				} else if (op === "//") {
-					return Math.floor(left / right);
-				} else if (op === "**") {
-					return Math.pow(left, right);
-				} else if (op === "%") {
-					return left % right;
-				} else if (op === "<") {
-					return left < right;
-				} else if (op === "<=") {
-					return left <= right;
-				} else if (op === ">") {
-					return left > right;
-				} else if (op === ">=") {
-					return left >= right;
-				} else if (op === "==") {
-					return left === right;
-				} else if (op === "!=") {
-					return left !== right;
-				} else if (op === "una-") {
-					return -left;
-				} else {
-					let type = Number.isInteger(left) ? "integer" : "float";
-					throw new Error(`Unsupported operator ${op} for ${type}`);
-				}
-			} else if (typeof left === "boolean") {
-				if (op === "not") {
-					return !left;
-				} else if (op === "and") {
-					return left && right;
-				} else if (op === "or") {
-					return left || right;
-				} else {
-					throw new Error(`Unsupported operator ${op} for boolean`);
-				}
 			} else if (typeof left === "object") {
 				if (op === ".") {
 					if (typeof right === "string") {
@@ -455,36 +390,6 @@ class AshInterpreter extends AshInstrument {
 			} else {
 				throw new Error(`Unsupported type: ${typeof left}`);
 			}
-		} else if (node.type === "if") {
-			let condition = this.execute(node.value);
-			if (condition === true) {
-				return this.execute(node.left);
-			} else {
-				return nil;
-			}
-		} else if (node.type === "while") {
-			let condition = this.execute(node.value);
-			let last = nil;
-			let security = 16384;
-			while (condition === true && security > 0) {
-				try {
-					if (node.left !== null) {
-						last = this.execute(node.left);
-					}
-				} catch (e) {
-					if (e.message === "break") {
-						break;
-					} else {
-						throw e;
-					}
-				}
-				condition = this.execute(node.value);
-				security -= 1;
-			}
-			if (condition && security === 0) {
-				throw new Error("Infinite loop detected");
-			}
-			return last;
 		} else if (node.type === "import") {
 			let name = node.value.value;
 			console.log(`Importing ${name}`);
@@ -504,13 +409,6 @@ class AshInterpreter extends AshInstrument {
 					`Don't know what to do with keyword node ${node.value}`
 				);
 			}
-		} else {
-			this.log(node, typeof node);
-			this.log(node.type, typeof node.type);
-			this.log(node.value, typeof node.value);
-			throw new Error(
-				`Unknown node type |${node.type}| for node ${node}`
-			);
 		}
 	}
 }
@@ -521,14 +419,6 @@ class AshInterpreter extends AshInstrument {
 const notAnExpression = new NotAnExpression();
 
 let resources = {};
-
-//-----------------------------------------------------------------
-// Functions
-//-----------------------------------------------------------------
-
-function log(s) {
-	console.log(s);
-}
 
 function AshLex(code, debug_lex = false) {
 	if (debug_lex) {
@@ -551,16 +441,6 @@ function AshExecute(root, debug_execute = false, info = null, error = null) {
 	return new AshInterpreter(debug_execute, info, error).execute(root);
 }
 
-function AshExecuteAsync(callback, root, debug_execute = false, info = null, error = null) {
-	if (debug_execute) {
-		log(`Executing async ${debug_execute}`);
-	}
-	console.log("Starting Async Exection");
-	let ai = new AshInterpreter(debug_execute, info, error);
-	console.log("Go!");
-	ai.executeAsync(callback, root);
-}
-
 function AshProcess(
 	code,
 	debug_lex = false,
@@ -573,18 +453,6 @@ function AshProcess(
 	return result;
 }
 
-function AshProcessAsync(
-	callback,
-	code,
-	debug_lex = false,
-	debug_parse = false,
-	debug_execute = false
-) {
-	let nodes = AshLex(code, debug_lex);
-	let root = AshParse(nodes, debug_parse);
-	AshExecuteAsync(callback, root, debug_execute);
-}
-
 function AshTests(debug = false) {
 	let tests = {
 		"Test 6": ["not false and true", true],
@@ -593,8 +461,6 @@ function AshTests(debug = false) {
 }
 
 function main() {
-	let debug = false;
-	let filename = null;
 	// 3: filename or -d
 	// 4: filename or -d
 	} else if (process.argv.length === 4) {
@@ -611,11 +477,6 @@ function main() {
 		} else {
 			filename = process.argv[2];
 		}
-	}
-
-	if (filename === null) {
-		// Run only with node.exe and the script
-
 	} else {
 		// Run with script name
 		let debug = false;

@@ -97,9 +97,14 @@ class Interpreter
             return this.library(idFun, arg);
         } else if (node.type === 'While') {
             let cond = this.do(node.value, level + 1);
+            let security = 1000000000;
             while (cond === true) {
                 this.do(node.left, level + 1);
                 cond = this.do(node.value, level + 1);
+                security -= 1;
+                if (security === 0) {
+                    throw new Error("Infinite loop detected");
+                }
             }
             return nil;
         } else if (node.type === 'If') {
@@ -116,7 +121,11 @@ class Interpreter
                 console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
                 return val;
             } else if (node.value === 'not') {
-                let val = !this.do(node.left, level+1);
+                let val = this.do(node.left, level+1);
+                if (typeof val !== "boolean") {
+                    throw new Error(`[ERROR] Unsupported unary operator ${node.value} for ${typeof val}`);
+                }
+                val = !val;
                 console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
                 return val;
             }  else {
@@ -156,55 +165,87 @@ class Interpreter
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level  +1);
                 let res = null;
-                switch (node.value)
-                {
-                    case '+':
-                        res = left + right;
-                        break;
-                    case '-':
-                        res = left - right;
-                        break;
-                    case '*':
-                        res = left * right;
-                        break;
-                    case '/':
-                        res = left / right;
-                        break;
-                    case '**':
-                        res = Math.pow(left, right);
-                        break;
-                    case '//':
-                        res = Math.floor(left / right);
-                        break;
-                    case '%':
-                        res = left % right;
-                        break;
-                    case '==':
-                        res = left === right;
-                        break;
-                    case '!=':
-                        res = left !== right;
-                        break;
-                    case '>':
-                        res = left > right;
-                        break;
-                    case '<':
-                        res = left < right;
-                        break;
-                    case '>=':
-                        res = left >= right;
-                        break;
-                    case '<=':
-                        res = left <= right;
-                        break;
-                    case 'and':
-                        res = left && right;
-                        break;
-                    case 'or':
-                        res = left || right;
-                        break;
-                    default:
-                        throw new Error(`[ERROR] Unknown binary operator not handled : ${node.value}`);
+                if (typeof left === "boolean") {
+                    switch (node.value)
+                    {
+                        case 'and':
+                            res = left && right;
+                            break;
+                        case 'or':
+                            res = left || right;
+                            break;
+                        default:
+                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for boolean`);
+                    }
+                } else if (typeof left === "string") {
+                    switch (node.value)
+                    {
+                        case '+':
+                            if (typeof right !== "string") {
+                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter. Can only add a string to a string.`);
+                            }
+                            res = left + right;
+                            break;
+                        case '*':
+                            if (typeof right !== "number" || !Number.isInteger(right)) {
+                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter. Can only repeat a string by an integer.`);
+                            }
+                            res = left.repeat(right);
+                            break;
+                        default:
+                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for string`);
+                    }
+                } else if (typeof left === "number") {
+                    let type = Number.isInteger(left) ? "integer" : "float";
+                    switch (node.value)
+                    {
+                        case '+':
+                            if (typeof right !== "number") {
+                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter`);
+                            }
+                            res = left + right;
+                            break;
+                        case '-':
+                            res = left - right;
+                            break;
+                        case '*':
+                            res = left * right;
+                            break;
+                        case '/':
+                            res = left / right;
+                            break;
+                        case '**':
+                            res = Math.pow(left, right);
+                            break;
+                        case '//':
+                            res = Math.floor(left / right);
+                            break;
+                        case '%':
+                            res = left % right;
+                            break;
+                        case '==':
+                            res = left === right;
+                            break;
+                        case '!=':
+                            res = left !== right;
+                            break;
+                        case '>':
+                            res = left > right;
+                            break;
+                        case '<':
+                            res = left < right;
+                            break;
+                        case '>=':
+                            res = left >= right;
+                            break;
+                        case '<=':
+                            res = left <= right;
+                            break;
+                        default:
+                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type}`);
+                    }
+                } else {
+                    throw new Error(`[ERROR] Unsupported type : ${typeof left}`);
                 }
                 console.log('    '.repeat(level) + `Binaryop(${node.value}) ${res}`);
                 return res;
@@ -238,7 +279,10 @@ class Interpreter
             console.log('    '.repeat(level) + `String ${node.value}`); //no slice(1, .length -1)
             return node.value.slice(1, node.value.length - 1);
         } else {
-            throw new Error(`[ERROR] Not handled node: ${node}`);
+            console.log(node, typeof node);
+            console.log(node.type, typeof node.type);
+            console.log(node.value, typeof node.value);
+            throw new Error(`[ERROR] Not handled node type |${node.type}| for node: ${node}`);
         }
     }
 
