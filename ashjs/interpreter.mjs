@@ -380,6 +380,24 @@ function nodeMain(debug = true) {
     // 2: filename.mjs
     if (process.argv.length === 3 && process.argv[2] === 'tests') {
         testsMain(debug);
+    } else if (process.argv.length === 4 && process.argv[2] === 'build') {
+        let appPath = process.argv[3];
+        // find the app
+        if (!fs.existsSync(appPath)) {
+            throw new Error(`Impossible to find a valid ash file at ${path.join(process.cwd(), appPath)}`);
+        }
+        let appName = path.basename(appPath);
+        let appDirectory = path.dirname(appPath);
+        let appBuildDirectory = path.join(appDirectory, 'build');
+        console.log(`Building ${appName} application in directory ${appDirectory}`);
+        if (!fs.existsSync(appBuildDirectory)) {
+            fs.mkdirSync(appBuildDirectory);
+        }
+        let data = fs.readFileSync("template.html", "utf-8");
+        data = data.replace(/%AppName%/g, appName);
+        let code = fs.readFileSync(appPath, "utf-8");
+        data = data.replace('//%code%', code);
+        fs.writeFileSync(path.join(appBuildDirectory, "index.html"), data);
     } else if (process.argv.length === 3 && fs.existsSync(process.argv[2])) {
         let filename = process.argv[2];
         console.log(`Running file ${filename}`);
