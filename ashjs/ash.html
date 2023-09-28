@@ -1,52 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <title>Ash Live</title>
-    <meta charset="utf8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
-    <link rel="shortcut icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
-    <link href="http://fonts.googleapis.com/css?family=Lobster" rel="stylesheet" type="text/css" />
-    <link href="ash.css" rel="stylesheet" />
-    <script type="module" src="./lexer.mjs"></script>
-    <script type="module" src="./parser.mjs"></script>
-    <script type="module" src="./interpreter.mjs"></script>
-    <script type="module" stc="./translator.mjs"></script>
     <script>
         function openOrClose() {
             let elements = document.querySelectorAll('#parametersPanel > fieldset');
             elements.forEach(e => {
-                if (e.style.display === 'none') {
-                    e.style.display = 'block';
-                } else {
+                if (e.style.display === 'block') {
                     e.style.display = 'none';
+                } else {
+                    e.style.display = 'block';
                 }
             });
         }
     </script>
     <script type="module">
-        //-----------------------------------------------------------------
-        // Imports
-        //-----------------------------------------------------------------
-        import { Lexer, Language } from "./lexer.mjs";
-        import { Parser } from "./parser.mjs";
-        import { Interpreter, nil } from "./interpreter.mjs";
-        //import { Translator} from "./translator.mjs";
 
-        //-----------------------------------------------------------------
-        // Functions
-        //-----------------------------------------------------------------
-        function $(element) {
-            let obj = document.getElementById(element);
-            if (obj === null) {
-                let msg = "No element found: " + element;
-                alert(msg);
-                throw new Error(msg);
-            }
-            return obj;
-        }
+
+
 
         function react(event) {
             if (event.key === 'Enter') {
@@ -300,18 +270,6 @@
         }
 
         function main() {
-            let input = document.getElementById("expr");
-            input.addEventListener("keydown", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    document.getElementById("go_expr").click();
-                }
-            });
-            let go = document.getElementById("go_expr");
-            go.onclick = clickprocess;
-            go = document.getElementById("go_inst");
-            go.onclick = clickprocess;
-            //tests(false);
             let expr = document.getElementById("expression");
             let inst = document.getElementById("instructions");
 
@@ -383,6 +341,15 @@
 <body>
     <h1>Ash</h1>
     <form name="main">
+        <fieldset id="fieldset_inst" style="display: none">
+            <legend id="legend_instr">Type your instructions</legend>
+            <textarea id="inst" name="inst" rows="5" cols="80" autofocus placeholder="Enter your code here"
+                spellcheck="false" required autocomplete="false" style="resize: none"></textarea>
+            <br /><br />
+            <input id="go_inst" type="button" value="Run" />
+            <input id="res_inst" type="text" disabled style="background-color: gainsboro" />
+        </fieldset>
+        <!-- Parameters -->
         <fieldset id="parametersPanel">
             <legend id="parametersButton" onclick="openOrClose()">Parameters</legend>
             <fieldset>
@@ -408,20 +375,6 @@
                 <input id="debug_execute" name="debug_execute" type="checkbox" onchange="console.clear()" />
                 <label for="debug_execute">Execute</label>
             </fieldset>
-        </fieldset>
-        <fieldset id="fieldset_expr">
-            <legend id="legend_expr">Type your expression</legend>
-            <input id="expr" name="expr" type="text" size="60" />
-            <input id="go_expr" type="button" value="Run" />
-            <input id="res_expr" type="text" disabled style="background-color: gainsboro" />
-        </fieldset>
-        <fieldset id="fieldset_inst" style="display: none">
-            <legend id="legend_instr">Type your instructions</legend>
-            <textarea id="inst" name="inst" rows="5" cols="80" autofocus placeholder="Enter your code here"
-                spellcheck="false" required autocomplete="false" style="resize: none"></textarea>
-            <br /><br />
-            <input id="go_inst" type="button" value="Run" />
-            <input id="res_inst" type="text" disabled style="background-color: gainsboro" />
         </fieldset>
     </form>
     <div class="grid-container">

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Ash Live</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="https://xitog.github.io/dgx/img/favicon.ico" type="image/x-icon" />
+    <link href="http://fonts.googleapis.com/css?family=Lobster" rel="stylesheet" type="text/css" />
+    <link href="ash.css" rel="stylesheet" />
+    <script type="module" src="./lexer.mjs"></script>
+    <script type="module" src="./parser.mjs"></script>
+    <script type="module" src="./interpreter.mjs"></script>
+    <script type="module" stc="./translator.mjs"></script>
+    <script type="module">
+        //-----------------------------------------------------------------
+        // Imports
+        //-----------------------------------------------------------------
+        import { Lexer, Language } from "./lexer.mjs";
+        import { Parser } from "./parser.mjs";
+        import { Interpreter } from "./interpreter.mjs";
+        //import { Translator} from "./translator.mjs";
+
+        //-----------------------------------------------------------------
+        // Functions
+        //-----------------------------------------------------------------
+        function $(element) {
+            let obj = document.getElementById(element);
+            if (obj === null) {
+                let msg = "No element found: " + element;
+                alert(msg);
+                throw new Error(msg);
+            }
+            return obj;
+        }
+
+        function run() {
+            console.log('run');
+            let code = $("expr_input").value;
+            let tokens = new Lexer('ash').lex(code);
+            let root = new Parser().parse(tokens, true);
+            let result = GlobalInterpreter.do(root);
+            console.log('>>>', result);
+        }
+
+        function main() {
+            console.log('main');
+            GlobalInterpreter = new Interpreter();
+            $("expr_button").onclick = run;
+            $("main_form").onsubmit = function () {
+                run();
+                return false;
+            }
+        }
+
+        let data;
+        await fetch('./languages/ash.lang.json').then(response => response.json().then(
+            data =>
+                Language.readDefinition(data)
+        ));
+
+        let GlobalInterpreter;
+
+        window.onload = main;
+
+    </script>
+</head>
+
+<body id="body">
+    <!-- content -->
+    <div id="container">
+        <div>
+            <h1>Ash</h1>
+            <form id="main_form" name="main">
+                <fieldset id="fieldset_expr">
+                    <legend id="expr_legend">Type your expression</legend>
+                    <input id="expr_input" name="expr" type="text" size="60" />
+                    <input id="expr_button" type="button" value="Run" />
+                </fieldset>
+            </form>
+            <textarea id="console"></textarea>
+            <canvas id="screen"></canvas>
+            <button id="options_button">Options</button>
+        </div>
+    </div>
+    <!--
+        <input id="res_expr" type="text" disabled style="background-color: gainsboro" />
+    -->
+</body>
+
+</html>
