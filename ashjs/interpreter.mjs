@@ -36,6 +36,8 @@
 // Environment & imports
 //-------------------------------------------------------------------------------
 
+const VERSION = 0.1;
+
 const FILENAME = "interpreter.mjs";
 
 const node =
@@ -120,6 +122,12 @@ class Function extends Value {
 
     isProcedure() {
         return this.value === 'procedure';
+    }
+
+    call(args) {
+        if (args.length != this.parameters.length) {
+            throw new Error(`Too many or not enough parameters: expected number is ${this.parameters.length} and ${args.length} were provided.`);
+        }
     }
 }
 
@@ -724,4 +732,4 @@ if (node && main) {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Interpreter, nil };
+export { Interpreter, nil, VERSION };

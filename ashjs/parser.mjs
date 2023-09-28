@@ -192,7 +192,6 @@ class Parser {
                 this.advance();
             } else {
                 res = this.parseExpression();
-                this.log("HELLO " + this.index + " / " + this.tokens.length);
                 if (this.index < this.tokens.length) {
                     if (this.test("separator", [";", ",", ")"]) || this.test("newline", "\n")) {
                         this.advance();

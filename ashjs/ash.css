@@ -26,7 +26,7 @@ h1 {
 
 #main_form {
     margin-top: 10em;
-    margin-bottom: 10em;
+    margin-bottom: 2em;
 }
 
 #main_form > fieldset {
@@ -43,7 +43,33 @@ h1 {
 }
 
 #console {
+    width: 640px;
+    margin: auto;
     display: none;
+    resize: none;
+}
+
+#console > pre {
+    border: 1px solid darkgrey;
+    background-color: gainsboro;
+    text-align: left;
+    padding-left: 1em;
+}
+
+#console > pre > span.command {
+    color: dimgray;
+}
+
+#option_panel {
+    display: none;
+}
+
+#version {
+    font-size: 10px;
+    color: black;
+    height: 12px;
+    width: 100%;
+    margin-top: 1em;
 }
 
 /* It's supposed to look like a tree diagram */

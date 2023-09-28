@@ -1,10 +1,5 @@
 class AshFunction {
 	call(argList) {
-		if (argList.getSize() > this.paramList.length) {
-			throw new Error(
-				`Too many parameters: maximum expected is ${this.paramList.length} and ${argList.length} were provided.`
-			);
-		}
 		for (let index = 0; index < this.paramList.length; index++) {
 			let param = this.paramList[index];
 			if (index < argList.getSize()) {
@@ -55,48 +50,7 @@ class AshFunction {
 	}
 }
 
-class AshInterpreter extends AshInstrument {
-	constructor()
-	{
-		super();
-		document.addEventListener('keydown', (event) => {
-			let name = event.key;
-			let code = event.code;
-			// Alert the key name and key code on keydown
-			console.log(`Key down ${name} \r\n Key code value: ${code}`);
-			this.KEYS[code] = true;
-		}, false);
-		document.addEventListener('keyup', (event) => {
-			let name = event.key;
-			let code = event.code;
-			// Alert the key name and key code on keydown
-			console.log(`Key up ${name} \r\n Key code value: ${code}`);
-			this.KEYS[code] = false;
-		}, false);
-		if (info !== null) {
-			this.info = info;
-		} else {
-			this.info = console.log;
-			info = console.log;
-		}
-		if (error !== null) {
-			this.error = error;
-		} else {
-			this.error = console.log;
-			// Code non utilisé : error = console.log;
-		}
-		this.KEYS = {};
-		this.scope = {
-			keydown: function (args) {
-				console.log("function keydown", args);
-				let code = args.get(0);
-				console.log(GlobalInterpreter.KEYS);
-				return (code in GlobalInterpreter.KEYS && GlobalInterpreter.KEYS[code]);
-			},
-		};
-	}
-
-	execute_core(node, symbol = false, debug = false) {
+	function execute_core(node, symbol = false, debug = false) {
 		if (node.type === "function" || node.type === "procedure") {
 			this.scope[node.value.value] = new AshFunction(
 				node.value.value,
@@ -226,7 +180,7 @@ class AshInterpreter extends AshInstrument {
 			}
 		}
 	}
-}
+
 const notAnExpression = new NotAnExpression();
 		//try {
 		// Execute
