@@ -18,7 +18,7 @@ body {
 }
 
 h1 {
-    font-family: "Lobster", cursive, monospace, "Consolas",
+    font-family: "Lobster", monospace, "Consolas",
         "Century Gothic";
     color: #4087e4;
     font-size: 32px;
@@ -34,12 +34,27 @@ h1 {
     margin: auto;
 }
 
+#code_textarea {
+    resize: none;
+    /*height: 16px;*/
+    margin: 0;
+    padding: 0;
+    display: none;
+}
+
 #screen {
     width: 640px;
     height: 480px;
     margin: auto;
     display: none;
     padding-bottom: 2em;
+    border: 1px solid black;
+    margin-top: 1em;
+}
+
+#ast {
+    margin: auto;
+    display: none;
 }
 
 #console {
@@ -64,7 +79,7 @@ h1 {
     display: none;
 }
 
-#version {
+#version, #info > a {
     font-size: 10px;
     color: black;
     height: 12px;
@@ -182,26 +197,4 @@ code[data-type="id"] {
 }
 code[data-type="int"] {
     color: red;
-}
-
-#parametersPanel {
-    margin-top: 2em;
-}
-
-#parametersPanel > fieldset {
-    display: none;
-}
-
-#parametersButton {
-    text-decoration: underline;
-    cursor: pointer;
-}
-#parametersButton:hover {
-    background-color: black;
-    color: white;
-}
-
-div.result {
-    margin: auto;
-    max-width: 800px;
 }

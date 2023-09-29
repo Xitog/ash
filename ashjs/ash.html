@@ -1,23 +1,5 @@
     <script type="module">
         function analyse() {
-            console.clear();
-            let code = $("code");
-            let lex = new Lexer(Language.LANGUAGES['ash'], ['blank']);
-            console.log(lex);
-            let tokens = [];
-            let output_ast = $("ast");
-            let output_console = $("console");
-            let output_result = $("result");
-            let output_javascript = $("javascript");
-            let output_javascript_result = $("javascript-result");
-            output_ast.innerHTML = '';
-            output_console.innerHTML = '';
-            output_result.innerHTML = '';
-            output_javascript.innerHTML = '';
-            output_javascript_result.innerHTML = '';
-            let screen = $("screen");
-            let ctx = screen.getContext("2d");
-            ctx.clearRect(0, 0, screen.width, screen.height);
             try {
                 // Get the code as HTML
                 let text = code.innerHTML;
@@ -50,39 +32,8 @@
             output_javascript.innerHTML = output;
             output_javascript_result.innerHTML = res_translated;
         }
-
-        document.getElementById("ast-title").addEventListener('click', () => { open_or_close('ast') });
-        document.getElementById("screen-title").addEventListener('click', () => { open_or_close('screen') });
-        document.getElementById("console-title").addEventListener('click', () => { open_or_close('console') });
-        document.getElementById("result-title").addEventListener('click', () => { open_or_close('result') });
-        document.getElementById("javascript-title").addEventListener('click', () => { open_or_close('javascript') });
-        document.getElementById("javascript-result-title").addEventListener('click', () => { open_or_close('javascript-result') });
-
         document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
         document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
-
-        let container = null;
-        let result = null;
-        let ok = true;
-        let GlobalInterpreter = new Interpreter();
-
-        function reset_form() {
-            let exprchk = document.getElementById("expression").checked;
-
-            let expr = document.getElementById("fieldset_expr");
-            let inst = document.getElementById("fieldset_inst");
-
-            if (exprchk) {
-                expr.style.display = "block";
-                inst.style.display = "none";
-            } else {
-                expr.style.display = "none";
-                inst.style.display = "block";
-            }
-
-            console.clear();
-        }
-
         let current_line = 1;
         function globalDrawText(
             s,
@@ -112,14 +63,6 @@
                 document.getElementById("debug_parse").checked;
             let debug_execute =
                 document.getElementById("debug_execute").checked;
-
-            // HTML Result
-            container = document.createElement("div");
-            container.classList.add('result');
-            // Title
-            let title = document.createElement("h1");
-            title.innerText = name;
-            container.appendChild(title);
             // Input nodes
             let input = document.createElement("pre");
             input.innerHTML = tokens
@@ -161,28 +104,6 @@
                 result = `PARSE ERROR: ${exception}`;
             }
         }
-
-        function clickprocess() {
-            let code;
-            if (document.getElementById("expression").checked) {
-                code = document.main.expr.value;
-            } else {
-                code = document.main.inst.value; //.replaceAll("\n", "");
-            }
-            iprocess(">>>", code);
-        }
-
-        function main() {
-            let expr = document.getElementById("expression");
-            let inst = document.getElementById("instructions");
-
-            expr.addEventListener("change", reset_form);
-            inst.addEventListener("change", reset_form);
-
-            reset_form();
-        }
-
-        window.onload = main;
     </script>
     <style>
         #code {
@@ -236,49 +157,9 @@
         }
     </style>
 </head>
-
 <body>
-    <form name="main">
-        <fieldset id="fieldset_inst" style="display: none">
-            <legend id="legend_instr">Type your instructions</legend>
-            <textarea id="inst" name="inst" rows="5" cols="80" autofocus placeholder="Enter your code here"
-                spellcheck="false" required autocomplete="false" style="resize: none"></textarea>
-            <br /><br />
-            <input id="go_inst" type="button" value="Run" />
-            <input id="res_inst" type="text" disabled style="background-color: gainsboro" />
-        </fieldset>
-        <!-- Parameters -->
-        <fieldset id="parametersPanel">
-            <legend id="parametersButton" onclick="openOrClose()">Parameters</legend>
-            <fieldset>
-                <legend>Debug</legend>
-                <input id="debug_lex" name="debug_lex" type="checkbox" onchange="console.clear()" />
-                <label for="debug_lex">Lex</label>
-                <input id="debug_parse" name="debug_parse" type="checkbox" onchange="console.clear()" />
-                <label for="debug_parse">Parse</label>
-                <input id="debug_execute" name="debug_execute" type="checkbox" onchange="console.clear()" />
-                <label for="debug_execute">Execute</label>
-            </fieldset>
-        </fieldset>
-    </form>
     <div class="grid-container">
         <div class="grid-child">
-            <div>
-                <div id="ast-title" class="title">Abstract Syntax tree</div>
-                <pre id="ast"></pre>
-            </div>
-            <div>
-                <div id="screen-title" class="title">Screen</div>
-                <canvas id="screen" width="640px" height="480px"></canvas>
-            </div>
-            <div>
-                <div id="console-title" class="title">Console</div>
-                <pre id="console"></pre>
-            </div>
-            <div>
-                <div id="result-title" class="title">Result</div>
-                <pre id="result"></pre>
-            </div>
             <div>
                 <div id="javascript-title" class="title">JavaScript</div>
                 <pre id="javascript"></pre>
@@ -289,8 +170,5 @@
             </div>
         </div>
     </div>
-    <canvas id="screen" width="640" height="480" style="border: 1px solid black; margin-top: 1em"></canvas>
-    <div id="output"></div>
-    <p><a href="https://github.com/Xitog/ash">Source & docs</a></p>
 </body>
 </html>

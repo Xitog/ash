@@ -180,13 +180,3 @@ class AshFunction {
 			}
 		}
 	}
-
-const notAnExpression = new NotAnExpression();
-		//try {
-		// Execute
-		AshProcess(data, false, false, false);
-		//} catch (e) {
-		//	console.log(`Error when reading file: ${filename}`);
-		//	console.log(e.message);
-		//	console.trace();
-		//}

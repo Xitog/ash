@@ -69,6 +69,14 @@ class NilClass {
 }
 const nil = new NilClass();
 
+class NotAnExpression {
+    toString() {
+        return "not an expression"
+    }
+}
+// Shall a procedure returns nil or nae ?
+const notAnExpression = new NotAnExpression();
+
 class Value {
     constructor(identifier, type, value) {
         this.identifier = identifier;
@@ -128,6 +136,7 @@ class Function extends Value {
         if (args.length != this.parameters.length) {
             throw new Error(`Too many or not enough parameters: expected number is ${this.parameters.length} and ${args.length} were provided.`);
         }
+        return this.code(args);
     }
 }
 
@@ -139,7 +148,7 @@ let log = new Function(
         'o': 'any'
     },
     function (args) {
-        console.log(args[0]);
+        GlobalInterpreter.output_function(args);
         return nil;
     }
 );
@@ -321,6 +330,7 @@ class Interpreter {
         this.output_screen = output_screen;
         this.scope = {};
         this.debug = false;
+        GlobalInterpreter = this;
     }
 
     getContext() {
@@ -571,14 +581,14 @@ class Interpreter {
         let base = {
             // Graphic functions
             'clear': clear, 'line': line,
-            'circle': circle, 'react': react, 'draw': draw,
+            'circle': circle, 'rect': rect, 'draw': draw,
             'text': text,
             'set_fill': set_fill, 'set_stroke': set_stroke,
             // Console functions
             'log': log, 'writeln': log
         };
         if (id in base) {
-            return base[id](args);
+            return base[id].call(args);
         }
         throw new Error(`[ERROR] Unknown function ${id}`);
     }
