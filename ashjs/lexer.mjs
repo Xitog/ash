@@ -358,7 +358,7 @@ class Lexer
             this.log(`pour le mot |${content}| nous avons : ${oldMatches.map(x => x.toString()).join("\n")}`);
             if (this.lang.isWrong(oldMatches[0].type))
             {
-                throw new Error(`A wrong token definition ${oldMatches[0].type} : ${oldMatches[0].elem} has been validated by the lexer: ${content}`);
+                throw new Error(`A wrong token definition (${oldMatches[0].type} : ${oldMatches[0].elem}) has been validated by the lexer: ${content}`);
             }
             if (!discards.includes(oldMatches[0].type))
             {

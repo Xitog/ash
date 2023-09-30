@@ -49,7 +49,7 @@
         "string" : ["'([^\\\\']|\\\\['nt])*'", "\"([^\\\\\"]|\\\\[\"nt])*\""]
     },
     "wrong": [
-        "wrong_int"
+        "wrong_integer"
     ],
     "precedences": {
 		".": 9.5,

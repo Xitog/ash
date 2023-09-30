@@ -51,28 +51,47 @@
                 alert("No code to process");
                 return false;
             }
+            let step = 'INIT';
             try {
+                code = code.trim();
+                if (debug) console.log(`Input code : |code|`)
                 if (debug) console.log('Lexing :');
-                let tokens = new Lexer('ash', [], debug).lex(code);
+                step = 'LEXING';
+                let lexer = new Lexer('ash', [], debug);
+                let tokens = lexer.lex(code);
+                if (debug) {
+                    for (const [index, tok] of tokens.entries()) {
+                        console.log('    ' + index.toString().padStart(3) + `. ${tok}`);
+                    }
+                }
                 if (debug) console.log('Parsing :');
+                step = 'PARSING';
                 let root = new Parser().parse(tokens, debug);
                 if (debug) console.log('Interpreter :');
+                step = 'EXECUTING';
                 GlobalInterpreter.setDebug(debug);
                 let result = GlobalInterpreter.do(root);
                 let output = document.createElement("pre");
                 if (debug) console.log('End of execution');
-                output.innerHTML = '<span class="command">&gt;&gt;&gt; ' + code + '</span>\n' + buffer + '=' + result;
+                // Graphic output
+                if ($("input_ast").checked) {
+                    let graph = document.createElement("div");
+                    graph.innerHTML = root.toHTMLTree();
+                    $("console").prepend(graph);
+                }
+                // Console output
+                output.innerHTML = '<span class="command">&gt;&gt;&gt; ' + lexer.toHTML(tokens, ['blank']) + '</span>\n' + buffer + '=' + result;
                 $("console").style.display = 'block';
                 $("console").prepend(output);
                 console.log('>>>', result);
                 $("code_input").value = '';
             } catch (e) {
-                console.log(`Error when executing code: ${code}`);
-                console.log(e.message);
+                console.log(`[${step}] Error when executing code: ${code}`);
+                console.log(`[${step}] ${e.message}`);
                 console.trace();
-                alert(e.message);
+                alert(`[${step}] ${e.message}`);
             }
-            console.log('end of run');
+            console.log(`end of run at ${step}`);
         }
 
         function openOrCloseOptions() {

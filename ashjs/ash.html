@@ -1,6 +1,5 @@
     <script type="module">
         function analyse() {
-            try {
                 // Get the code as HTML
                 let text = code.innerHTML;
                 // Removing all <sup>X</sup>
@@ -8,29 +7,10 @@
                 // Put back the HTML inside the code
                 code.innerHTML = text;
                 // Get again the code but as text (delete all html markup)
-                text = code.innerText.trim();
-                console.log('Input text   |' + text + '|');
-                // Tokenizing
-                tokens = lex.lex(text);
                 let html = '<div>' + lex.toHTML(tokens, ['blank', 'newline'], true).replaceAll('\n', '</div><div>') + '</div>';
-                code.innerHTML = html;
-                console.log('HTML         |' + html + '|');
-                console.log('Tokens       :');
-                for (const [index, tok] of tokens.entries()) {
-                    console.log('    ' + index.toString().padStart(3) + `. ${tok}`);
-                }
-            } catch (error) {
-                alert(error);
-                return;
-            }
             let translator = new Translator();
             let output = translator.do(ast);
             let res_translated = eval(output);
-
-            output_ast.innerHTML = tree;
-            output_result.innerHTML = result;
-            output_javascript.innerHTML = output;
-            output_javascript_result.innerHTML = res_translated;
         }
         document.querySelectorAll('[class$="_reset"]').forEach(e => e.addEventListener('click', reset));
         document.querySelectorAll('[class$="_analyse"]').forEach(e => e.addEventListener('click', analyse));
@@ -48,14 +28,6 @@
             context.fillText(s, 10, current_line * 20);
             current_line += 1;
         }
-
-        function info(s) {
-            globalDrawText(s);
-        }
-        function error(s) {
-            globalDrawText(s, "#ff0000");
-        }
-
         function iprocess(name, code) {
             console.clear();
             let debug_lex = document.getElementById("debug_lex").checked;
@@ -70,39 +42,6 @@
                 .map((x, index) => index + ". |" + x.toHTML('ash') + "|")
                 .join(" "); //.join(", ");
             container.appendChild(input);
-
-            // Parsing
-            try {
-                // Graphic output
-                let graph = document.createElement("div");
-                graph.innerHTML = root.toHTMLTree();
-                container.appendChild(graph);
-                // Executing
-                try {
-                    // Result
-                    let output = document.getElementById("output");
-                    let res = document.createElement("pre");
-                    res.innerHTML = "Result = " + result;
-                    container.appendChild(res);
-                    if (result !== nil) {
-                        info(result);
-                    } else {
-                        error(result);
-                    }
-                    output.prepend(container); // appendChild
-                    let boxres;
-                    if (document.getElementById("expression").checked) {
-                        boxres = document.getElementById("res_expr");
-                    } else {
-                        boxres = document.getElementById("res_inst");
-                    }
-                    boxres.value = result;
-                } catch (exception) {
-                    result = `EXECUTION ERROR: ${exception}`;
-                }
-            } catch (exception) {
-                result = `PARSE ERROR: ${exception}`;
-            }
         }
     </script>
     <style>
@@ -117,36 +56,16 @@
             font-family: 'Courier New', Courier, monospace;
             white-space: pre-wrap;
         }
-
         .grid-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-gap: 5px;
             height: 100%;
         }
-
         div.grid-child:nth-child(2) {
             margin-top: 30px;
             font-family: 'Courier New', Courier, monospace;
         }
-
-        span[class$=identifier] {
-            color: rgb(2, 155, 238);
-            /*rgb(156, 220, 254);*/
-        }
-
-        span[class$=separator] {
-            color: rgb(255, 201, 17);
-            /* 197 121 145 */
-        }
-
-        pre {
-            border: 1px #e7e7e7 solid;
-            background: #f0f0f0;
-            padding: 0.5em;
-            margin-top: 0;
-        }
-
         div.title {
             /*width: 100%;*/
             border: 1px #a1a1a1 solid;
