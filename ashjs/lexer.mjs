@@ -248,7 +248,7 @@ class Match
 
 class Lexer
 {
-    constructor(lang, discards=[])
+    constructor(lang, discards=[], debug=false)
     {
         if (typeof lang === "string")
         {
@@ -259,7 +259,7 @@ class Lexer
             throw new Error(`Lang |${lang}| must be a recognized language or an instance of Language`);
         }
         this.discards = discards;
-        this.debug = false;
+        this.debug = debug;
     }
 
     getLanguage()

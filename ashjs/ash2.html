@@ -40,9 +40,8 @@
             $("code_input").value = '';
         }
 
-        function run() {
-            console.clear();
-            console.log('start of run');
+        function run(debug = false) {
+            console.log(`start of run debug=${debug}`);
             buffer = '';
             let code = $("code_input").value;
             if (code === '') {
@@ -53,13 +52,15 @@
                 return false;
             }
             try {
-                let tokens = new Lexer('ash').lex(code);
-                console.log('Parsing :');
-                let root = new Parser().parse(tokens, true);
-                console.log('Interpreter :');
+                if (debug) console.log('Lexing :');
+                let tokens = new Lexer('ash', [], debug).lex(code);
+                if (debug) console.log('Parsing :');
+                let root = new Parser().parse(tokens, debug);
+                if (debug) console.log('Interpreter :');
+                GlobalInterpreter.setDebug(debug);
                 let result = GlobalInterpreter.do(root);
                 let output = document.createElement("pre");
-                console.log('End of execution');
+                if (debug) console.log('End of execution');
                 output.innerHTML = '<span class="command">&gt;&gt;&gt; ' + code + '</span>\n' + buffer + '=' + result;
                 $("console").style.display = 'block';
                 $("console").prepend(output);
@@ -67,8 +68,8 @@
                 $("code_input").value = '';
             } catch (e) {
                 console.log(`Error when executing code: ${code}`);
-		        console.log(e.message);
-		        console.trace();
+                console.log(e.message);
+                console.trace();
                 alert(e.message);
             }
             console.log('end of run');
@@ -105,32 +106,42 @@
             buffer += m + '\n';
         }
 
-        function initScreen() {
+        function getScreenFunction() {
             let screen = $("screen");
             let ctx = screen.getContext("2d");
-            ctx.clearRect(0, 0, screen.width, screen.height);
-            screen.style.display = 'block';
+            if (screen.style.display !== 'block') {
+                ctx.clearRect(0, 0, screen.width, screen.height);
+                screen.style.display = 'block';
+            }
+            return ctx;
         }
 
         function main() {
             console.log('start of main');
             $("version").innerHTML = "Running v" + VERSION;
-            GlobalInterpreter = new Interpreter(outputFunction);
+            GlobalInterpreter = new Interpreter(outputFunction, getScreenFunction);
+            $("code_input").addEventListener("keyup", function (event) {
+                if (event.key === "Enter") {
+                    console.clear();
+                    console.log("Enter in input pressed");
+                    let debug = $("input_debug").checked;
+                    run(debug);
+                }
+            });
             $("button_clear").onclick = clear;
-            $("button_run").onclick = run;
-            $("main_form").onsubmit = function () {
-                // S'il y avait une exeception dans run avant
-                // le return false n'était pas exécuté
-                // et le formulaire était envoyé
-                run();
-                return false;
-            }
+            $("button_run").onclick = function() {
+                console.clear();
+                console.log("Button run pressed");
+                let debug = $("input_debug").checked;
+                run(debug);
+            };
             $("button_run").disabled = false;
             // Options
             $("options_button").onclick = openOrCloseOptions;
             $("input_multilines").onchange = changeInput;
             $("input_sidebyside").checked = false;
             $("input_multilines").checked = false;
+            $("input_debug").checked = false;
             // End
             console.log("end of main");
         }
@@ -143,7 +154,7 @@
 
         let GlobalInterpreter;
 
-        window.onload = function() { main(); };
+        window.onload = function () { main(); };
 
         function checkActivation() {
             if ($("button_run").disabled) {
@@ -162,11 +173,12 @@
             <form id="main_form" name="main">
                 <fieldset id="fieldset_expr">
                     <legend id="expr_legend">Enter your code</legend>
-                    <input id="button_clear" type="button" value="Clear"/>
-                    <input id="code_input" type="text" size="60"/>
-                    <textarea id="code_textarea" name="code" rows="5" cols="60" autofocus placeholder="Enter your code here"
-                              spellcheck="false" required autocomplete="false" wrap="off"></textarea>
-                    <input id="button_run" type="button" value="Run" disabled/>
+                    <input id="button_clear" type="button" value="Clear" />
+                    <input id="code_input" type="text" size="60" placeholder="Enter your code here" />
+                    <textarea id="code_textarea" name="code" rows="5" cols="60" autofocus
+                        placeholder="Enter your code here" spellcheck="false" required autocomplete="false"
+                        wrap="off"></textarea>
+                    <input id="button_run" type="button" value="Run" disabled />
                 </fieldset>
             </form>
             <canvas id="screen"></canvas>
@@ -177,13 +189,13 @@
                 <fieldset>
                     <legend>Options</legend>
                     <label for="input_sidebyside">Side by side</label>
-                    <input id="input_sidebyside" name="sidebyside" type="checkbox"/>
+                    <input id="input_sidebyside" name="sidebyside" type="checkbox" />
                     <label for="input_multilines">Multilines</label>
-                    <input id="input_multilines" name="mode" type="checkbox"/>
+                    <input id="input_multilines" name="mode" type="checkbox" />
                     <label for="input_ast">Show AST</label>
-                    <input id="input_ast" name="ast" type="checkbox"/>
+                    <input id="input_ast" name="ast" type="checkbox" />
                     <label for="input_debug">Debug</label>
-                    <input id="input_debug" name="debug" type="checkbox"/>
+                    <input id="input_debug" name="debug" type="checkbox" />
                 </fieldset>
             </div>
         </div>

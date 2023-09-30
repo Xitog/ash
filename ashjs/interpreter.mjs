@@ -121,20 +121,20 @@ class Function extends Value {
     }
 
     toString() {
-		return (
-			`function ${this.identifier} (` +
-			this.parameters.map((x) => x.toString()).join(", ") +
-			")"
-		);
-	}
+        return (
+            `function ${this.identifier} (` +
+            this.parameters.map((x) => x.toString()).join(", ") +
+            ")"
+        );
+    }
 
     isProcedure() {
         return this.value === 'procedure';
     }
 
     call(args) {
-        if (args.length != this.parameters.length) {
-            throw new Error(`Too many or not enough parameters: expected number is ${this.parameters.length} and ${args.length} were provided.`);
+        if (args.length !== Object.keys(this.parameters).length) {
+            throw new Error(`Too many or not enough parameters: expected number is ${Object.keys(this.parameters).length} and ${args.length} were provided.`);
         }
         return this.code(args);
     }
@@ -159,7 +159,7 @@ let clear = new Function(
     'procedure',
     {},
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             context.clearRect(0, 0, 640, 480);
         }
@@ -173,7 +173,7 @@ let line = new Function(
     'procedure',
     {},
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             let x1 = args.get(0);
             let y1 = args.get(1);
@@ -232,10 +232,11 @@ let rect = new Function(
         'y': 'integer',
         'width': 'integer',
         'height': 'integer',
+        'color': 'string',
         'fill': 'boolean'
     },
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             context.fillStyle = args.get(4);
             context.strokeStyle = args.get(4);
@@ -269,7 +270,7 @@ let draw = new Function(
         'image': 'string'
     },
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             context.drawImage(args[2], args[0], args[1]);
         }
@@ -285,7 +286,7 @@ let text = new Function(
         's': 'string'
     },
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             ctx.fillText(args[2], args[0], args[1]);
         }
@@ -301,7 +302,7 @@ let set_fill = new Function(
         'c': 'string'
     },
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             context.fillStyle = args[0];
         }
@@ -316,7 +317,7 @@ let set_stroke = new Function(
         'c': 'string'
     },
     function (args) {
-        context = GlobalInterpreter.getContext();
+        let context = GlobalInterpreter.getContext();
         if (context !== null) {
             context.strokeStyle = args[0];
         }
@@ -324,21 +325,30 @@ let set_stroke = new Function(
 );
 
 class Interpreter {
-    constructor(output_function = null, output_screen = null) {
+    constructor(output_function = null, output_screen = null, debug = false) {
         this.root = {};
         this.output_function = output_function == null ? console.log : output_function;
         this.output_screen = output_screen;
         this.scope = {};
-        this.debug = false;
+        this.debug = debug;
         GlobalInterpreter = this;
     }
 
     getContext() {
-        let canvas = document.getElementById("screen");
-        if (canvas !== null) {
-            return canvas.getContext("2d");
+        if (this.output_screen !== null) {
+            return this.output_screen();
         }
         return null;
+    }
+
+    setDebug(debug) {
+        this.debug = debug;
+    }
+
+    log(s, level) {
+        if (this.debug) {
+            console.log('    '.repeat(level) + s);
+        }
     }
 
     execute(code, debugLex = false, debugParse = false, debugExecute = false) {
@@ -360,14 +370,14 @@ class Interpreter {
             if (node.right !== null) {
                 val = this.do(node.right, level + 1);
             }
-            console.log('    '.repeat(level) + `Block ${val}`);
+            this.log(`Block ${val}`, level);
             return val;
         } else if (node.type === 'Import') {
-            console.log('Importing: ' + this.do(node.left, level + 1, false));
+            this.log('Importing: ' + this.do(node.left, level + 1, false), level);
             return nil;
         } else if (node.type === 'Call') {
             let idFun = this.do(node.left, level + 1, false);
-            let arg = null;
+            let arg = [];
             if (node.right !== null) {
                 arg = this.do(node.right, level + 1);
             }
@@ -395,7 +405,7 @@ class Interpreter {
         } else if (node.type === 'UnaryOp') {
             if (node.value === '-') {
                 let val = -this.do(node.left, level + 1);
-                console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
+                this.log(`UnaryOp(${node.value}) ${val}`, level);
                 return val;
             } else if (node.value === 'not') {
                 let val = this.do(node.left, level + 1);
@@ -403,7 +413,7 @@ class Interpreter {
                     throw new Error(`[ERROR] Unsupported unary operator ${node.value} for ${typeof val}`);
                 }
                 val = !val;
-                console.log('    '.repeat(level) + `UnaryOp(${node.value}) ${val}`);
+                this.log(`UnaryOp(${node.value}) ${val}`, level);
                 return val;
             } else {
                 throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
@@ -421,9 +431,9 @@ class Interpreter {
                 if (node.value !== '=' && !(identifier in this.scope)) {
                     throw new Error(`Unknown variable ${identifier} in current scope`);
                 } else if (!(identifier in this.scope)) {
-                    console.log('    '.repeat(level) + `Declaration ${identifier} ${node.value} ${val}`);
+                    this.log(`Declaration ${identifier} ${node.value} ${val}`, level);
                 } else {
-                    console.log('    '.repeat(level) + `Affectation ${identifier} ${node.value} ${val}`);
+                    this.log(`Affectation ${identifier} ${node.value} ${val}`, level);
                 }
                 if (node.value === '=') {
                     if (!(identifier in this.scope)) {
@@ -538,20 +548,20 @@ class Interpreter {
                 } else {
                     throw new Error(`[ERROR] Unsupported type : ${typeof left}`);
                 }
-                console.log('    '.repeat(level) + `Binaryop(${node.value}) ${res}`);
+                this.log(`Binaryop(${node.value}) ${res}`, level);
                 return res;
             }
         } else if (node.type === 'Integer') {
             let val = parseInt(node.value);
-            console.log('    '.repeat(level) + `Integer ${val}`);
+            this.log(`Integer ${val}`, level);
             return val;
         } else if (node.type === 'Float') {
             let val = parseFloat(node.value);
-            console.log('    '.repeat(level) + `Float ${val}`)
+            this.log(`Float ${val}`, level)
             return val;
         } else if (node.type === 'Boolean') {
             let val = node.value === 'true';
-            console.log('    '.repeat(level) + `Boolean ${val}`);
+            this.log(`Boolean ${val}`, level);
             return val;
         } else if (node.type === 'Identifier') {
             if (evalId) {
@@ -560,14 +570,14 @@ class Interpreter {
                     console.log(this.scope);
                     throw new Error(`Unknown identifier |${node.value}| in current scope`);
                 }
-                console.log('    '.repeat(level) + `Identifier ${node.value} as value  ${this.scope[node.value].getValue()}`);
+                this.log(`Identifier ${node.value} as value  ${this.scope[node.value].getValue()}`, level);
                 return this.scope[node.value].getValue();
             } else {
-                console.log('    '.repeat(level) + `Identifier ${node.value} as identifier`);
+                this.log(`Identifier ${node.value} as identifier`, level);
                 return node.value;
             }
         } else if (node.type === 'String') {
-            console.log('    '.repeat(level) + `String ${node.value}`); //no slice(1, .length -1)
+            this.log(`String ${node.value}`, level); //no slice(1, .length -1)
             return node.value.slice(1, node.value.length - 1);
         } else {
             console.log(node, typeof node);
@@ -577,7 +587,7 @@ class Interpreter {
         }
     }
 
-    library(id, args) {
+    library(id, args=[]) {
         let base = {
             // Graphic functions
             'clear': clear, 'line': line,
