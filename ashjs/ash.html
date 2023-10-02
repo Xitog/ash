@@ -163,7 +163,6 @@
             // Options
             $("options_button").onclick = openOrCloseOptions;
             $("input_multilines").onchange = changeInput;
-            $("input_sidebyside").checked = false;
             $("input_multilines").checked = false;
             $("input_debug").checked = false;
             // End
@@ -212,8 +211,6 @@
             <div id="option_panel">
                 <fieldset>
                     <legend>Options</legend>
-                    <label for="input_sidebyside">Side by side</label>
-                    <input id="input_sidebyside" name="sidebyside" type="checkbox" />
                     <label for="input_multilines">Multilines</label>
                     <input id="input_multilines" name="mode" type="checkbox" />
                     <label for="input_ast">Show AST</label>
