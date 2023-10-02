@@ -54,7 +54,9 @@ const reader = node ? await import("readline-sync") : null;
 const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
 import { Lexer, Language } from "./lexer.mjs";
-import { Parser, Node } from "./parser.mjs"
+import { Parser, Node } from "./parser.mjs";
+
+Language.readDefinition();
 
 //-----------------------------------------------------------------------------
 // Classes
@@ -175,12 +177,12 @@ let line = new Function(
     function (args) {
         let context = GlobalInterpreter.getContext();
         if (context !== null) {
-            let x1 = args.get(0);
-            let y1 = args.get(1);
-            let x2 = args.get(2);
-            let y2 = args.get(3);
-            context.lineWidth = args.get(4);
-            context.strokeStyle = args.get(5);
+            let x1 = args[0];
+            let y1 = args[1];
+            let x2 = args[2];
+            let y2 = args[3];
+            context.lineWidth = args[4];
+            context.strokeStyle = args[5];
             context.beginPath();
             context.moveTo(x1, y1);
             context.lineTo(x2, y2);
@@ -204,11 +206,11 @@ let circle = new Function(
     function (args) {
         let context = GlobalInterpreter.getContext();
         if (context !== null) {
-            let centerX = args.get(0);
-            let centerY = args.get(1);
-            let radius = args.get(2);
-            let color = args.get(3);
-            let full = args.get(4);
+            let centerX = args[0];
+            let centerY = args[1];
+            let radius = args[2];
+            let color = args[3];
+            let full = args[4];
             context.beginPath();
             context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
             if (full) {
@@ -238,21 +240,21 @@ let rect = new Function(
     function (args) {
         let context = GlobalInterpreter.getContext();
         if (context !== null) {
-            context.fillStyle = args.get(4);
-            context.strokeStyle = args.get(4);
-            if (args.get(5)) {
+            context.fillStyle = args[4];
+            context.strokeStyle = args[4];
+            if (args[5]) {
                 context.fillRect(
-                    args.get(0),
-                    args.get(1),
-                    args.get(2),
-                    args.get(3)
+                    args[0],
+                    args[1],
+                    args[2],
+                    args[3]
                 );
             } else {
                 context.strokeRect(
-                    args.get(0),
-                    args.get(1),
-                    args.get(2),
-                    args.get(3)
+                    args[0],
+                    args[1],
+                    args[2],
+                    args[3]
                 );
             }
         }
@@ -283,7 +285,9 @@ let text = new Function(
     nil,
     'procedure',
     {
-        's': 'string'
+        's': 'string',
+        'x': 'integer',
+        'y': 'integer'
     },
     function (args) {
         let context = GlobalInterpreter.getContext();
@@ -291,6 +295,20 @@ let text = new Function(
             ctx.fillText(args[2], args[0], args[1]);
         }
         return nil;
+    }
+);
+
+let set_font = new Function(
+    'set_font',
+    nil,
+    'procedure',
+    {
+        'police': 'string',
+        'size': 'integer'
+    },
+    function (args) {
+        let context = GlobalInterpreter.getContext();
+        context.font = `${args[1]}px ${args[0]}`;
     }
 );
 
@@ -419,7 +437,15 @@ class Interpreter {
                 throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
             }
         } else if (node.type === 'BinaryOp') {
-            if (['=', '+=', '-=', '*=', '/=', '//=', '**=', '%='].includes(node.value)) {
+            if (node.value === ',') {
+                let left = this.do(node.left, level + 1);
+                let right = this.do(node.right, level + 1);
+                if (!Array.isArray(right)) {
+                    right = [right];
+                }
+                right.unshift(left);
+                return right;
+            } else if (['=', '+=', '-=', '*=', '/=', '//=', '**=', '%='].includes(node.value)) {
                 // Left side
                 let identifier = this.do(node.left, level + 1, false);
                 if (typeof identifier !== 'string') {
@@ -593,7 +619,7 @@ class Interpreter {
             'clear': clear, 'line': line,
             'circle': circle, 'rect': rect, 'draw': draw,
             'text': text,
-            'set_fill': set_fill, 'set_stroke': set_stroke,
+            'set_font': set_font, 'set_fill': set_fill, 'set_stroke': set_stroke,
             // Console functions
             'log': log, 'writeln': log
         };
@@ -680,7 +706,6 @@ function execute(text) {
 }
 
 function nodeMain(debug = true) {
-    Language.readDefinition();
     GlobalInterpreter = new Interpreter();
     console.log(`Running nodeMain of ${FILENAME}`);
     console.log(`Parameters (${process.argv.length}):`);

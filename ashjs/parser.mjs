@@ -119,6 +119,7 @@ class Node extends Token {
 //-----------------------------------------------------------------------------
 
 let precedence = [
+    [','],
     ['=', '+=', '-=', '*=', '/=', '//=', '%='],
     ['and', 'or'],
     ['<', '<=', '>=', '>', '==', '!='],
@@ -193,7 +194,7 @@ class Parser {
             } else {
                 res = this.parseExpression();
                 if (this.index < this.tokens.length) {
-                    if (this.test("separator", [";", ",", ")"]) || this.test("newline", "\n")) {
+                    if (this.test("separator", [";", ")"]) || this.test("newline", "\n")) {
                         this.advance();
                     } else if (!this.test("keyword", ["end", "loop"])) {
                         throw new Error(`Unfinished Expression at ${this.tokens[this.index]} after ${this.tokens[this.index - 1]}`);
@@ -234,7 +235,7 @@ class Parser {
         let name = precedence[opLevel].map(x => this.uFirst(x)).join(", ");
         let node = null;
         let right = null;
-        this.log(`>>> ${this.level} START ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
+        this.log(`>>> ${this.level} START BinaryOp ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
         node = this.parseBinaryOp(opLevel + 1);
         // On peut faire un while ici pour traiter les suites en chaînant avec expr = new Expression(expr, operator, right);
         if (this.test('operator', precedence[opLevel])) {
