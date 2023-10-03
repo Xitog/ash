@@ -135,7 +135,12 @@ class Function extends Value {
     }
 
     call(args) {
+        if (!Array.isArray(args)) {
+            throw new Error(`Args should be a list, not ${typeof args}`);
+        }
         if (args.length !== Object.keys(this.parameters).length) {
+            console.log("Parameters:");
+            console.log(args, ' type:', typeof args);
             throw new Error(`Too many or not enough parameters: expected number is ${Object.keys(this.parameters).length} and ${args.length} were provided.`);
         }
         return this.code(args);
@@ -150,7 +155,7 @@ let log = new Function(
         'o': 'any'
     },
     function (args) {
-        GlobalInterpreter.output_function(args);
+        GlobalInterpreter.output_function(args.join(' '));
         return nil;
     }
 );
@@ -363,6 +368,10 @@ class Interpreter {
         this.debug = debug;
     }
 
+    getDebug() {
+        return this.debug;
+    }
+
     log(s, level) {
         if (this.debug) {
             console.log('    '.repeat(level) + s);
@@ -398,6 +407,9 @@ class Interpreter {
             let arg = [];
             if (node.right !== null) {
                 arg = this.do(node.right, level + 1);
+                if (!Array.isArray(arg)) {
+                    arg = [arg];
+                }
             }
             return this.library(idFun, arg);
         } else if (node.type === 'While') {
@@ -686,22 +698,25 @@ function testsMain(debug) {
 //-------------------------------------------------------------------------------
 
 function execute(text) {
-    let tokens = new Lexer('ash').lex(text);
-    console.log('Tokens:');
-    let cpt = 0;
-    for (let token of tokens) {
-        if (!token.equals("blank")) {
-            console.log(`    ${cpt}. ${token}`);
-            cpt += 1;
+    let tokens = new Lexer('ash', [], GlobalInterpreter.getDebug()).lex(text);
+    if (GlobalInterpreter.getDebug()) {
+        console.log('Tokens:');
+        let cpt = 0;
+        for (let token of tokens) {
+            if (!token.equals("blank")) {
+                console.log(`    ${cpt}. ${token}`);
+                cpt += 1;
+            }
         }
     }
-    let res = new Parser().parse(tokens, true);
-    console.log(text);
-    console.log('AST:');
-    console.log(res.toString());
-    console.log('Result:');
+    let res = new Parser().parse(tokens, GlobalInterpreter.getDebug());
+    if (GlobalInterpreter.getDebug()) {
+        console.log(text);
+        console.log('AST:');
+        console.log(res.toString());
+        console.log('Result:');
+    }
     let finalRes = GlobalInterpreter.do(res);
-    console.log(finalRes);
     return finalRes;
 }
 
@@ -749,13 +764,15 @@ function nodeMain(debug = true) {
     } else {
         console.log('Running REPL:');
         let cmd = "";
+        let buffer = "";
+        let prompt = 'ash> ';
         while (cmd !== "exit") {
-            cmd = reader.question(">>> ");
-            if (cmd !== 'exit' && cmd !== 'vars') {
-                let result = execute(cmd);
-                if (result !== null) { // notAnExpression
-                    console.log(result);
-                }
+            cmd = reader.question(prompt).trim();
+            if (cmd.endsWith("\\")) {
+                buffer += cmd.substring(0, cmd.length-1) + "\n";
+                prompt = '...> ';
+            } else if (cmd === 'exit') {
+                console.log('Exiting...');
             } else if (cmd === 'vars') {
                 if (Object.keys(GlobalInterpreter.scope).length > 0) {
                     for (let [key, val] of Object.entries(GlobalInterpreter.scope)) {
@@ -763,6 +780,23 @@ function nodeMain(debug = true) {
                     }
                 } else {
                     console.log("No variables");
+                }
+            } else if (cmd === 'debug') {
+                GlobalInterpreter.setDebug(!GlobalInterpreter.getDebug());
+                let s = GlobalInterpreter.getDebug() ? 'on' : 'off';
+                console.log(`Debug is now ${s}`);
+            } else {
+                if (buffer.length > 0) {
+                    buffer += cmd;
+                    cmd = buffer;
+                    buffer = "";
+                    prompt = 'ash> ';
+                }
+                let result = execute(cmd);
+                if (result === null) {
+                    throw new Error("Should not return null.");
+                } else if (result !== nil) { // notAnExpression
+                    console.log(result);
                 }
             }
         }
