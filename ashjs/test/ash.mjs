@@ -44,7 +44,6 @@ class AshFunction {
 		if (typeof this.code === "function") {
 			return this.code(argList);
 		} else {
-			// TODO: parameters
 			return GlobalInterpreter.execute(this.code);
 		}
 	}
@@ -135,7 +134,7 @@ class AshFunction {
 						if (!symbol) {
 							// Function call without parameters
 							if (left[right] instanceof AshFunction) {
-								let val = left[right].call(new NodeList()); // TODO
+								let val = left[right].call(new NodeList());
 								if (val === undefined || val === null) {
 									return nil;
 								}
