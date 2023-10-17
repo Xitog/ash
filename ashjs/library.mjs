@@ -16,9 +16,11 @@ function typeJStoAsh(value) {
     return typeAsh;
 }
 
+// is t1 kindOf t2 ?
 function kindOf(t1, t2) {
     return (
-        (t2 === 'int' && t1 === 'nat') // int inclut nat
+        (t2 === 'any')
+        || (t2 === 'int' && t1 === 'nat') // int inclut nat
         || (t2 === 'num' && ['int', 'nat'].includes(t2)) // num inclut int & nat
         || (t1 === t2)
     );
@@ -26,6 +28,13 @@ function kindOf(t1, t2) {
 //-----------------------------------------------------------------------------
 // Classes
 //-----------------------------------------------------------------------------
+
+class NotAnExpression {
+    toString() {
+        return "Not an expression";
+    }
+}
+const notAnExpression = new NotAnExpression();
 
 class NilClass {
     toString() {
@@ -166,9 +175,16 @@ class Library {
 
     static log (args) {
         Library.GlobalInterpreter.output_function(args.join(' '));
-        return nil;
+        return notAnExpression;
     }
 
+    static produceDocumentation() {
+        for (const [funID, funData] of Object.entries(table)) {
+            let keyword = funData.isProcedure() ? 'procedure' : 'function';
+            let retType = funData.isProcedure() ? '' : ' > ' + funData.getType();
+            console.log(`${keyword} ${funID}(${funData.parameters.join(', ')}${retType})`);
+        }
+    }
     //-------------------------------------------------------------------------
     // Graphic functions
     //-------------------------------------------------------------------------
@@ -178,7 +194,7 @@ class Library {
         if (context !== null) {
             context.clearRect(0, 0, 640, 480);
         }
-        return nil;
+        return notAnExpression;
     }
 
     static line(args) {
@@ -195,7 +211,7 @@ class Library {
             context.lineTo(x2, y2);
             context.stroke();
         }
-        return nil;
+        return notAnExpression;
     }
 
     static circle(args) {
@@ -216,7 +232,7 @@ class Library {
                 context.stroke();
             }
         }
-        return nil;
+        return notAnExpression;
     }
 
     static rect(args) {
@@ -240,7 +256,7 @@ class Library {
                 );
             }
         }
-        return nil;
+        return notAnExpression;
     }
 
     static draw(args) {
@@ -248,7 +264,7 @@ class Library {
         if (context !== null) {
             context.drawImage(args[2], args[0], args[1]);
         }
-        return nil;
+        return notAnExpression;
     }
 
     static text(args) {
@@ -256,25 +272,28 @@ class Library {
         if (context !== null) {
             ctx.fillText(args[0], args[1], args[2]);
         }
-        return nil;
+        return notAnExpression;
     }
 
     static setFont(args) {
         let context = Library.GlobalInterpreter.getContext();
         context.font = `${args[1]}px ${args[0]}`;
+        return notAnExpression;
     }
 
-    static setFill(args) {
+    static setColor(args) {
         let context = Library.GlobalInterpreter.getContext();
         if (context !== null) {
             context.fillStyle = args[0];
+            context.strokeStyle = args[0];
         }
+        return notAnExpression;
     }
 
-    static setStrokeStyle(args) {
+    static getColor(args) {
         let context = Library.GlobalInterpreter.getContext();
         if (context !== null) {
-            context.strokeStyle = args[0];
+            return context.strokeStyle;
         }
     }
 }
@@ -372,23 +391,21 @@ const table = {
         ],
         Library.setFont
     ),
-    'set_fill': new Function(
-        'set_fill',
+    'set_color': new Function(
+        'set_color',
         nil,
         'procedure',
         [
             new Parameter('c', 'str')
         ],
-        Library.setFill
+        Library.setColor
     ),
-    'set_stroke': new Function(
-        'set_stroke',
-        nil,
-        'procedure',
-        [
-            new Parameter('c', 'str')
-        ],
-        Library.setStrokeStyle
+    'get_color': new Function(
+        'get_color',
+        'str',
+        'function',
+        [],
+        Library.getColor
     )
 };
 
@@ -396,4 +413,4 @@ const table = {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Library, Function, Value, nil };
+export { Library, Function, Value, nil, notAnExpression };

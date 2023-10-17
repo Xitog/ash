@@ -298,7 +298,7 @@ class Parser {
             return node;
         }
         let current = this.read();
-        if (current !== null && ['identifier', 'integer', 'float', 'boolean', 'string'].includes(current.type)) {
+        if (current !== null && ['identifier', 'integer', 'float', 'boolean', 'string', 'nil'].includes(current.type)) {
             this.log(`>>> ${this.level} PARSING literal at ${this.index} : ${current}`);
             this.advance();
             this.level -= 1;

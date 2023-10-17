@@ -55,7 +55,7 @@ const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
 import { Lexer, Language } from "./lexer.mjs";
 import { Parser, Node } from "./parser.mjs";
-import { Library, Value, nil } from "./library.mjs";
+import { Library, Value, nil, notAnExpression } from "./library.mjs";
 
 Language.readDefinition();
 
@@ -64,14 +64,6 @@ Language.readDefinition();
 //-----------------------------------------------------------------------------
 
 let GlobalInterpreter = null;
-
-class NotAnExpression {
-    toString() {
-        return "not an expression"
-    }
-}
-// Shall a procedure returns nil or nae ?
-const notAnExpression = new NotAnExpression();
 
 class Interpreter {
     constructor(output_function = null, output_screen = null, debug = false) {
@@ -328,6 +320,9 @@ class Interpreter {
             let val = node.value === 'true';
             this.log(`Boolean ${val}`, level);
             return val;
+        } else if (node.type === 'Nil') {
+            this.log('NilClass nil', level);
+            return nil;
         } else if (node.type === 'Identifier') {
             if (evalId) {
                 if (!(node.value in this.scope)) {
@@ -412,6 +407,19 @@ function testsMain(debug) {
 // Main
 //-------------------------------------------------------------------------------
 
+// Sonarlint complains about ${token}: it does not recognize the .toString()
+class XToken
+{
+    constructor(tok)
+    {
+        this.tok = tok;
+    }
+    toString()
+    {
+        return this.tok.toString();
+    }
+}
+
 function execute(text) {
     let tokens = new Lexer('ash', [], GlobalInterpreter.getDebug()).lex(text);
     if (GlobalInterpreter.getDebug()) {
@@ -419,7 +427,7 @@ function execute(text) {
         let cpt = 0;
         for (let token of tokens) {
             if (!token.equals("blank")) {
-                console.log(`    ${cpt}. ${token}`);
+                console.log(`    ${cpt}. ${XToken(token)}`);
                 cpt += 1;
             }
         }
@@ -442,7 +450,9 @@ function nodeMain(debug = true) {
     process.argv.forEach(x => console.log('    ' + x));
     // 1: node.exe
     // 2: filename.mjs
-    if (process.argv.length === 3 && process.argv[2] === 'tests') {
+    if (process.argv.length === 3 && process.argv[2] === 'doc') {
+        Library.produceDocumentation();
+    } else if (process.argv.length === 3 && process.argv[2] === 'tests') {
         testsMain(debug);
     } else if (process.argv.length === 4 && process.argv[2] === 'build') {
         let appPath = process.argv[3];
@@ -526,4 +536,4 @@ if (node && main) {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Interpreter, nil, VERSION };
+export { Interpreter, nil, notAnExpression, VERSION };

@@ -1,46 +1,5 @@
 class AshFunction {
 	call(argList) {
-		for (let index = 0; index < this.paramList.length; index++) {
-			let param = this.paramList[index];
-			if (index < argList.getSize()) {
-				let arg = argList.get(index);
-				if (param.type !== "any") {
-					if (param.type === "int") {
-						if (
-							!(arg instanceof Number) ||
-							!Number.isInteger(left)
-						) {
-							throw new Error(
-								`Parameter ${index} should be an integer.`
-							);
-						}
-					} else if (param.type === "flt") {
-						if (typeof arg !== "number") {
-							throw new Error(
-								`Parameter ${arg} at ${index} should be a number and is a ${typeof arg}.`
-							);
-						}
-					} else if (param.type === "bool") {
-						if (!(arg instanceof Boolean)) {
-							throw new Error(
-								`Parameter ${index} should be an boolean.`
-							);
-						}
-					} else if (param.type === "str") {
-						if (!(arg instanceof String)) {
-							throw new Error(
-								`Parameter ${index} should be a string.`
-							);
-						}
-					}
-				}
-			} else if (param.def === nil) {
-                throw new Error(
-                    `Not enough parameter: ${this} requires ${this.paramList.length
-                    } parameters and ${argList.getSize()} were given.`
-                );
-            }
-		}
 		if (typeof this.code === "function") {
 			return this.code(argList);
 		} else {
