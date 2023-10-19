@@ -1,13 +1,3 @@
-class AshFunction {
-	call(argList) {
-		if (typeof this.code === "function") {
-			return this.code(argList);
-		} else {
-			return GlobalInterpreter.execute(this.code);
-		}
-	}
-}
-
 	function execute_core(node, symbol = false, debug = false) {
 		if (node.type === "function" || node.type === "procedure") {
 			this.scope[node.value.value] = new AshFunction(
@@ -19,21 +9,7 @@ class AshFunction {
 			return nil;
 		} else if (node.type === "expr") {
 			let op = node.value.value;
-			// Reorganize a += 5 as a = a + 5
-			if (["*=", "**=", "/=", "//=", "+=", "-=", "%="].includes(op)) {
-				let new_node = new Node(
-					"expr",
-					new Node("binop", "="),
-					node.left,
-					new Node(
-						"expr",
-						new Node("binop", op.replace("=", "")),
-						node.left,
-						node.right
-					)
-				);
-				return this.execute_core(new_node);
-			}
+
 			let right =
 				node.right === null
 					? null

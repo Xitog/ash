@@ -45,11 +45,12 @@ const node =
     process.version !== null &&
     typeof process.version === "string";
 
+const fs = node ? await import("fs") : null;
 const path = node ? await import("path") : null;
 
 const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
-import { Token } from "./lexer.mjs";
+import { Token, lexFile } from "./lexer.mjs";
 
 //-------------------------------------------------------------------------------
 // Classes
@@ -68,8 +69,8 @@ class Node extends Token {
 
     toString(level = 0, sigil = 'root') {
         let content = '';
-        if (['Affectation', 'Identifier', 'Integer', 'Float', 'Boolean', 'BinaryOp', 'UnaryOp'].includes(this.type)) {
-            content = ` (${this.value})`;
+        if (['Affectation', 'Identifier', 'Integer', 'Float', 'Boolean', 'BinaryOp', 'UnaryOp', 'String'].includes(this.type)) {
+            content = ` |${this.value}|`;
         }
         let base = '    '.repeat(level) + `${level}. (${sigil}) ${this.type}${content}\n`;
         let value = '';
@@ -127,6 +128,7 @@ let precedence = [
     ['+', '-'],
     ['*', '/', '//', '%'],
     ['**'], // /!\ Right to left associative
+    ['.']
 ];
 
 class Parser {
@@ -185,7 +187,7 @@ class Parser {
             } else if (current.equals("keyword", "for")) {
                 res = this.parseFor();
             } else if (current.equals("keyword", ["break", "next"])) {
-                res = new Node(this.uFirst(current.getType()), null, current.getStart(), current.getLine());
+                res = new Node(this.uFirst(current.getValue()), null, current.getStart(), current.getLine());
                 this.advance();
             } else if (current.equals("keyword", ["function", "procedure"])) {
                 res = this.parseSubProgram();
@@ -194,7 +196,7 @@ class Parser {
             } else {
                 res = this.parseExpression();
                 if (this.index < this.tokens.length) {
-                    if (this.test("separator", [";", ")"]) || this.test("newline", "\n")) {
+                    if (this.test("separator", [";", ")", "]"]) || this.test("newline", "\n")) {
                         this.advance();
                     } else if (!this.test("keyword", ["end", "loop"])) {
                         throw new Error(`Unfinished Expression at ${this.tokens[this.index]} after ${this.tokens[this.index - 1]}`);
@@ -267,20 +269,23 @@ class Parser {
         return node;
     }
 
-    parseCall() {
+    parseCall() { // TODO: prep for indexation [x]
         this.level += 1;
         let node = this.parseLiteral();
-        if (this.test('separator', '(')) {
-            this.log(`>>> ${this.level} PARSING Call at ${this.index}`);
+        if (this.test('separator', ['(', '['])) {
+            let current = this.read('separator');
+            let msg = current.value === '(' ? 'Call' : 'List';
+            let ending = current.value === '(' ? ')' : ']';
+            this.log(`>>> ${this.level} PARSING ${msg} at ${this.index}`);
             this.advance();
             let par1 = null;
-            if (!this.test('separator', ')')) {
+            if (!this.test('separator', ending)) {
                 par1 = this.parseExpression();
             }
-            if (!this.test('separator', ')')) {
+            if (!this.test('separator', ending)) {
                 throw new Error("Unclosed parenthesis");
             }
-            node = new Node('Call', node.getValue(), node.getStart(), node.getLine(), node, par1);
+            node = new Node(msg, node.getValue(), node.getStart(), node.getLine(), node, par1);
         }
         this.level -= 1;
         return node;
@@ -288,11 +293,14 @@ class Parser {
 
     parseLiteral() {
         this.level += 1;
-        if (this.test('separator', '(')) {
+        if (this.test('separator', ['(', '['])) {
+            this.log(`>>> ${this.level} PARSING Structure ( or [ at ${this.index}`);
+            let current = this.read('separator');
+            let ending = current.value === '(' ? ')' : ']';
             this.advance();
             let node = this.parseExpression();
-            if (!this.test('separator', ')')) {
-                throw new Error("Unclosed (");
+            if (!this.test('separator', ending)) {
+                throw new Error(`[ERROR] ${ending} not found, unclosed structure.`);
             }
             this.advance();
             return node;
@@ -393,8 +401,20 @@ class Parser {
 // Main
 //-------------------------------------------------------------------------------
 
-function nodeMain(debug = true) {
-    console.log("No code to run as main");
+function nodeMain() {
+    console.log(`Running nodeMain of ${FILENAME}`);
+    console.log(`Parameters (${process.argv.length}):`);
+    process.argv.forEach(x => console.log('    ' + x));
+    if (process.argv.length === 3 && fs.existsSync(process.argv[2])) {
+        let tokens = lexFile(process.argv[2]);
+        let res = new Parser().parse(tokens, true);
+        console.log(res.toString());
+        return res;
+    } else if (process.argv.length > 4) {
+        throw new Error(
+            `Too many parameters: ${process.argv.length}. The maximum is 4.`
+        );
+    }
 }
 
 if (node && main) {

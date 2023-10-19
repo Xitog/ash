@@ -65,6 +65,9 @@ Language.readDefinition();
 
 let GlobalInterpreter = null;
 
+class BreakException extends Error {}
+class NextException extends Error {}
+
 class Interpreter {
     constructor(output_function = null, output_screen = null, debug = false) {
         this.root = {};
@@ -116,7 +119,7 @@ class Interpreter {
             if (node.right !== null) {
                 val = this.do(node.right, level + 1);
             }
-            this.log(`Block ${val}`, level);
+            this.log(`Block ${val} of type ${Library.getTypeJS(val)}`, level);
             return val;
         } else if (node.type === 'Import') {
             this.log('Importing: ' + this.do(node.left, level + 1, false), level);
@@ -131,18 +134,27 @@ class Interpreter {
                 }
             }
             return this.library(idFun, arg);
+        } else if (node.type === 'Break') {
+            throw new BreakException();
+        } else if (node.type === 'Next') {
+            throw new NextException();
         } else if (node.type === 'While') {
             let cond = this.do(node.value, level + 1);
             let security = 1000000000;
             while (cond === true) {
-                this.do(node.left, level + 1);
+                try {
+                    this.do(node.left, level + 1);
+                } catch (err) {
+                    if (err instanceof BreakException) break;
+                    else if (!(err instanceof NextException)) throw err;
+                }
                 cond = this.do(node.value, level + 1);
                 security -= 1;
                 if (security === 0) {
                     throw new Error("Infinite loop detected");
                 }
             }
-            return nil;
+            return notAnExpression;
         } else if (node.type === 'If') {
             let cond = this.do(node.value, level + 1);
             if (cond === true) {
@@ -168,7 +180,14 @@ class Interpreter {
                 throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
             }
         } else if (node.type === 'BinaryOp') {
-            if (node.value === ',') {
+            if (node.value === '.') {
+                let left = this.do(node.left, level + 1);
+                let right = this.do(node.right, level + 1, false);
+                console.log(left, Library.getTypeJS(left));
+                console.log(right, Library.getTypeJS(right));
+                return nil;
+                //Library.sendMessage(Library.typeJStoAsh(left), )
+            } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
                 if (!Array.isArray(right)) {
@@ -194,14 +213,7 @@ class Interpreter {
                 }
                 if (node.value === '=') {
                     if (!(identifier in this.scope)) {
-                        let type = "object";
-                        if (typeof val === "boolean") {
-                            type = 'boolean';
-                        } else if (typeof val === "number") {
-                            type = Number.isInteger(val) ? 'integer' : 'float';
-                        } else if (typeof val === "string") {
-                            type = 'string';
-                        }
+                        let type = Library.typeJStoAsh(val);
                         this.scope[identifier] = new Value(identifier, type, val);
                     } else {
                         this.scope[identifier].setValue(val);
@@ -348,7 +360,7 @@ class Interpreter {
     }
 
     library(idFun, args=[]) {
-        return Library.call(idFun, args);
+        return Library.sendMessage(null, idFun, args);
     }
 }
 
@@ -427,7 +439,7 @@ function execute(text) {
         let cpt = 0;
         for (let token of tokens) {
             if (!token.equals("blank")) {
-                console.log(`    ${cpt}. ${XToken(token)}`);
+                console.log(`    ${cpt}. ${new XToken(token)}`);
                 cpt += 1;
             }
         }
@@ -481,7 +493,9 @@ function nodeMain(debug = true) {
             console.log(`Data read from file: ${filename}`);
         }
         let res = execute(data);
-        console.log("Final Res: " + res);
+        if (res !== notAnExpression) {
+            console.log("Final Res: " + res);
+        }
     } else if (process.argv.length > 4) {
         throw new Error(
             `Too many parameters: ${process.argv.length}. The maximum is 4.`
@@ -520,8 +534,8 @@ function nodeMain(debug = true) {
                 let result = execute(cmd);
                 if (result === null) {
                     throw new Error("Should not return null.");
-                } else if (result !== nil) { // notAnExpression
-                    console.log(result);
+                } else if (result !== notAnExpression) {
+                    console.log(result.toString());
                 }
             }
         }

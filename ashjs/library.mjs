@@ -2,20 +2,6 @@
 // Function
 //-----------------------------------------------------------------------------
 
-function typeJStoAsh(value) {
-    let typeValue = typeof value;
-    let typeAsh = null;
-    if (typeValue === 'boolean') {
-        typeAsh = 'bool';
-    } else if (typeValue === 'number') {
-        typeAsh = Number.isInteger(value) ? 'int' : 'num';
-        typeAsh = (typeAsh === 'int' && value >= 0) ? 'nat' : 'int';
-    } else if (typeValue === 'string') {
-        typeAsh = 'str';
-    }
-    return typeAsh;
-}
-
 // is t1 kindOf t2 ?
 function kindOf(t1, t2) {
     return (
@@ -51,19 +37,8 @@ class Value {
     }
 
     setValue(value) {
-        console.log(typeof value);
-        console.log(Number.isInteger(value));
-        if (
-            (this.type === "boolean" && typeof value !== "boolean")
-            || (this.type === "integer" && (typeof value !== "number" || !Number.isInteger(value)))
-            || (this.type === "float" && typeof value !== "number")
-            || (this.type === "string" && typeof value !== "string")
-        ) {
-            let expectedType = typeof value;
-            if (expectedType === "number") {
-                expectedType = Number.isInteger(value) ? "integer" : "float";
-            }
-            throw new Error(`[ERROR] Variable ${this.identifier} is of type ${this.type} cannot set to ${value} of type ${expectedType}`);
+        if (this.type !== Library.typeJStoAsh(value)) {
+            throw new Error(`[ERROR] Variable ${this.identifier} is of type ${this.type} cannot set to ${value} of type ${Library.typeJStoAsh(value)}`);
         }
         this.value = value;
     }
@@ -147,8 +122,8 @@ class Function extends Value {
                     }
                     args.push(this.parameters[j].getDefault());
                 }
-            } else if (!kindOf(typeJStoAsh(args[i]), this.parameters[i].getType())) {
-                throw new Error(`Wrong parameter type at #${i}: ${this.parameters[i]} expected vs ${args[i]} : ${typeJStoAsh(args[i])}`);
+            } else if (!kindOf(Library.typeJStoAsh(args[i]), this.parameters[i].getType())) {
+                throw new Error(`Wrong parameter type at #${i}: ${this.parameters[i]} expected vs ${args[i]} : ${Library.typeJStoAsh(args[i])}`);
             }
         }
         return this.code(args);
@@ -162,9 +137,11 @@ class Library {
         Library.GlobalInterpreter = globalInterpreter;
     }
 
-    static call(idFun, args) {
-        if (idFun in table) {
-            return table[idFun].call(args);
+    static sendMessage(idType, idFun, args) {
+        if (idType === null) {
+            if (idFun in table) {
+                return table[idFun].call(args);
+            }
         }
         throw new Error(`[ERROR] Unknown function ${idFun}`);
     }
@@ -176,6 +153,48 @@ class Library {
     static log (args) {
         Library.GlobalInterpreter.output_function(args.join(' '));
         return notAnExpression;
+    }
+
+    //-------------------------------------------------------------------------
+    // Helper functions
+    //-------------------------------------------------------------------------
+
+    static getTypeJS(value) {
+        let typeValue = typeof value;
+        let res = null;
+        if (typeValue === 'object') {
+            if (Array.isArray(value)) {
+                res = 'Array';
+            } else {
+                res = value.constructor.name;
+            }
+        } else if (['boolean', 'string'].includes(typeValue)) {
+            res = typeValue;
+        } else if (typeValue === 'number') {
+            if (Number.isInteger(value) && value >= 0) {
+                res = 'number_natural';
+            } else if (Number.isInteger(value)) {
+                res = 'number_integer';
+            } else {
+                res = 'number_float';
+            }
+        } else {
+            throw new Error(`[ERROR] Unknow JavaScript type for value |${value}|. typeof=${typeValue} isArray=${Array.isArray(value)}`);
+        }
+        return res;
+    }
+
+    static typeJStoAsh(value) {
+        let typeJS = Library.getTypeJS(value);
+        let equivalence = {
+            'Array': 'list',
+            'boolean': 'bool',
+            'string': 'str',
+            'number_int': 'int',
+            'number_natural': 'nat',
+            'number_float': 'num'
+        };
+        return typeJS in equivalence ? equivalence[typeJS] : typeJS;
     }
 
     static produceDocumentation() {
