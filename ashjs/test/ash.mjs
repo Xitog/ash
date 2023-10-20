@@ -1,13 +1,5 @@
 	function execute_core(node, symbol = false, debug = false) {
-		if (node.type === "function" || node.type === "procedure") {
-			this.scope[node.value.value] = new AshFunction(
-				node.value.value,
-				[],
-				node.type === "procedure",
-				node.right
-			);
-			return nil;
-		} else if (node.type === "expr") {
+		if (node.type === "expr") {
 			let op = node.value.value;
 
 			let right =
@@ -92,25 +84,6 @@
 				);
 			} else {
 				throw new Error(`Unsupported type: ${typeof left}`);
-			}
-		} else if (node.type === "import") {
-			let name = node.value.value;
-			console.log(`Importing ${name}`);
-			if (name === "io") {
-				this.scope["io"] = {
-					read: new AshFunction("read", [], function (args) {
-						return reader.question("AAAA:");
-					}),
-				};
-			}
-			return nil;
-		} else if (node.type === "keyword") {
-			if (node.value === "break") {
-				throw new Error("break");
-			} else {
-				throw new Error(
-					`Don't know what to do with keyword node ${node.value}`
-				);
 			}
 		}
 	}

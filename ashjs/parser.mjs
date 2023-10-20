@@ -128,7 +128,6 @@ let precedence = [
     ['+', '-'],
     ['*', '/', '//', '%'],
     ['**'], // /!\ Right to left associative
-    ['.']
 ];
 
 class Parser {
@@ -272,10 +271,16 @@ class Parser {
     parseCall() { // TODO: prep for indexation [x]
         this.level += 1;
         let node = this.parseLiteral();
-        if (this.test('separator', ['(', '['])) {
+        if (this.test('operator', '.')) {
+            this.log(`>>> ${this.level} PARSING Access at ${this.index}`);
+            this.advance();
+            let par1 = this.parseExpression();
+            node = new Node('BinaryOperator', '.', node.getStart(), node.getLine(), node, par1);
+        } else if (this.test('separator', ['(', '['])) {
             let current = this.read('separator');
-            let msg = current.value === '(' ? 'Call' : 'List';
+            let msg = current.value === '(' ? 'Call' : 'BinaryOp';
             let ending = current.value === '(' ? ')' : ']';
+            let value = current.value === '(' ? null : 'index';
             this.log(`>>> ${this.level} PARSING ${msg} at ${this.index}`);
             this.advance();
             let par1 = null;
@@ -285,7 +290,7 @@ class Parser {
             if (!this.test('separator', ending)) {
                 throw new Error("Unclosed parenthesis");
             }
-            node = new Node(msg, node.getValue(), node.getStart(), node.getLine(), node, par1);
+            node = new Node(msg, value, node.getStart(), node.getLine(), node, par1);
         }
         this.level -= 1;
         return node;

@@ -55,7 +55,7 @@ const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
 import { Lexer, Language } from "./lexer.mjs";
 import { Parser, Node } from "./parser.mjs";
-import { Library, Value, nil, notAnExpression } from "./library.mjs";
+import { Library, Value, List, nil, notAnExpression } from "./library.mjs";
 
 Language.readDefinition();
 
@@ -69,10 +69,11 @@ class BreakException extends Error {}
 class NextException extends Error {}
 
 class Interpreter {
-    constructor(output_function = null, output_screen = null, debug = false) {
+    constructor(output_function = null, output_screen = null, input_function = null, debug = false) {
         this.root = {};
         this.output_function = output_function == null ? console.log : output_function;
         this.output_screen = output_screen;
+        this.input_function = input_function == null ? reader.question : input_function;
         this.scope = {};
         this.debug = debug;
         GlobalInterpreter = this;
@@ -190,8 +191,8 @@ class Interpreter {
             } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
-                if (!Array.isArray(right)) {
-                    right = [right];
+                if (!(right instanceof List)) {
+                    right = new List([right]);
                 }
                 right.unshift(left);
                 return right;
@@ -233,12 +234,27 @@ class Interpreter {
                 } else if (node.value === '%=') {
                     this.scope[identifier].setValue(this.scope[identifier].getValue() % val);
                 }
+                this.log(`Affectation combined ${identifier} ${node.value} ${val}`, level);
                 return this.scope[identifier].getValue();
             } else {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
                 let res = null;
-                if (typeof left === "boolean") {
+                if (left instanceof List) {
+                    switch (node.value) {
+                        case 'index':
+                            res = left.at(right);
+                            break;
+                        case '+':
+                            res = left.add(right);
+                            break;
+                        case '.':
+                            res = left.method(right);
+                            break;
+                        default:
+                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type}`);
+                    }
+                } else if (typeof left === "boolean") {
                     switch (node.value) {
                         case 'and':
                             res = left && right;
@@ -352,9 +368,9 @@ class Interpreter {
             this.log(`String ${node.value}`, level); //no slice(1, .length -1)
             return node.value.slice(1, node.value.length - 1);
         } else {
-            console.log(node, typeof node);
-            console.log(node.type, typeof node.type);
-            console.log(node.value, typeof node.value);
+            console.log('Node:', node, typeof node);
+            console.log('Type:', node.type, typeof node.type);
+            console.log('Value:', node.value, typeof node.value);
             throw new Error(`[ERROR] Not handled node type |${node.type}| for node: ${node}`);
         }
     }

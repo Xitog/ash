@@ -52,6 +52,65 @@ class Value {
     }
 }
 
+class AshObject {
+    constructor(type = 'Object', value = null) {
+        this.value = value;
+        this.type = type;
+    }
+    toString() {
+        return `|${this.type} ${this.value}|`;
+    }
+}
+
+class List extends AshObject {
+    constructor(value=[]) {
+        super('List', value);
+    }
+    first() {
+        if (this.value.length === 0) {
+            return nil;
+        }
+        return this.value[0];
+    }
+    last() {
+        if (this.value.length === 0) {
+            return nil;
+        }
+        return this.value[this.value.length - 1];
+    }
+    at(index) {
+        let res = null;
+        if (Library.typeJStoAsh(index) === 'nat') {
+            if (index - 1 < 0 || index - 1 >= this.value.length) {
+                throw new Error(`[ERROR] Index ${index} out of bound: 1..${this.value.length}.`);
+            }
+            res = this.value[index - 1];
+        } else if (Library.typeJStoAsh(index) === 'int') {
+            res = this.value[this.value.length + index]; // negative
+        } else {
+            throw new Error(`[ERROR] An index must be a natural or an integer not a ${Library.typeJStoAsh(index)}.`);
+        }
+        return res;
+    }
+    unshift(o) {
+        this.value.unshift(o);
+    }
+    add(lst) {
+        if (!(lst instanceof List)) {
+            throw new Error(`[ERROR] Only a list can be added to a list not a ${Library.typeJStoAsh(right)}.`);
+        }
+    }
+    method(msg) {
+        if (!this.methods().includes(msg)) {
+            throw new Error(`[ERROR] Unknown method ${msg} for type ${this.type}.`);
+        }
+        return this[msg];
+    }
+    methods() {
+        return new List(['add', 'first', 'last', 'unshift', 'at', 'methods']);
+    }
+}
+
 class Parameter {
     /**
      * Il y a une subtilité dans le defaultValue.
@@ -155,6 +214,10 @@ class Library {
         return notAnExpression;
     }
 
+    static read (args) {
+        return Library.GlobalInterpreter.input_function('AAAA:');
+    }
+
     //-------------------------------------------------------------------------
     // Helper functions
     //-------------------------------------------------------------------------
@@ -190,7 +253,7 @@ class Library {
             'Array': 'list',
             'boolean': 'bool',
             'string': 'str',
-            'number_int': 'int',
+            'number_integer': 'int',
             'number_natural': 'nat',
             'number_float': 'num'
         };
@@ -331,6 +394,13 @@ const table = {
         ],
         Library.log
     ),
+    'read': new Function(
+        'read',
+        'str',
+        'function',
+        [],
+        Library.read
+    ),
     'clear': new Function(
         'clear',
         nil,
@@ -432,4 +502,4 @@ const table = {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Library, Function, Value, nil, notAnExpression };
+export { Library, Function, Value, List, nil, notAnExpression };
