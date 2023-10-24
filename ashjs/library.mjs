@@ -52,6 +52,16 @@ class Value {
     }
 }
 
+class BoundedFunction {
+    constructor(o, f) {
+        this.o = o;
+        this.f = f;
+    }
+    do(args) {
+        return this.f.apply(this.o, args);
+    }
+}
+
 class AshObject {
     constructor(type = 'Object', value = null) {
         this.value = value;
@@ -505,4 +515,4 @@ const table = {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Library, Function, Value, List, nil, notAnExpression };
+export { Library, Function, Value, List, nil, notAnExpression, BoundedFunction };

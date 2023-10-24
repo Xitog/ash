@@ -55,7 +55,7 @@ const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
 import { Lexer, Language } from "./lexer.mjs";
 import { Parser, Node } from "./parser.mjs";
-import { Library, Value, List, nil, notAnExpression } from "./library.mjs";
+import { Library, Value, List, nil, notAnExpression, BoundedFunction } from "./library.mjs";
 
 Language.readDefinition();
 
@@ -136,7 +136,7 @@ class Interpreter {
                 }
             }
             console.log('BBBBBB', args); // TODO
-            return idFun(args);
+            return idFun.do(args);
             //return this.library(idFun, arg);
         } else if (node.type === 'Break') {
             throw new BreakException();
@@ -187,7 +187,7 @@ class Interpreter {
             if (node.value === '.') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1, false);
-                return left[right];
+                return new BoundedFunction(left, left[right]);
             } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
