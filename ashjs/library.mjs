@@ -100,6 +100,9 @@ class List extends AshObject {
             throw new Error(`[ERROR] Only a list can be added to a list not a ${Library.typeJStoAsh(right)}.`);
         }
     }
+    includes(v) {
+        return this.value.includes(v);
+    }
     method(msg) {
         if (!this.methods().includes(msg)) {
             throw new Error(`[ERROR] Unknown method ${msg} for type ${this.type}.`);

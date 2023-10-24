@@ -127,14 +127,17 @@ class Interpreter {
             return nil;
         } else if (node.type === 'Call') {
             let idFun = this.do(node.left, level + 1, false);
-            let arg = [];
+            console.log('AAAAAA', typeof idFun); // TODO
+            let args = [];
             if (node.right !== null) {
-                arg = this.do(node.right, level + 1);
-                if (!Array.isArray(arg)) {
-                    arg = [arg];
+                args = this.do(node.right, level + 1);
+                if (!Array.isArray(args)) {
+                    args = [args];
                 }
             }
-            return this.library(idFun, arg);
+            console.log('BBBBBB', args); // TODO
+            return idFun(args);
+            //return this.library(idFun, arg);
         } else if (node.type === 'Break') {
             throw new BreakException();
         } else if (node.type === 'Next') {
@@ -180,14 +183,11 @@ class Interpreter {
             } else {
                 throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
             }
-        } else if (node.type === 'BinaryOp') {
+        } else if (node.type === 'BinaryOp') { // TODO
             if (node.value === '.') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1, false);
-                console.log(left, Library.getTypeJS(left));
-                console.log(right, Library.getTypeJS(right));
-                return nil;
-                //Library.sendMessage(Library.typeJStoAsh(left), )
+                return left[right];
             } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
@@ -448,7 +448,7 @@ class XToken
     }
 }
 
-function execute(text) {
+function execute(text, doExecute=true) {
     let tokens = new Lexer('ash', [], GlobalInterpreter.getDebug()).lex(text);
     if (GlobalInterpreter.getDebug()) {
         console.log('Tokens:');
@@ -467,8 +467,11 @@ function execute(text) {
         console.log(res.toString());
         console.log('Result:');
     }
-    let finalRes = GlobalInterpreter.do(res);
-    return finalRes;
+    if (doExecute) {
+        let finalRes = GlobalInterpreter.do(res);
+        return finalRes;
+    }
+    return notAnExpression;
 }
 
 function nodeMain(debug = true) {
@@ -521,6 +524,7 @@ function nodeMain(debug = true) {
         let cmd = "";
         let buffer = "";
         let prompt = 'ash> ';
+        let doExecute = true;
         while (cmd !== "exit") {
             cmd = reader.question(prompt).trim();
             if (cmd.endsWith("\\")) {
@@ -540,6 +544,9 @@ function nodeMain(debug = true) {
                 GlobalInterpreter.setDebug(!GlobalInterpreter.getDebug());
                 let s = GlobalInterpreter.getDebug() ? 'on' : 'off';
                 console.log(`Debug is now ${s}`);
+            } else if (cmd === 'exec') {
+                doExecute = !doExecute;
+                console.log(`Execute is now ${doExecute}`);
             } else {
                 if (buffer.length > 0) {
                     buffer += cmd;
@@ -547,7 +554,7 @@ function nodeMain(debug = true) {
                     buffer = "";
                     prompt = 'ash> ';
                 }
-                let result = execute(cmd);
+                let result = execute(cmd, doExecute);
                 if (result === null) {
                     throw new Error("Should not return null.");
                 } else if (result !== notAnExpression) {

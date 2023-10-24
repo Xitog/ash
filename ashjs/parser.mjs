@@ -127,7 +127,8 @@ let precedence = [
     ['<<', '>>'],
     ['+', '-'],
     ['*', '/', '//', '%'],
-    ['**'], // /!\ Right to left associative
+    ['**'], // /!\ Right to left associative (by default)
+    // . is the only Left to Right
 ];
 
 class Parser {
@@ -163,12 +164,12 @@ class Parser {
 
     parseBlock() {
         // if, while, for, break, next, expression, affectation, comment, newline
-        this.log(`>>> ${this.level} START parseBlock at ${this.index}: ${this.read()}`);
+        this.log(`${this.level}. START parseBlock at ${this.index}: ${this.read()}`);
         let root = null;
         let suite = null;
         this.level += 1;
         while (this.index < this.tokens.length) {
-            this.log(`>>> ${this.level} LOOP parseBlock at ${this.index}: ${this.read()}`);
+            this.log(`${this.level}. LOOP parseBlock at ${this.index}: ${this.read()}`);
             let res = null;
             let current = this.read();
             // Test
@@ -222,7 +223,7 @@ class Parser {
 
     parseExpression() {
         this.level += 1;
-        this.log(`>>> ${this.level} parseExpression at ${this.index}`);
+        this.log(`${this.level}. START parseExpression at ${this.index}`);
         let res = this.parseBinaryOp();
         this.level -= 1;
         return res;
@@ -236,12 +237,12 @@ class Parser {
         let name = precedence[opLevel].map(x => this.uFirst(x)).join(", ");
         let node = null;
         let right = null;
-        this.log(`>>> ${this.level} START BinaryOp ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
+        this.log(`${this.level}. START BinaryOp ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
         node = this.parseBinaryOp(opLevel + 1);
         // On peut faire un while ici pour traiter les suites en chaînant avec expr = new Expression(expr, operator, right);
         if (this.test('operator', precedence[opLevel])) {
             let op = this.advance();
-            this.log(`>>> ${this.level} PARSING ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
+            this.log(`${this.level}. PARSING ${name} (operator ${opLevel + 1}/${precedence.length}) at ${this.index}`);
             right = this.parseBinaryOp(opLevel);
             if (right === null) {
                 throw new Error("No expression on the right of a binary operator at " + current.getLine());
@@ -258,39 +259,68 @@ class Parser {
         if (this.test('operator', ['not', '-'])) {
             let op = this.read();
             this.advance();
-            this.log(`>>> ${this.level} PARSING UnaryOperator(${op.getValue()}) at ${this.index}`);
-            node = this.parseCall();
+            this.log(`${this.level}. PARSING UnaryOperator(${op.getValue()}) at ${this.index}`);
+            node = this.parseAccessOrCall();
             node = new Node('UnaryOp', op.getValue(), op.getStart(), op.getLine(), node);
         } else {
-            node = this.parseCall();
+            this.log(`${this.level}. START UnaryOperator at ${this.index}`);
+            node = this.parseAccessOrCall();
         }
         this.level -= 1;
         return node;
     }
 
-    parseCall() { // TODO: prep for indexation [x]
+    parseAccessOrCall() {
         this.level += 1;
+        this.log(`${this.level}. START parseAccessOrCall at ${this.index}`);
         let node = this.parseLiteral();
-        if (this.test('operator', '.')) {
-            this.log(`>>> ${this.level} PARSING Access at ${this.index}`);
-            this.advance();
-            let par1 = this.parseExpression();
-            node = new Node('BinaryOperator', '.', node.getStart(), node.getLine(), node, par1);
-        } else if (this.test('separator', ['(', '['])) {
-            let current = this.read('separator');
-            let msg = current.value === '(' ? 'Call' : 'BinaryOp';
-            let ending = current.value === '(' ? ')' : ']';
-            let value = current.value === '(' ? null : 'index';
-            this.log(`>>> ${this.level} PARSING ${msg} at ${this.index}`);
-            this.advance();
-            let par1 = null;
-            if (!this.test('separator', ending)) {
-                par1 = this.parseExpression();
+        while (this.test('separator', ['(', '[']) || this.test('operator', '.')) {
+            if (this.test('separator', ['(', '['])) {
+                let current = this.read('separator');
+                let msg = current.value === '(' ? 'Call' : 'BinaryOp';
+                let ending = current.value === '(' ? ')' : ']';
+                let value = current.value === '(' ? null : 'index';
+                this.log(`${this.level}. PARSING ${msg} at ${this.index}`);
+                this.advance();
+                let par1 = null;
+                if (!this.test('separator', ending)) {
+                    par1 = this.parseExpression();
+                }
+                if (!this.test('separator', ending)) {
+                    throw new Error("Unclosed parenthesis");
+                }
+                this.advance(); // Deleted closing ) or ]
+                node = new Node(msg, value, node.getStart(), node.getLine(), node, par1);
+            } else if (this.test('operator', '.')) {
+                this.log(`${this.level}. PARSING . at ${this.index}`);
+                this.advance();
+                node = this.parseAccess([node]);
             }
-            if (!this.test('separator', ending)) {
-                throw new Error("Unclosed parenthesis");
+        }
+        this.level -= 1;
+        return node;
+    }
+
+    parseAccess(nodesBefore=null) {
+        this.level += 1;
+        this.log(`${this.level}. START parseAccess at ${this.index}`);
+        let node = this.parseLiteral();
+        if (this.test('operator', '.')) { // Some more to do
+            this.advance();
+            if (nodesBefore === null) {
+                nodesBefore = [];
             }
-            node = new Node(msg, value, node.getStart(), node.getLine(), node, par1);
+            nodesBefore.push(node);
+            node = this.parseAccess(nodesBefore);
+        } else if (nodesBefore !== null) {
+            nodesBefore.push(node);
+            let first = nodesBefore.shift();
+            let second = nodesBefore.shift();
+            node = new Node('BinaryOp', '.', first.getStart(), first.getLine(), first, second);
+            while (nodesBefore.length > 0) {
+                let next = nodesBefore.shift();
+                node = new Node('BinaryOp', '.', next.getStart(), next.getLine(), node, next);
+            }
         }
         this.level -= 1;
         return node;
@@ -299,7 +329,7 @@ class Parser {
     parseLiteral() {
         this.level += 1;
         if (this.test('separator', ['(', '['])) {
-            this.log(`>>> ${this.level} PARSING Structure ( or [ at ${this.index}`);
+            this.log(`${this.level}. PARSING Structure ( or [ at ${this.index}`);
             let current = this.read('separator');
             let ending = current.value === '(' ? ')' : ']';
             this.advance();
@@ -312,7 +342,7 @@ class Parser {
         }
         let current = this.read();
         if (current !== null && ['identifier', 'integer', 'float', 'boolean', 'string', 'nil'].includes(current.type)) {
-            this.log(`>>> ${this.level} PARSING literal at ${this.index} : ${current}`);
+            this.log(`${this.level}. PARSING literal at ${this.index} : ${current}`);
             this.advance();
             this.level -= 1;
             return new Node(this.uFirst(current.getType()), current.getValue(), current.getStart(), current.getLine());
@@ -323,7 +353,7 @@ class Parser {
 
     parseImport() {
         this.level += 1;
-        this.log(`>>> ${this.level} PARSING Import at ${this.index}`);
+        this.log(`${this.level}. PARSING Import at ${this.index}`);
         let importtoken = this.read('keyword', 'import');
         this.advance();
         let left = this.parseLiteral();
@@ -336,7 +366,7 @@ class Parser {
 
     parseWhile() {
         this.level += 1;
-        this.log(`>>> ${this.level} PARSING While at ${this.index}`);
+        this.log(`${this.level}. PARSING While at ${this.index}`);
         let whiletoken = this.read('keyword', 'while');
         this.advance();
         let condition = this.parseExpression();
@@ -351,7 +381,7 @@ class Parser {
 
     parseIf() {
         this.level += 1;
-        this.log(`>>> ${this.level} PARSING If at ${this.index}`);
+        this.log(`${this.level}. PARSING If at ${this.index}`);
         let iftoken = this.read('keyword', 'if');
         this.advance();
         let condition = this.parseExpression();
