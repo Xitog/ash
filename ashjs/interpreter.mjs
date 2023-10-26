@@ -126,8 +126,7 @@ class Interpreter {
             this.log('Importing: ' + this.do(node.left, level + 1, false), level);
             return nil;
         } else if (node.type === 'Call') {
-            let idFun = this.do(node.left, level + 1, false);
-            console.log('AAAAAA', typeof idFun); // TODO
+            let boundFunction = this.do(node.left, level + 1, false);
             let args = [];
             if (node.right !== null) {
                 args = this.do(node.right, level + 1);
@@ -135,9 +134,11 @@ class Interpreter {
                     args = [args];
                 }
             }
-            console.log('BBBBBB', args); // TODO
-            return idFun.do(args);
-            //return this.library(idFun, arg);
+            if (boundFunction instanceof BoundedFunction) {
+                return boundFunction.do(args);
+            } else if (typeof boundFunction === "string") {
+                return this.library(boundFunction, args);
+            }
         } else if (node.type === 'Break') {
             throw new BreakException();
         } else if (node.type === 'Next') {
@@ -183,7 +184,7 @@ class Interpreter {
             } else {
                 throw new Error(`[ERROR] Unknown Unary Op: ${node}`)
             }
-        } else if (node.type === 'BinaryOp') { // TODO
+        } else if (node.type === 'BinaryOp') {
             if (node.value === '.') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1, false);
