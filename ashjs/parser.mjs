@@ -168,7 +168,8 @@ class Parser {
         let root = null;
         let suite = null;
         this.level += 1;
-        while (this.index < this.tokens.length) {
+        let doBreak = false;
+        while (this.index < this.tokens.length && !doBreak) {
             this.log(`${this.level}. LOOP parseBlock at ${this.index}: ${this.read()}`);
             let res = null;
             let current = this.read();
@@ -198,24 +199,30 @@ class Parser {
                 if (this.index < this.tokens.length) {
                     if (this.test("separator", [";", ")", "]"]) || this.test("newline", "\n")) {
                         this.advance();
+                    } else if (this.test("keyword", "else")) {
+                        // We come from an higher function (parseIf) and we must go back
+                        doBreak = true;
                     } else if (!this.test("keyword", ["end", "loop"])) {
                         throw new Error(`Unfinished Expression at ${this.tokens[this.index]} after ${this.tokens[this.index - 1]}`);
                     }
                 }
             }
-            // Checking
-            if (res === null || res === undefined) {
-                throw new Error("Something went wrong in parsing. Aborting.");
+            // if we have else + \n we will have res === null so must protect the code again that
+            if (!doBreak) {
+                // Checking
+                if ((res === null || res === undefined)) {
+                    throw new Error("Something went wrong in parsing. Aborting.");
+                }
+                // Chaining
+                if (suite === null) {
+                    suite = new Node("Block");
+                    root = suite;
+                } else {
+                    suite.right = new Node("Block");
+                    suite = suite.right;
+                }
+                suite.left = res;
             }
-            // Chaining
-            if (suite === null) {
-                suite = new Node("Block");
-                root = suite;
-            } else {
-                suite.right = new Node("Block");
-                suite = suite.right;
-            }
-            suite.left = res;
         }
         this.level -= 1;
         return root;
@@ -387,6 +394,7 @@ class Parser {
         let condition = this.parseExpression();
         this.read('keyword', 'then');
         this.advance();
+        this.log(`${this.level}. PARSING IfBlock at ${this.index}`);
         let action = this.parseBlock();
         let actionElse = null;
         if (this.test('keyword', 'else')) {

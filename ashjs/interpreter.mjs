@@ -167,7 +167,7 @@ class Interpreter {
             } else if (node.right !== null) {
                 this.do(node.right, level + 1);
             }
-            return nil;
+            return notAnExpression;
         } else if (node.type === 'UnaryOp') {
             if (node.value === '-') {
                 let val = -this.do(node.left, level + 1);
@@ -514,6 +514,7 @@ function nodeMain(debug = true) {
         data = data.replace(/\r\n/g, "\n").replace(/\n\r/g, "\n");
         if (debug) {
             console.log(`Data read from file: ${filename}`);
+            console.log(data);
         }
         let res = execute(data);
         if (res !== notAnExpression) {
