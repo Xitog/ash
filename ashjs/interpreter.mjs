@@ -188,6 +188,9 @@ class Interpreter {
             if (node.value === '.') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1, false);
+                if (!(right in left)) {
+                    throw new Error(`[ERROR] unknown method or attribute ${right} in ${left}`);
+                }
                 return new BoundedFunction(left, left[right]);
             } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
