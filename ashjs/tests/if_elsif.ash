@@ -1,6 +1,6 @@
 a = 6
 if a == 5 then
     log("a = 5 (never)")
-else
+elsif a == 6 then
     log("a = 6")
 end

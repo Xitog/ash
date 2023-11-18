@@ -76,11 +76,17 @@ class List extends AshObject {
     constructor(value=[]) {
         super('List', value);
     }
+    toString() {
+        return `|${this.type} (${this.value.length}) ${this.value}|`;
+    }
     first() {
         if (this.value.length === 0) {
             return nil;
         }
         return this.value[0];
+    }
+    head() {
+        return this.first();
     }
     last() {
         if (this.value.length === 0) {
@@ -102,17 +108,97 @@ class List extends AshObject {
         }
         return res;
     }
-    unshift(o) {
-        this.value.unshift(o);
-    }
     add(lst) {
         if (!(lst instanceof List)) {
             throw new Error(`[ERROR] Only a list can be added to a list not a ${Library.typeJStoAsh(right)}.`);
         }
+        this.value += lst;
     }
-    includes(v) {
-        return this.value.includes(v);
+    max() {
+        return Math.max(...this.value);
     }
+    min() {
+        return Math.min(...this.value);
+    }
+    includes(value) {
+        return this.value.includes(value);
+    }
+    insert(pos, value) {
+        this.value.insert(pos - 1, value);
+    }
+    push(value) {
+        this.value.push(value);
+    }
+    append(value) {
+        this.value.push(value);
+    }
+    concat(lst) {
+        this.value += lst;
+    }
+    remove(pos) {
+        this.value.splice(pos - 1, 1);
+    }
+    sort() {
+        this.value.sort();
+    }
+    find(value) {
+        return this.value.indexOf(value) + 1;
+    }
+    flatten() {
+        let res = [];
+        for (let e of this.value) {
+            if (e instanceof List) {
+                e.flatten();
+                res = res.concat(e.value);
+            } else {
+                res.push(e);
+            }
+        }
+        this.value = res;
+    }
+    pop() {
+        return this.value.pop();
+    }
+    shift() {
+        return this.value.shift();
+    }
+    unshift(value) {
+        this.value.unshift(value);
+    }
+    prepend(value) {
+        this.value.unshift(value);
+    }
+    size() {
+        return this.value.length;
+    }
+    length() {
+        return this.value.length;
+    }
+    count() {
+        return this.value.length;
+    }
+    /*
+    append
+    head
+    tail
+    filter
+    map
+    [ for x in y return z ]
+    [ x for x in y ]
+    split
+    include?
+    in
+    any?
+    all?
+    join(s)
+    unique
+    reverse
+    zip
+    reduce
+    Map-Apply / Reduce / Filter
+    freeze
+    frozen?
+    */
     method(msg) {
         if (!this.methods().includes(msg)) {
             throw new Error(`[ERROR] Unknown method ${msg} for type ${this.type}.`);
@@ -123,6 +209,17 @@ class List extends AshObject {
         return new List(['add', 'first', 'last', 'unshift', 'at', 'methods']);
     }
 }
+
+/*
+dict
+exist? / include? / key?
+delete / remove
+keys
+values
+merge, update
+freeze
+frozen?
+*/
 
 class Parameter {
     /**

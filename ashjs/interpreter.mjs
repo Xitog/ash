@@ -120,7 +120,11 @@ class Interpreter {
             if (node.right !== null) {
                 val = this.do(node.right, level + 1);
             }
-            this.log(`Block ${val} of type ${Library.getTypeJS(val)}`, level);
+            if (val !== notAnExpression) {
+                this.log(`Block ${val} of type ${Library.getTypeJS(val)}`, level);
+            } else {
+                this.log(`Block ${val} notAnExpression`, level);
+            }
             return val;
         } else if (node.type === 'Import') {
             this.log('Importing: ' + this.do(node.left, level + 1, false), level);
@@ -134,11 +138,13 @@ class Interpreter {
                     args = [args];
                 }
             }
+            let res;
             if (boundFunction instanceof BoundedFunction) {
-                return boundFunction.do(args);
+                res = boundFunction.do(args);
             } else if (typeof boundFunction === "string") {
-                return this.library(boundFunction, args);
+                res = this.library(boundFunction, args);
             }
+            return (res == undefined ? notAnExpression : res);
         } else if (node.type === 'Break') {
             throw new BreakException();
         } else if (node.type === 'Next') {
@@ -195,10 +201,11 @@ class Interpreter {
             } else if (node.value === ',') {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
-                if (!(right instanceof List)) {
-                    right = new List([right]);
+                if (Array.isArray(right)) {
+                    right.unshift(left);
+                } else {
+                    right = [left, right];
                 }
-                right.unshift(left);
                 return right;
             } else if (['=', '+=', '-=', '*=', '/=', '//=', '**=', '%='].includes(node.value)) {
                 // Left side
@@ -340,6 +347,17 @@ class Interpreter {
                 this.log(`Binaryop(${node.value}) ${res}`, level);
                 return res;
             }
+        } else if (node.type === 'List') {
+            let res = new List();
+            if (node.left !== null) {
+                let elem = this.do(node.left, level + 1);
+                if (Array.isArray(elem)) {
+                    elem.forEach(e => res.push(e));
+                } else {
+                    res.push(elem);
+                }
+            }
+            return res;
         } else if (node.type === 'Integer') {
             let val = parseInt(node.value);
             this.log(`Integer ${val}`, level);

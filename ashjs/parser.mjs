@@ -340,12 +340,17 @@ class Parser {
             let current = this.read('separator');
             let ending = current.value === '(' ? ')' : ']';
             this.advance();
-            let node = this.parseExpression();
-            if (!this.test('separator', ending)) {
-                throw new Error(`[ERROR] ${ending} not found, unclosed structure.`);
+            let root = new Node('List', null, current.getStart(), current.getLine());
+            let node = root;
+            while (!this.test('separator', ending)) {
+                node.left = this.parseExpression();
+                node = node.left;
+                if (!this.test('separator', ending) && !this.test('separator', ',')) {
+                    throw new Error(`[ERROR] ${ending} not found, unclosed structure.`);
+                }
             }
             this.advance();
-            return node;
+            return root;
         }
         let current = this.read();
         if (current !== null && ['identifier', 'integer', 'float', 'boolean', 'string', 'nil'].includes(current.type)) {
