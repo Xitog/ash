@@ -177,7 +177,7 @@ class Parser {
             if (current.equals("newline") || current.equals("comment") || current.equals("blank")) {
                 this.advance();
                 continue;
-            } else if (this.test("keyword", ["end", "loop"])) {
+            } else if (this.test("keyword", ["end", "loop", "elsif"])) {
                 break;
             } else if (current.equals("keyword", "import")) {
                 res = this.parseImport();
@@ -391,25 +391,35 @@ class Parser {
         return new Node('While', condition, whiletoken.getStart(), whiletoken.getLine(), action, null);
     }
 
-    parseIf() {
+    parseIf(sub=false) {
         this.level += 1;
         this.log(`${this.level}. PARSING If at ${this.index}`);
-        let iftoken = this.read('keyword', 'if');
+        let iftoken = null;
+        if (!sub) {
+            iftoken = this.read('keyword', 'if');
+        } else {
+            iftoken = this.read('keyword', 'elsif');
+        }
         this.advance();
         let condition = this.parseExpression();
         this.read('keyword', 'then');
         this.advance();
         this.log(`${this.level}. PARSING IfBlock at ${this.index}`);
         let action = this.parseBlock();
-        let actionElse = null;
-        if (this.test('keyword', 'else')) {
+        let subnode = null;
+        if (this.test('keyword', 'elsif')) {
+            subnode = this.parseIf(true);
+        } else if (this.test('keyword', 'else')) {
             this.advance();
-            actionElse = this.parseBlock();
+            subnode = this.parseBlock();
         }
-        this.read('keyword', 'end');
-        this.advance();
+        while (this.test('newline')) {this.advance()}; // handling of newline
+        if (!sub) {
+            this.read('keyword', 'end');
+            this.advance();
+        }
         this.level -= 1;
-        return new Node('If', condition, iftoken.getStart(), iftoken.getLine(), action, actionElse);
+        return new Node('If', condition, iftoken.getStart(), iftoken.getLine(), action, subnode);
     }
 
     read(type = null, value = null) {
