@@ -57,6 +57,9 @@ class BoundedFunction {
         this.o = o;
         this.f = f;
     }
+    toString() {
+        return `${this.f}`;
+    }
     do(args) {
         return this.f.apply(this.o, args);
     }
@@ -70,10 +73,53 @@ class AshObject {
     toString() {
         return `|${this.type} ${this.value}|`;
     }
+    getType() {
+        return this.type;
+    }
 }
 
-class List extends AshObject {
-    constructor(value=[]) {
+class AshInteger extends AshObject {
+    constructor(value) {
+        super('Integer', value);
+    }
+}
+
+class AshFloat extends AshObject {
+    constructor(value) {
+        super('Float', value);
+    }
+}
+
+class AshString extends AshObject {
+    constructor(value) {
+        super('String', value);
+    }
+    __add__(s) {
+        return new AshString(this.value + s.value);
+    }
+    __mul__(i) {
+        return new AshString(this.value.repeat(i.value));
+    }
+    upper() {
+        this.value = this.value.toUpperCase();
+        return notAnExpression;
+    }
+}
+
+class AshBoolean extends AshObject {
+    constructor(value) {
+        super('Boolean', value);
+    }
+    __and__(b) {
+        return new AshBoolean(this.value && b.value);
+    }
+    __or__(b) {
+        return new AshBoolean(this.value || b.value);
+    }
+}
+
+class AshList extends AshObject {
+    constructor(value = []) {
         super('List', value);
     }
     toString() {
@@ -103,16 +149,26 @@ class List extends AshObject {
             res = this.value[index - 1];
         } else if (Library.typeJStoAsh(index) === 'int') {
             res = this.value[this.value.length + index]; // negative
+        } else if (index instanceof AshInteger) {
+            if (index.value - 1 < 0 || index.value - 1 >= this.value.length) {
+                throw new Error(`[ERROR] Index ${index.value} out of bound: 1..${this.value.length}.`);
+            }
+            res = this.value[index.value - 1];
         } else {
             throw new Error(`[ERROR] An index must be a natural or an integer not a ${Library.typeJStoAsh(index)}.`);
         }
         return res;
     }
-    add(lst) {
-        if (!(lst instanceof List)) {
+    __add__(lst) {
+        if (!(lst instanceof AshList)) {
             throw new Error(`[ERROR] Only a list can be added to a list not a ${Library.typeJStoAsh(right)}.`);
         }
         this.value += lst;
+        return notAnExpression;
+    }
+    concat(lst) {
+        this.value += lst;
+        return notAnExpression;
     }
     max() {
         return Math.max(...this.value);
@@ -125,21 +181,23 @@ class List extends AshObject {
     }
     insert(pos, value) {
         this.value.insert(pos - 1, value);
+        return notAnExpression;
     }
     push(value) {
         this.value.push(value);
+        return notAnExpression;
     }
     append(value) {
         this.value.push(value);
-    }
-    concat(lst) {
-        this.value += lst;
+        return notAnExpression;
     }
     remove(pos) {
         this.value.splice(pos - 1, 1);
+        return notAnExpression;
     }
     sort() {
         this.value.sort();
+        return notAnExpression;
     }
     find(value) {
         return this.value.indexOf(value) + 1;
@@ -147,7 +205,7 @@ class List extends AshObject {
     flatten() {
         let res = [];
         for (let e of this.value) {
-            if (e instanceof List) {
+            if (e instanceof AshList) {
                 e.flatten();
                 res = res.concat(e.value);
             } else {
@@ -155,6 +213,7 @@ class List extends AshObject {
             }
         }
         this.value = res;
+        return notAnExpression;
     }
     pop() {
         return this.value.pop();
@@ -164,9 +223,11 @@ class List extends AshObject {
     }
     unshift(value) {
         this.value.unshift(value);
+        return notAnExpression;
     }
     prepend(value) {
         this.value.unshift(value);
+        return notAnExpression;
     }
     size() {
         return this.value.length;
@@ -177,11 +238,25 @@ class List extends AshObject {
     count() {
         return this.value.length;
     }
+    reverse() {
+        this.value.reverse();
+        return notAnExpression;
+    }
+    join(s) {
+        return new AshString(this.value.join(s));
+    }
+    unique() {
+        let res = [];
+        this.value.forEach(element => {
+            if (!(res.includes(element))) {
+                res.push(element);
+            }
+        });
+        this.value = res;
+        return notAnExpression;
+    }
     /*
-    append
-    head
     tail
-    filter
     map
     [ for x in y return z ]
     [ x for x in y ]
@@ -190,11 +265,7 @@ class List extends AshObject {
     in
     any?
     all?
-    join(s)
-    unique
-    reverse
     zip
-    reduce
     Map-Apply / Reduce / Filter
     freeze
     frozen?
@@ -206,7 +277,7 @@ class List extends AshObject {
         return this[msg];
     }
     methods() {
-        return new List(['add', 'first', 'last', 'unshift', 'at', 'methods']);
+        return new AshList(['add', 'first', 'last', 'unshift', 'at', 'methods']);
     }
 }
 
@@ -319,12 +390,12 @@ class Library {
     // Console functions
     //-------------------------------------------------------------------------
 
-    static log (args) {
+    static log(args) {
         Library.GlobalInterpreter.output_function(args.join(' '));
         return notAnExpression;
     }
 
-    static read (args) {
+    static read(args) {
         return Library.GlobalInterpreter.input_function('AAAA:');
     }
 
@@ -336,7 +407,9 @@ class Library {
         let typeValue = typeof value;
         let res = null;
         if (typeValue === 'object') {
-            if (Array.isArray(value)) {
+            if (value instanceof AshObject) {
+                res = value.getType();
+            } else if (Array.isArray(value)) {
                 res = 'Array';
             } else {
                 res = value.constructor.name;
@@ -612,4 +685,8 @@ const table = {
 // Exports
 //-----------------------------------------------------------------------------
 
-export { Library, Function, Value, List, nil, notAnExpression, BoundedFunction };
+export {
+    Library, Function, Value, BoundedFunction,
+    nil, notAnExpression,
+    AshObject, AshInteger, AshFloat, AshBoolean, AshString, AshList
+};

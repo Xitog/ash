@@ -55,7 +55,10 @@ const main = (node) ? path.basename(process.argv[1]) === FILENAME : false;
 
 import { Lexer, Language } from "./lexer.mjs";
 import { Parser, Node } from "./parser.mjs";
-import { Library, Value, List, nil, notAnExpression, BoundedFunction } from "./library.mjs";
+import {
+    Library, Value, nil, notAnExpression, BoundedFunction,
+    AshObject, AshInteger, AshFloat, AshBoolean, AshString, AshList
+} from "./library.mjs";
 
 Language.readDefinition();
 
@@ -65,8 +68,8 @@ Language.readDefinition();
 
 let GlobalInterpreter = null;
 
-class BreakException extends Error {}
-class NextException extends Error {}
+class BreakException extends Error { }
+class NextException extends Error { }
 
 class Interpreter {
     constructor(output_function = null, output_screen = null, input_function = null, debug = false) {
@@ -144,7 +147,10 @@ class Interpreter {
             } else if (typeof boundFunction === "string") {
                 res = this.library(boundFunction, args);
             }
-            return (res == undefined ? notAnExpression : res);
+            if (res !== notAnExpression && !(res instanceof AshObject)) {
+                throw new Error(`Out of Ash World\n    function ${boundFunction}\n    returned ${res} of type ${typeof res}`);
+            }
+            return res;
         } else if (node.type === 'Break') {
             throw new BreakException();
         } else if (node.type === 'Next') {
@@ -251,49 +257,7 @@ class Interpreter {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
                 let res = null;
-                if (left instanceof List) {
-                    switch (node.value) {
-                        case 'index':
-                            res = left.at(right);
-                            break;
-                        case '+':
-                            res = left.add(right);
-                            break;
-                        case '.':
-                            res = left.method(right);
-                            break;
-                        default:
-                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type}`);
-                    }
-                } else if (typeof left === "boolean") {
-                    switch (node.value) {
-                        case 'and':
-                            res = left && right;
-                            break;
-                        case 'or':
-                            res = left || right;
-                            break;
-                        default:
-                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for boolean`);
-                    }
-                } else if (typeof left === "string") {
-                    switch (node.value) {
-                        case '+':
-                            if (typeof right !== "string") {
-                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter. Can only add a string to a string.`);
-                            }
-                            res = left + right;
-                            break;
-                        case '*':
-                            if (typeof right !== "number" || !Number.isInteger(right)) {
-                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter. Can only repeat a string by an integer.`);
-                            }
-                            res = left.repeat(right);
-                            break;
-                        default:
-                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for string`);
-                    }
-                } else if (typeof left === "number") {
+                if (typeof left === "number") {
                     let type = Number.isInteger(left) ? "integer" : "float";
                     switch (node.value) {
                         case '+':
@@ -341,6 +305,26 @@ class Interpreter {
                         default:
                             throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type}`);
                     }
+                } else if (typeof left === "object") {
+                    switch (node.value) {
+                        case 'and':
+                            res = left.__and__(right);
+                            break;
+                        case 'or':
+                            res = left.__or__(right);
+                            break;
+                        case '+':
+                            res = left.__add__(right);
+                            break;
+                        case '*':
+                            res = left.__mul__(right);
+                            break;
+                        case 'index':
+                            res = left.at(right);
+                            break;
+                        default:
+                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${left.constructor.name}`);
+                    }
                 } else {
                     throw new Error(`[ERROR] Unsupported type : ${typeof left}`);
                 }
@@ -348,7 +332,7 @@ class Interpreter {
                 return res;
             }
         } else if (node.type === 'List') {
-            let res = new List();
+            let res = new AshList();
             if (node.left !== null) {
                 let elem = this.do(node.left, level + 1);
                 if (Array.isArray(elem)) {
@@ -361,15 +345,15 @@ class Interpreter {
         } else if (node.type === 'Integer') {
             let val = parseInt(node.value);
             this.log(`Integer ${val}`, level);
-            return val;
+            return new AshInteger(val);
         } else if (node.type === 'Float') {
             let val = parseFloat(node.value);
             this.log(`Float ${val}`, level)
-            return val;
+            return new AshFloat(val);
         } else if (node.type === 'Boolean') {
             let val = node.value === 'true';
             this.log(`Boolean ${val}`, level);
-            return val;
+            return new AshBoolean(val);
         } else if (node.type === 'Nil') {
             this.log('NilClass nil', level);
             return nil;
@@ -387,8 +371,8 @@ class Interpreter {
                 return node.value;
             }
         } else if (node.type === 'String') {
-            this.log(`String ${node.value}`, level); //no slice(1, .length -1)
-            return node.value.slice(1, node.value.length - 1);
+            this.log(`String ${node.value}`, level);
+            return new AshString(node.value.slice(1, node.value.length - 1));
         } else {
             console.log('Node:', node, typeof node);
             console.log('Type:', node.type, typeof node.type);
@@ -397,7 +381,7 @@ class Interpreter {
         }
     }
 
-    library(idFun, args=[]) {
+    library(idFun, args = []) {
         return Library.sendMessage(null, idFun, args);
     }
 }
@@ -458,19 +442,16 @@ function testsMain(debug) {
 //-------------------------------------------------------------------------------
 
 // Sonarlint complains about ${token}: it does not recognize the .toString()
-class XToken
-{
-    constructor(tok)
-    {
+class XToken {
+    constructor(tok) {
         this.tok = tok;
     }
-    toString()
-    {
+    toString() {
         return this.tok.toString();
     }
 }
 
-function execute(text, doExecute=true) {
+function execute(text, doExecute = true) {
     let tokens = new Lexer('ash', [], GlobalInterpreter.getDebug()).lex(text);
     if (GlobalInterpreter.getDebug()) {
         console.log('Tokens:');
@@ -551,7 +532,7 @@ function nodeMain(debug = true) {
         while (cmd !== "exit") {
             cmd = reader.question(prompt).trim();
             if (cmd.endsWith("\\")) {
-                buffer += cmd.substring(0, cmd.length-1) + "\n";
+                buffer += cmd.substring(0, cmd.length - 1) + "\n";
                 prompt = '...> ';
             } else if (cmd === 'exit') {
                 console.log('Exiting...');
