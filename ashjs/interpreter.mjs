@@ -257,55 +257,7 @@ class Interpreter {
                 let left = this.do(node.left, level + 1);
                 let right = this.do(node.right, level + 1);
                 let res = null;
-                if (typeof left === "number") {
-                    let type = Number.isInteger(left) ? "integer" : "float";
-                    switch (node.value) {
-                        case '+':
-                            if (typeof right !== "number") {
-                                throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type} with ${typeof right} parameter`);
-                            }
-                            res = left + right;
-                            break;
-                        case '-':
-                            res = left - right;
-                            break;
-                        case '*':
-                            res = left * right;
-                            break;
-                        case '/':
-                            res = left / right;
-                            break;
-                        case '**':
-                            res = Math.pow(left, right);
-                            break;
-                        case '//':
-                            res = Math.floor(left / right);
-                            break;
-                        case '%':
-                            res = left % right;
-                            break;
-                        case '==':
-                            res = left === right;
-                            break;
-                        case '!=':
-                            res = left !== right;
-                            break;
-                        case '>':
-                            res = left > right;
-                            break;
-                        case '<':
-                            res = left < right;
-                            break;
-                        case '>=':
-                            res = left >= right;
-                            break;
-                        case '<=':
-                            res = left <= right;
-                            break;
-                        default:
-                            throw new Error(`[ERROR] Unsupported binary operator ${node.value} for ${type}`);
-                    }
-                } else if (typeof left === "object") {
+                if (typeof left === "object" && left instanceof AshObject) {
                     switch (node.value) {
                         case 'and':
                             res = left.__and__(right);
@@ -316,8 +268,41 @@ class Interpreter {
                         case '+':
                             res = left.__add__(right);
                             break;
+                        case '-':
+                            res = left.__sub__(right);
+                            break;
                         case '*':
                             res = left.__mul__(right);
+                            break;
+                        case '/':
+                            res = left.__div__(right);
+                            break;
+                        case '//':
+                            res = left.__intdiv__(right);
+                            break;
+                        case '**':
+                            res = left.__pow__(right);
+                            break;
+                        case '%':
+                            res = left.__mod__(right);
+                            break;
+                        case '>':
+                            res = left.__gt__(right);
+                            break;
+                        case '>=':
+                            res = left.__ge__(right);
+                            break;
+                        case '<':
+                            res = left.__lt__(right);
+                            break;
+                        case '<=':
+                            res = left.__le__(right);
+                            break;
+                        case '==':
+                            res = left.__eq__(right);
+                            break;
+                        case '!=':
+                            res = left.__eq__(right).__not__();
                             break;
                         case 'index':
                             res = left.at(right);

@@ -82,6 +82,46 @@ class AshInteger extends AshObject {
     constructor(value) {
         super('Integer', value);
     }
+    __add__(i) {
+        return new AshInteger(this.value + i.value);
+    }
+    __sub__(i) {
+        return new AshInteger(this.value - i.value);
+    }
+    __mul__(i) {
+        return new AshInteger(this.value * i.value);
+    }
+    __div__(i) {
+        if (this.value / i.value === Math.floor(this.value / i.value)) {
+            return new AshInteger(this.value / i.value)
+        } else {
+            return new AshFloat(this.value / i.value);
+        }
+    }
+    __intdiv__(i) {
+        return new AshInteger(Math.floor(this.value / i.value));
+    }
+    __mod__(i) {
+        return new AshInteger(this.value % i.value);
+    }
+    __pow__(i) {
+        return new AshInteger(Math.pow(this.value, i.value));
+    }
+    __gt__(i) {
+        return new AshBoolean(this.value > i.value);
+    }
+    __ge__(i) {
+        return new AshBoolean(this.value >= i.value);
+    }
+    __lt__(i) {
+        return new AshBoolean(this.value < i.value);
+    }
+    __le__(i) {
+        return new AshBoolean(this.value <= i.value);
+    }
+    __eq__(i) {
+        return new AshBoolean(this.value === i.value);
+    }
 }
 
 class AshFloat extends AshObject {
@@ -115,6 +155,9 @@ class AshBoolean extends AshObject {
     }
     __or__(b) {
         return new AshBoolean(this.value || b.value);
+    }
+    __not__() {
+        return new AshBoolean(!this.value);
     }
 }
 
