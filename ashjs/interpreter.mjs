@@ -116,6 +116,9 @@ class Interpreter {
     }
 
     do(node, level = 0, evalId = true) {
+        if (node === null) {
+            return notAnExpression;
+        }
         if (node === undefined) {
             throw new Error(`[ERROR] node is undefined.`);
         }
