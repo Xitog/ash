@@ -4,10 +4,38 @@
 #include <string.h>
 #include <ctype.h>
 
+typedef enum {
+    LITT_INT_DEC = 1,
+    LITT_INT_HEX = 2,
+    LITT_INT_BIN = 3,
+    LITT_FLT = 4,
+    LITT_ID = 5,
+    LITT_KW = 6,
+    SPACE = 7,
+} Type;
+
+char * REPR[] = {
+    "NONE",
+    "INTEGER",
+    "HEXADECIMAL",
+    "BINARY",
+    "FLOAT",
+    "IDENTIFIER",
+    "KEYWORD",
+    "SPACE"
+};
+
+typedef struct {
+    Type type;
+    unsigned int start;
+    unsigned int count;
+} Token;
+
 void lex(const char * cmd);
-unsigned int read_identifier(const char * cmd, unsigned int start);
-unsigned int read_digit(const char * cmd, unsigned int start);
-unsigned int read_space(const char * cmd, unsigned int start);
+Token read_identifier(const char * cmd, unsigned int start);
+Token read_digit(const char * cmd, unsigned int start);
+Token read_hexa(const char * cmd, unsigned int start, unsigned int current);
+Token read_space(const char * cmd, unsigned int start);
 
 bool file_exists(const char filepath[])
 {
@@ -52,9 +80,12 @@ char * string_sub(const char * cmd, unsigned int start, unsigned int count)
     return buffer;
 }
 
-const char * IDENTIFIER = "IDENTIFIER";
-const char * SPACE = "SPACE";
-const char * INTEGER = "INTEGER";
+void token_print(Token * t, const char * cmd)
+{
+    printf("%s (@%d #%d) : |%s|\n", 
+            REPR[t->type], t->start, t->count, 
+            string_sub(cmd, t->start, t->count));
+}
 
 void lex(const char * cmd)
 {
@@ -64,30 +95,26 @@ void lex(const char * cmd)
     }
     unsigned int old = 0;
     unsigned int index = 0;
-    unsigned int count = 0;
-    char * type = NULL;
+    Token t;
     while (index < strlen(cmd)) {
         old = index;
         //printf("SOL: old=%d index=%d length=%llu\n", old, index, strlen(cmd));
         if (isalpha(cmd[index])) {
-            count = read_identifier(cmd, index);
-            type = (char *) IDENTIFIER;
+            t = read_identifier(cmd, index);
         } else if (cmd[index] == ' ') {
-            count = read_space(cmd, index);
-            type = (char *) SPACE;
+            t = read_space(cmd, index);
         } else if (isdigit(cmd[index])) {
-            count = read_digit(cmd, index);
-            type = (char *) INTEGER;
+            t = read_digit(cmd, index);
         }
-        index += count;
+        index += t.count;
         //printf("EOL: start=%d index=%d count=%d\n", old, index, count);
-        printf("%s (@%d #%d) : |%s|\n", 
-                type, old, count, string_sub(cmd, old, count));
+        token_print(&t, cmd);
     }
 }
 
-unsigned int read_space(const char * cmd, unsigned int start)
+Token read_space(const char * cmd, unsigned int start)
 {
+    Token t;
     unsigned int index = start;
     unsigned int count = 0;
     while (index < strlen(cmd)) {
@@ -98,11 +125,15 @@ unsigned int read_space(const char * cmd, unsigned int start)
         }
         index += 1;
     }
-    return count;
+    t.start = start;
+    t.count = count;
+    t.type = SPACE;
+    return t;
 }
 
-unsigned int read_identifier(const char * cmd, unsigned int start)
+Token read_identifier(const char * cmd, unsigned int start)
 {
+    Token t;
     unsigned int index = start;
     unsigned int count = 0;
     while (index < strlen(cmd)) {
@@ -113,7 +144,10 @@ unsigned int read_identifier(const char * cmd, unsigned int start)
         }
         index += 1;
     }
-    return count;
+    t.count = count;
+    t.start = start;
+    t.type = LITT_ID;
+    return t;
 }
 
 bool is_hexa(char c) {
@@ -139,29 +173,49 @@ bool is_hexa(char c) {
     return res;
 }
 
-unsigned int read_digit(const char * cmd, unsigned int start)
+Token read_digit(const char * cmd, unsigned int start)
 {
+    Token t;
     unsigned int index = start;
     unsigned int count = 0;
-    bool is_prefixed = false;
-    bool start_with_zero = false;
+    if (index < strlen(cmd)
+        && cmd[index] == '0'
+        && index + 1 < strlen(cmd)
+        && cmd[index + 1] == 'x') {
+        t = read_hexa(cmd, start, index + 2);
+    } else {
+        while (index < strlen(cmd)) {
+            char c = cmd[index];
+            if (isdigit(c)) {
+                count += 1;
+            } else {
+                break;
+            }
+            index += 1;
+        }
+        t.count = count;
+        t.start = start;
+        t.type = LITT_INT_DEC;
+    }
+    return t;
+}
+
+Token read_hexa(const char * cmd, unsigned int start, unsigned int current)
+{
+    Token t;
+    unsigned int index = current;
+    unsigned int count = current - start;
     while (index < strlen(cmd)) {
         char c = cmd[index];
-        if (isdigit(c)) {
-            count += 1;
-            if (count == 1 && c == '0') {
-                start_with_zero = true;
-            }
-        } else if (start_with_zero && count == 1 && c == 'x') {
-            is_prefixed = true;
-            count += 1;
-        } else if (is_prefixed && is_hexa(c)) {
+        if (isdigit(c) || is_hexa(c) || c == '_') {
             count += 1;
         } else {
             break;
         }
         index += 1;
     }
-    return count;
+    t.count = count;
+    t.start = start;
+    t.type = LITT_INT_HEX;
+    return t;
 }
-
