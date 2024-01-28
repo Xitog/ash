@@ -5,13 +5,14 @@
 #include <ctype.h>
 
 typedef enum {
-    LITT_INT_DEC = 1,
-    LITT_INT_HEX = 2,
-    LITT_INT_BIN = 3,
-    LITT_FLT = 4,
-    LITT_ID = 5,
-    LITT_KW = 6,
+    DECIMAL = 1,
+    HEXADEICMAL = 2,
+    BINARY = 3,
+    FLOAT = 4,
+    IDENTIFIER = 5,
+    KEYWORD = 6,
     SPACE = 7,
+    OPERATOR = 8
 } Type;
 
 char * REPR[] = {
@@ -22,7 +23,8 @@ char * REPR[] = {
     "FLOAT",
     "IDENTIFIER",
     "KEYWORD",
-    "SPACE"
+    "SPACE",
+    "OPERATOR"
 };
 
 typedef struct {
@@ -35,6 +37,7 @@ void lex(const char * cmd);
 Token read_identifier(const char * cmd, unsigned int start);
 Token read_digit(const char * cmd, unsigned int start);
 Token read_hexa(const char * cmd, unsigned int start, unsigned int current);
+Token read_float(const char * cmd, unsigned int start, unsigned int current);
 Token read_space(const char * cmd, unsigned int start);
 
 bool file_exists(const char filepath[])
@@ -51,6 +54,7 @@ bool file_exists(const char filepath[])
 
 int main(int argc, char * argv[])
 {
+    printf("Ash 0.0.1\n");
     unsigned int nb_file = 0;
     bool is_file = false;
     for (int i = 1; i < argc; i++) { // skip ash.exe
@@ -82,8 +86,8 @@ char * string_sub(const char * cmd, unsigned int start, unsigned int count)
 
 void token_print(Token * t, const char * cmd)
 {
-    printf("%s (@%d #%d) : |%s|\n", 
-            REPR[t->type], t->start, t->count, 
+    printf("%s (@%d #%d) : |%s|\n",
+            REPR[t->type], t->start, t->count,
             string_sub(cmd, t->start, t->count));
 }
 
@@ -105,6 +109,10 @@ void lex(const char * cmd)
             t = read_space(cmd, index);
         } else if (isdigit(cmd[index])) {
             t = read_digit(cmd, index);
+        } else if (cmd[index] == '.') {
+            t.count = 1;
+            t.start = index;
+            t.type = OPERATOR;
         }
         index += t.count;
         //printf("EOL: start=%d index=%d count=%d\n", old, index, count);
@@ -146,7 +154,7 @@ Token read_identifier(const char * cmd, unsigned int start)
     }
     t.count = count;
     t.start = start;
-    t.type = LITT_ID;
+    t.type = IDENTIFIER;
     return t;
 }
 
@@ -184,19 +192,46 @@ Token read_digit(const char * cmd, unsigned int start)
         && cmd[index + 1] == 'x') {
         t = read_hexa(cmd, start, index + 2);
     } else {
+        bool is_float = false;
         while (index < strlen(cmd)) {
             char c = cmd[index];
             if (isdigit(c)) {
                 count += 1;
+            } else if (c == '.' && index + 1 < strlen(cmd) && isdigit(cmd[index + 1])) {
+                is_float = true;
+                t = read_float(cmd, start, index + 1);
+                break;
             } else {
                 break;
             }
             index += 1;
         }
-        t.count = count;
-        t.start = start;
-        t.type = LITT_INT_DEC;
+        if (!is_float) {
+            t.count = count;
+            t.start = start;
+            t.type = DECIMAL;
+        }
     }
+    return t;
+}
+
+Token read_float(const char * cmd, unsigned int start, unsigned int current)
+{
+    Token t;
+    unsigned int index = current;
+    unsigned int count = current - start;
+    while (index < strlen(cmd)) {
+        char c = cmd[index];
+        if (isdigit(c)) {
+            count += 1;
+        } else {
+            break;
+        }
+        index += 1;
+    }
+    t.count = count;
+    t.start = start;
+    t.type = FLOAT;
     return t;
 }
 
@@ -216,6 +251,6 @@ Token read_hexa(const char * cmd, unsigned int start, unsigned int current)
     }
     t.count = count;
     t.start = start;
-    t.type = LITT_INT_HEX;
+    t.type = HEXADEICMAL;
     return t;
 }

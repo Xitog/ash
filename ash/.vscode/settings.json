@@ -1,0 +1,4 @@
+{
+    "C_Cpp.default.cStandard" : "c99",
+    "makefile.compileCommandsPath": ".vscode/compile_commands.json"
+}
