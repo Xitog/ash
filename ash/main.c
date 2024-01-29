@@ -139,6 +139,14 @@ Token read_space(const char * cmd, unsigned int start)
     return t;
 }
 
+bool is_keyword(const char * cmd, Token t)
+{
+    if (cmd[t.start] == 'i' && cmd[t.start + 1] == 'f') {
+        return true;
+    }
+    return false;
+}
+
 Token read_identifier(const char * cmd, unsigned int start)
 {
     Token t;
@@ -155,6 +163,9 @@ Token read_identifier(const char * cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = IDENTIFIER;
+    if (is_keyword(cmd, t)) {
+        t.type = KEYWORD;
+    }
     return t;
 }
 
