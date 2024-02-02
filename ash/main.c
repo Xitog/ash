@@ -12,7 +12,10 @@ typedef enum {
     IDENTIFIER = 5,
     KEYWORD = 6,
     SPACE = 7,
-    OPERATOR = 8
+    OPERATOR = 8,
+    NEWLINE = 9,
+    SEPARATOR = 10,
+    STRING = 11
 } Type;
 
 char * REPR[] = {
@@ -24,7 +27,10 @@ char * REPR[] = {
     "IDENTIFIER",
     "KEYWORD",
     "SPACE",
-    "OPERATOR"
+    "OPERATOR",
+    "NEWLINE",
+    "SEPARATOR",
+    "STRING"
 };
 
 typedef struct {
@@ -39,6 +45,7 @@ Token read_digit(const char * cmd, unsigned int start);
 Token read_hexa(const char * cmd, unsigned int start, unsigned int current);
 Token read_float(const char * cmd, unsigned int start, unsigned int current);
 Token read_space(const char * cmd, unsigned int start);
+Token read_string(const char * cmd, unsigned int start);
 
 bool file_exists(const char filepath[])
 {
@@ -69,6 +76,26 @@ int main(int argc, char * argv[])
     printf("files/arguments = %d/%d\n", nb_file, argc - 1);
     if (nb_file == 0 && argc > 1) {
         lex(argv[1]);
+    } else if (nb_file == 1) {
+        bool file_and_buffer = false;
+        char * buffer = NULL;
+        FILE * file;
+        file = fopen(argv[1], "rb");
+        fseek(file, 0, SEEK_END);
+        long size = ftell(file);
+        buffer = calloc(size + 1, sizeof(char));
+        if (buffer) {
+            fseek(file, 0, SEEK_SET);
+            fread(buffer, 1, size, file);
+            file_and_buffer = true;
+        }
+        if (file != NULL) {
+            fclose(file);
+        }
+        if (file_and_buffer) {
+            printf("%s", buffer);
+            lex(buffer);
+        }
     }
     printf("End of program.\n");
     return EXIT_SUCCESS;
@@ -100,8 +127,10 @@ void lex(const char * cmd)
     unsigned int old = 0;
     unsigned int index = 0;
     Token t;
+    bool discard = false;
     while (index < strlen(cmd)) {
         old = index;
+        discard = false;
         //printf("SOL: old=%d index=%d length=%llu\n", old, index, strlen(cmd));
         if (isalpha(cmd[index])) {
             t = read_identifier(cmd, index);
@@ -113,10 +142,34 @@ void lex(const char * cmd)
             t.count = 1;
             t.start = index;
             t.type = OPERATOR;
+        } else if (cmd[index] == '\n') {
+            t.count = 1;
+            t.start = index;
+            t.type = NEWLINE;
+        } else if (cmd[index] == '=') {
+            t.count = 1;
+            t.start = index;
+            t.type = OPERATOR;
+        } else if (cmd[index] == '\r') {
+            t.count = 1;
+            t.start = index;
+            t.type = NEWLINE;
+            discard = true;
+        } else if (cmd[index] == '(' || cmd[index] == ')') {
+            t.count = 1;
+            t.start = index;
+            t.type = SEPARATOR;
+        } else if (cmd[index] == '"') {
+            t = read_string(cmd, index);
+        } else {
+            printf("Unknown char at %i: %c | %x\n", index, cmd[index], cmd[index]);
+            exit(EXIT_FAILURE);
         }
         index += t.count;
         //printf("EOL: start=%d index=%d count=%d\n", old, index, count);
-        token_print(&t, cmd);
+        if (!discard) {
+            token_print(&t, cmd);
+        }
     }
 }
 
@@ -139,10 +192,33 @@ Token read_space(const char * cmd, unsigned int start)
     return t;
 }
 
+char * KEYWORDS[] = {
+    "if",
+    "else",
+    "elsif",
+    "end",
+    "while"
+};
+
+#define NB_KEYWORDS 5
+
 bool is_keyword(const char * cmd, Token t)
 {
-    if (cmd[t.start] == 'i' && cmd[t.start + 1] == 'f') {
-        return true;
+    // Il faut parcourir les keywords et tester si on reconnaît l'un d'entre eux
+    bool ok[NB_KEYWORDS];
+    for (int i = 0; i < NB_KEYWORDS; i++) {
+        if (strlen(KEYWORDS[i]) == t.count) {
+            bool ok = true;
+            for (int j = 0; j < t.count; j++) {
+                if (KEYWORDS[i][j] != cmd[t.start + j]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) {
+                return true;
+            }
+        }
     }
     return false;
 }
@@ -263,5 +339,26 @@ Token read_hexa(const char * cmd, unsigned int start, unsigned int current)
     t.count = count;
     t.start = start;
     t.type = HEXADEICMAL;
+    return t;
+}
+
+Token read_string(const char * cmd, unsigned int start)
+{
+    Token t;
+    unsigned int index = start + 1; // On presuppose que le premier c'est "
+    unsigned int count = 1;
+    while (index < strlen(cmd)) {
+        char c = cmd[index];
+        if (c != '"') {
+            count += 1;
+        } else {
+            count += 1;
+            break;
+        }
+        index += 1;
+    }
+    t.count = count;
+    t.start = start;
+    t.type = STRING;
     return t;
 }

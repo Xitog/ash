@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/ash.exe",
             "console": "integratedTerminal",
-            "args": ["0xFF00FF 1.24 1.abc if"],
+            "args": ["0xFF00FF 1.24 1.abc if while"],
             "cwd": "${workspaceRoot}"
         }
     ]
