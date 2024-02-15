@@ -4,6 +4,8 @@
 #include <string.h>
 #include <ctype.h>
 
+const char * VERSION = "0.0.3";
+
 typedef enum {
     DECIMAL = 1,
     HEXADEICMAL = 2,
@@ -61,16 +63,16 @@ bool file_exists(const char filepath[])
 
 int main(int argc, char * argv[])
 {
-    printf("Ash 0.0.1\n");
+    printf("Ash %s\n", VERSION);
     unsigned int nb_file = 0;
     bool is_file = false;
     for (int i = 1; i < argc; i++) { // skip ash.exe
         if (file_exists(argv[i])) {
-            printf("%d. %s est un fichier\n", i, argv[i]);
+            printf("    Arg #%d: |%s| est un fichier\n", i, argv[i]);
             is_file = true;
             nb_file += 1;
         } else {
-            printf("%d. %s\n", i, argv[i]);
+            printf("    Arg #%d: |%s|\n", i, argv[i]);
         }
     }
     printf("files/arguments = %d/%d\n", nb_file, argc - 1);
@@ -97,7 +99,7 @@ int main(int argc, char * argv[])
             lex(buffer);
         }
     }
-    printf("End of program.\n");
+    printf("End of program Ash v%s.\n", VERSION);
     return EXIT_SUCCESS;
 }
 
@@ -122,7 +124,7 @@ void lex(const char * cmd)
 {
     printf("Starting Lexing\n");
     for (unsigned int i = 0; i < strlen(cmd); i++) {
-        printf("%d. %c\n", i, cmd[i]);
+        printf("    %d. %c\n", i, cmd[i]);
     }
     unsigned int old = 0;
     unsigned int index = 0;
@@ -247,23 +249,27 @@ Token read_identifier(const char * cmd, unsigned int start)
 
 bool is_hexa(char c) {
     bool res;
-    switch (c) {
-        case 'A':
-        case 'B':
-        case 'C':
-        case 'D':
-        case 'E':
-        case 'F':
-        case 'a':
-        case 'b':
-        case 'c':
-        case 'd':
-        case 'e':
-        case 'f':
-            res = true;
-            break;
-        default:
-            res = false;
+    if (isdigit(c)) {
+        res = true;
+    } else {
+        switch (c) {
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                res = true;
+                break;
+            default:
+                res = false;
+        }
     }
     return res;
 }
@@ -282,7 +288,7 @@ Token read_digit(const char * cmd, unsigned int start)
         bool is_float = false;
         while (index < strlen(cmd)) {
             char c = cmd[index];
-            if (isdigit(c)) {
+            if (isdigit(c) || c == '_') {
                 count += 1;
             } else if (c == '.' && index + 1 < strlen(cmd) && isdigit(cmd[index + 1])) {
                 is_float = true;
@@ -329,7 +335,7 @@ Token read_hexa(const char * cmd, unsigned int start, unsigned int current)
     unsigned int count = current - start;
     while (index < strlen(cmd)) {
         char c = cmd[index];
-        if (isdigit(c) || is_hexa(c) || c == '_') {
+        if (is_hexa(c) || c == '_') {
             count += 1;
         } else {
             break;
