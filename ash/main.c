@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
 
 //-----------------------------------------------------------------------------
 // Types
@@ -361,12 +362,55 @@ void lex(const char * cmd)
     }
 }
 
+void read_utf8(char * s) {
+    FILE * file = fopen(s, "rb");
+    uint8_t c;
+    uint64_t count = 0;
+    while (!feof(file)) {
+        int raw = fgetc(file);
+        if (raw >= 0 && raw < 255) {
+            if (raw < 127) {
+                c = (uint8_t) raw;
+                count += 1;
+                if (c != '\r' && c != '\n') {
+                    printf("%04d - %03d - %02X - %c  - 1 byte\n", (int) count, (int) c, c, (char) c);
+                } else if (c == '\r') {
+                    printf("%04d - %03d - %02X - \\r - 1 byte\n", (int) count, (int) c, c);
+                } else if (c == '\n') {
+                    printf("%04d - %03d - %02X - \\n - 1 byte\n", (int) count, (int) c, c);
+                }
+            } else if (raw < 224) {
+                printf("2 bytes character\n"); // C3 A9
+                fgetc(file);
+            } else if (raw < 240) {
+                printf("3 bytes character\n");
+                fgetc(file);
+                fgetc(file);
+            } else {
+                printf("4 bytes character\n");
+                fgetc(file);
+                fgetc(file);
+                fgetc(file);
+            }
+        } else if (raw == EOF) { // -1 (ou 255 si on le convertit en unsigned)
+            printf("End of file\n");
+        } else {
+            printf("Error while reading: %d\n", raw);
+        }
+    }
+    fclose(file);
+}
+
 //-----------------------------------------------------------------------------
 // Main
 //-----------------------------------------------------------------------------
 
 int main(int argc, char * argv[])
 {
+    printf("Start\n");
+    // Test
+    read_utf8("data.txt");
+    // End
     printf("Ash %s\n", VERSION);
     unsigned int nb_file = 0;
     bool is_file = false;
