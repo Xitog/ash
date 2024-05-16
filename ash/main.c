@@ -18,13 +18,14 @@ typedef enum _Type {
     HEXADEICMAL = 2,
     BINARY = 3,
     FLOAT = 4,
-    IDENTIFIER = 5,
-    KEYWORD = 6,
-    SPACE = 7,
-    OPERATOR = 8,
-    NEWLINE = 9,
-    SEPARATOR = 10,
-    STRING = 11
+    BOOLEAN = 5,
+    IDENTIFIER = 6,
+    KEYWORD = 7,
+    SPACE = 8,
+    OPERATOR = 9,
+    NEWLINE = 10,
+    SEPARATOR = 11,
+    STRING = 12
 } Type;
 
 typedef struct _Token {
@@ -45,6 +46,7 @@ char * TYPE_STRING[] = {
     "HEXADECIMAL",
     "BINARY",
     "FLOAT",
+    "BOOLEAN",
     "IDENTIFIER",
     "KEYWORD",
     "SPACE",
@@ -95,20 +97,37 @@ bool file_exists(const char filepath[])
     return exist;
 }
 
+bool token_cmp(const char * motherstring, const Token t, const char * s)
+{
+    if (strlen(s) != t.count) {
+        return false;
+    }
+    int i = 0;
+    char tc = motherstring[t.start];
+    char sc = s[i];
+    while (i < t.count) {
+        if (tc != sc) {
+            return false;
+        }
+        i+=1;
+        tc = motherstring[t.start + i];
+        sc = s[i];
+    }
+    return true;
+}
+
+bool is_boolean(const char * cmd, Token t)
+{
+    return token_cmp(cmd, t, "true") || token_cmp(cmd, t, "false");
+}
+
 bool is_keyword(const char * cmd, Token t)
 {
     // Il faut parcourir les keywords et tester si on reconnaît l'un d'entre eux
     bool ok[NB_KEYWORDS];
     for (int i = 0; i < NB_KEYWORDS; i++) {
         if (strlen(KEYWORDS[i]) == t.count) {
-            bool ok = true;
-            for (int j = 0; j < t.count; j++) {
-                if (KEYWORDS[i][j] != cmd[t.start + j]) {
-                    ok = false;
-                    break;
-                }
-            }
-            if (ok) {
+            if (token_cmp(cmd, t, KEYWORDS[i])) {
                 return true;
             }
         }
@@ -168,7 +187,9 @@ Token read_identifier(const char * cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = IDENTIFIER;
-    if (is_keyword(cmd, t)) {
+    if (is_boolean(cmd, t)) {
+        t.type = BOOLEAN;
+    } else if (is_keyword(cmd, t)) {
         t.type = KEYWORD;
     }
     return t;
@@ -369,7 +390,7 @@ void read_utf8(char * s) {
     while (!feof(file)) {
         int raw = fgetc(file);
         if (raw >= 0 && raw < 255) {
-            if (raw < 127) {
+            if (raw < 128) {
                 c = (uint8_t) raw;
                 count += 1;
                 if (c != '\r' && c != '\n') {
@@ -407,44 +428,66 @@ void read_utf8(char * s) {
 
 int main(int argc, char * argv[])
 {
-    printf("Start\n");
-    // Test
-    read_utf8("data.txt");
-    // End
     printf("Ash %s\n", VERSION);
     unsigned int nb_file = 0;
     bool is_file = false;
-    for (int i = 1; i < argc; i++) { // skip ash.exe
-        if (file_exists(argv[i])) {
-            printf("    Arg #%d: |%s| est un fichier\n", i, argv[i]);
-            is_file = true;
-            nb_file += 1;
-        } else {
-            printf("    Arg #%d: |%s|\n", i, argv[i]);
-        }
-    }
-    printf("files/arguments = %d/%d\n", nb_file, argc - 1);
-    if (nb_file == 0 && argc > 1) {
-        lex(argv[1]);
-    } else if (nb_file == 1) {
-        bool file_and_buffer = false;
-        char * buffer = NULL;
-        FILE * file;
-        file = fopen(argv[1], "rb");
-        fseek(file, 0, SEEK_END);
-        long size = ftell(file);
-        buffer = calloc(size + 1, sizeof(char));
-        if (buffer) {
-            fseek(file, 0, SEEK_SET);
-            fread(buffer, 1, size, file);
-            file_and_buffer = true;
-        }
-        if (file != NULL) {
-            fclose(file);
-        }
-        if (file_and_buffer) {
-            printf("%s", buffer);
-            lex(buffer);
+    // argv[0] est toujours ash.exe
+    if (argc > 1) {
+        if (strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "-eval") == 0) {
+            const size_t line_length = 1024;
+            char * line = malloc(line_length);
+            do {
+                memset(line, '\0', line_length);
+                int c;
+                unsigned short count = 0;
+                printf(">>> ");
+                while ((c = getchar()) != '\n' && c != EOF && count < line_length - 1) {
+                    line[count] = c;
+                    count += 1;
+                }
+                if (strcmp(line, "exit") != 0) {
+                    printf("Command : |%s| (#%d)\n", line, count);
+                    lex(line);
+                }
+            } while(strcmp(line, "exit") != 0);
+            free(line);
+            fflush(stdout);
+        } else if (strcmp(argv[1], "-t") == 0) {
+            read_utf8("data.txt");
+        } else if (strcmp(argv[1], "-f")) {
+            for (int i = 1; i < argc; i++) { // skip ash.exe
+                if (file_exists(argv[i])) {
+                    printf("    Arg #%d: |%s| est un fichier\n", i, argv[i]);
+                    is_file = true;
+                    nb_file += 1;
+                } else {
+                    printf("    Arg #%d: |%s|\n", i, argv[i]);
+                }
+            }
+            printf("files/arguments = %d/%d\n", nb_file, argc - 1);
+            if (nb_file == 0 && argc > 1) {
+                lex(argv[1]);
+            } else if (nb_file == 1) {
+                bool file_and_buffer = false;
+                char * buffer = NULL;
+                FILE * file;
+                file = fopen(argv[1], "rb");
+                fseek(file, 0, SEEK_END);
+                long size = ftell(file);
+                buffer = calloc(size + 1, sizeof(char));
+                if (buffer) {
+                    fseek(file, 0, SEEK_SET);
+                    fread(buffer, 1, size, file);
+                    file_and_buffer = true;
+                }
+                if (file != NULL) {
+                    fclose(file);
+                }
+                if (file_and_buffer) {
+                    printf("%s", buffer);
+                    lex(buffer);
+                }
+            }
         }
     }
     printf("End of program Ash v%s.\n", VERSION);
