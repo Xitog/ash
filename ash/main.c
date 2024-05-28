@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------
 
 typedef enum _Type {
+    NONE = 0,
     DECIMAL = 1,
     HEXADEICMAL = 2,
     BINARY = 3,
@@ -77,7 +78,7 @@ char * KEYWORDS[] = {
 
 bool char_is(const char c, const char * set)
 {
-    for (int i=0; i < strlen(set); i++) {
+    for (unsigned int i=0; i < strlen(set); i++) {
         if (set[i] == c) {
             return true;
         }
@@ -87,12 +88,19 @@ bool char_is(const char c, const char * set)
 
 bool file_exists(const char filepath[])
 {
-    FILE * file;
-    file = fopen(filepath, "r");
     bool exist = false;
-    if (file != NULL) {
-        fclose(file);
-        exist = true;
+    FILE * file;
+    errno_t err  = fopen_s(&file, filepath, "r");
+    if (err != 0) {
+        printf("Something bad happened\n");
+        if (file) {
+            fclose(file);
+        }
+    } else {
+        if (file) {
+            fclose(file);
+            exist = true;
+        }
     }
     return exist;
 }
@@ -102,7 +110,7 @@ bool token_cmp(const char * motherstring, const Token t, const char * s)
     if (strlen(s) != t.count) {
         return false;
     }
-    int i = 0;
+    unsigned int i = 0;
     char tc = motherstring[t.start];
     char sc = s[i];
     while (i < t.count) {
@@ -124,7 +132,6 @@ bool is_boolean(const char * cmd, Token t)
 bool is_keyword(const char * cmd, Token t)
 {
     // Il faut parcourir les keywords et tester si on reconnaît l'un d'entre eux
-    bool ok[NB_KEYWORDS];
     for (int i = 0; i < NB_KEYWORDS; i++) {
         if (strlen(KEYWORDS[i]) == t.count) {
             if (token_cmp(cmd, t, KEYWORDS[i])) {
@@ -135,14 +142,14 @@ bool is_keyword(const char * cmd, Token t)
     return false;
 }
 
-char buffer[250];
+char buffer_ss[250];
 char * string_sub(const char * cmd, unsigned int start, unsigned int count)
 {
-    memset(buffer, '\0', 250);
+    memset(buffer_ss, '\0', 250);
     for (unsigned int index = 0; index < count; index++) {
-        buffer[index] = cmd[start + index];
+        buffer_ss[index] = cmd[start + index];
     }
-    return buffer;
+    return buffer_ss;
 }
 
 void token_print(Token * t, const char * cmd)
@@ -237,7 +244,7 @@ Token read_hexa(const char * cmd, unsigned int start, unsigned int current)
 
 Token read_digit(const char * cmd, unsigned int start)
 {
-    Token t;
+    Token t = {.type = NONE, .start = 0, .count = 0};
     unsigned int index = start;
     unsigned int count = 0;
     if (index < strlen(cmd)
@@ -384,7 +391,14 @@ void lex(const char * cmd)
 }
 
 void read_utf8(char * s) {
-    FILE * file = fopen(s, "rb");
+    FILE * file = NULL;
+    errno_t err  = fopen_s(&file, s, "rb");
+    if (err != 0) {
+        printf("Something bad happened");
+        if (file) {
+            fclose(file);
+        }
+    }
     uint8_t c;
     uint64_t count = 0;
     while (!feof(file)) {
@@ -442,7 +456,7 @@ int main(int argc, char * argv[])
                 unsigned short count = 0;
                 printf(">>> ");
                 while ((c = getchar()) != '\n' && c != EOF && count < line_length - 1) {
-                    line[count] = c;
+                    line[count] = (char) c;
                     count += 1;
                 }
                 if (strcmp(line, "exit") != 0) {
@@ -471,7 +485,13 @@ int main(int argc, char * argv[])
                 bool file_and_buffer = false;
                 char * buffer = NULL;
                 FILE * file;
-                file = fopen(argv[1], "rb");
+                errno_t err = fopen_s(&file, argv[1], "rb");
+                if (err != 0) {
+                    printf("Something bad happened\n");
+                    if (file) {
+                        fclose(file);
+                    }
+                }
                 fseek(file, 0, SEEK_END);
                 long size = ftell(file);
                 buffer = calloc(size + 1, sizeof(char));
