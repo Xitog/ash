@@ -1,1 +1,0 @@
-cl /W4 testsdl.c /I D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\include /link /LIBPATH:D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\lib\x86 SDL2.lib SDL2main.lib shell32.lib /SUBSYSTEM:CONSOLE

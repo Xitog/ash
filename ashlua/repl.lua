@@ -16,5 +16,6 @@ while cmd ~= "exit" do
     cmd = io.read()
     if cmd ~= "exit" then
         lexer:lex(cmd)
+        lexer:info()
     end
 end

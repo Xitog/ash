@@ -1,4 +1,7 @@
-﻿//-----------------------------------------------------------------------------
+﻿// cl main.c list.c /Fe:ash.exe
+// .\main.exe
+
+//-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
 
@@ -8,6 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include "list.h"
 
 //-----------------------------------------------------------------------------
 // Types
@@ -39,7 +43,7 @@ typedef struct _Token {
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char * VERSION = "0.0.5";
+const char * VERSION = "0.0.51";
 
 char * TYPE_STRING[] = {
     "NONE",
@@ -152,9 +156,10 @@ char * string_sub(const char * cmd, unsigned int start, unsigned int count)
     return buffer_ss;
 }
 
-void token_print(Token * t, const char * cmd)
+void token_print(uint32_t count, Token * t, const char * cmd)
 {
-    printf("%s (@%d #%d) : |%s|\n",
+    printf("%d. %s (@%d #%d) : |%s|\n",
+            count,
             TYPE_STRING[t->type], t->start, t->count,
             string_sub(cmd, t->start, t->count));
 }
@@ -333,16 +338,20 @@ Token read_operator(const char * cmd, unsigned int start)
     return t;
 }
 
-void lex(const char * cmd)
+List * lex(const char * cmd, bool debug)
 {
-    printf("Starting Lexing\n");
-    for (unsigned int i = 0; i < strlen(cmd); i++) {
-        printf("    %d. %c\n", i, cmd[i]);
+    if (debug) {
+        printf("Starting Lexing\n");
+        for (unsigned int i = 0; i < strlen(cmd); i++) {
+            printf("    %d. %c\n", i, cmd[i]);
+        }
     }
     unsigned int old = 0;
     unsigned int index = 0;
     Token t;
     bool discard = false;
+    List * list = list_init();
+    unsigned int count = 0;
     while (index < strlen(cmd)) {
         old = index;
         discard = false;
@@ -382,12 +391,21 @@ void lex(const char * cmd)
             printf("Unknown char at %i: %c | %x\n", index, cmd[index], cmd[index]);
             exit(EXIT_FAILURE);
         }
+        count += 1;
         index += t.count;
         //printf("EOL: start=%d index=%d count=%d\n", old, index, count);
         if (!discard) {
-            token_print(&t, cmd);
+            if (debug) {
+                token_print(count, &t, cmd);
+            }
+            Token * ref = (Token *) malloc(sizeof(Token));
+            ref->count = t.count;
+            ref->start = t.start;
+            ref->type = t.type;
+            list_append(list, (void *) ref);
         }
     }
+    return list;
 }
 
 void read_utf8(char * s) {
@@ -443,72 +461,129 @@ void read_utf8(char * s) {
 int main(int argc, char * argv[])
 {
     printf("Ash %s\n", VERSION);
-    unsigned int nb_file = 0;
-    bool is_file = false;
+    bool debug = false;
+    bool output_json = false;
     // argv[0] est toujours ash.exe
     if (argc > 1) {
-        if (strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "-eval") == 0) {
-            const size_t line_length = 1024;
-            char * line = malloc(line_length);
-            do {
-                memset(line, '\0', line_length);
-                int c;
-                unsigned short count = 0;
-                printf(">>> ");
-                while ((c = getchar()) != '\n' && c != EOF && count < line_length - 1) {
-                    line[count] = (char) c;
-                    count += 1;
-                }
-                if (strcmp(line, "exit") != 0) {
-                    printf("Command : |%s| (#%d)\n", line, count);
-                    lex(line);
-                }
-            } while(strcmp(line, "exit") != 0);
-            free(line);
-            fflush(stdout);
-        } else if (strcmp(argv[1], "-t") == 0) {
+        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+            printf("Ash help menu:\n");
+            printf("-h --help: display this help\n");
+            printf("-t --test: run the tests\n");
+            printf("-e --eval: tokenize a string\n");
+            printf("If no option is provided and one argument is provided, lex the provided file");
+            printf("If no option and no argument is provided, start a REPL loop\n");
+        } else if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--test") == 0) {
             read_utf8("data.txt");
-        } else if (strcmp(argv[1], "-f")) {
-            for (int i = 1; i < argc; i++) { // skip ash.exe
-                if (file_exists(argv[i])) {
-                    printf("    Arg #%d: |%s| est un fichier\n", i, argv[i]);
-                    is_file = true;
-                    nb_file += 1;
-                } else {
-                    printf("    Arg #%d: |%s|\n", i, argv[i]);
-                }
+        } else if (strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "--eval") == 0) {
+            for (int i = 2; i < argc; i++) { // skip ash.exe and -e/--eval
+                lex(argv[i], debug);
             }
-            printf("files/arguments = %d/%d\n", nb_file, argc - 1);
-            if (nb_file == 0 && argc > 1) {
-                lex(argv[1]);
-            } else if (nb_file == 1) {
-                bool file_and_buffer = false;
-                char * buffer = NULL;
-                FILE * file;
-                errno_t err = fopen_s(&file, argv[1], "rb");
-                if (err != 0) {
-                    printf("Something bad happened\n");
-                    if (file) {
-                        fclose(file);
-                    }
-                }
-                fseek(file, 0, SEEK_END);
-                long size = ftell(file);
-                buffer = calloc(size + 1, sizeof(char));
-                if (buffer) {
-                    fseek(file, 0, SEEK_SET);
-                    fread(buffer, 1, size, file);
-                    file_and_buffer = true;
-                }
-                if (file != NULL) {
+        } else if (file_exists(argv[1])) {
+            bool file_and_buffer = false;
+            char * buffer = NULL;
+            FILE * file;
+            errno_t err = fopen_s(&file, argv[1], "rb");
+            if (err != 0) {
+                printf("Something bad happened\n");
+                if (file) {
                     fclose(file);
                 }
-                if (file_and_buffer) {
-                    printf("%s", buffer);
-                    lex(buffer);
-                }
             }
+            fseek(file, 0, SEEK_END);
+            long size = ftell(file);
+            buffer = calloc(size + 1, sizeof(char));
+            if (buffer) {
+                fseek(file, 0, SEEK_SET);
+                fread(buffer, 1, size, file);
+                file_and_buffer = true;
+            }
+            if (file != NULL) {
+                fclose(file);
+            }
+            if (file_and_buffer) {
+                printf("%s", buffer);
+                lex(buffer, debug);
+            }
+        } else {
+            printf("Unknown command: %s\n", argv[1]);
         }
+    } else {
+        const size_t line_length = 1024;
+        char * line = malloc(line_length);
+        do {
+            memset(line, '\0', line_length);
+            int c;
+            uint32_t count = 0;
+            printf(">>> ");
+            while ((c = getchar()) != '\n' && c != EOF && count < line_length - 1) {
+                line[count] = (char) c;
+                count += 1;
+            }
+            if (strcmp(line, "debug") == 0) {
+                debug = !debug;
+                if (debug) {
+                    printf("debug set to true\n");
+                } else {
+                    printf("debug set to false\n");
+                }
+            } else if (strcmp(line, "json") == 0) {
+                output_json = !output_json;
+                if (output_json) {
+                    printf("producing json output in out.json\n");
+                } else {
+                    printf("no producing json\n");
+                }
+            } else if (strcmp(line, "exit") != 0) {
+                if (debug) {
+                    printf("Command : |%s| (#%d)\n", line, count);
+                }
+                List * list = lex(line, debug);
+                ListElement * current = list->head;
+                count = 0;
+                while (current != NULL) {
+                    count += 1;
+                    token_print(count, (Token *) current->node, line);
+                    current = current->next;
+                }
+                if (output_json) {
+                    char * buffer = NULL;
+                    FILE * file;
+                    errno_t err = fopen_s(&file, "out.json", "w");
+                    if (err != 0) {
+                        printf("Something bad happened writing json output file\n");
+                        if (file) {
+                            fclose(file);
+                        }
+                    }
+                    fprintf(file, "%s", "[\n");
+                    current = list->head;
+                    count = 0;
+                    while (current != NULL) {
+                        count += 1;
+                        if (count > 1) {
+                            fprintf(file, ",\n");
+                        }
+                        fprintf(file, "    \"Token\": {");
+                        fprintf(file, "        \"start\": %d,", ((Token *)current->node)->start);
+                        fprintf(file, "        \"count\": %d,", ((Token *)current->node)->count);
+                        fprintf(file, "        \"type\": %d,", ((Token *)current->node)->type);
+                        fprintf(file, "        \"value\": %d,"); XXX
+                        fprintf(file, "    }");
+
+                            printf("%d. %s (@%d #%d) : |%s|\n",
+            count,
+            TYPE_STRING[t->type], t->start, t->count,
+
+                        current = current->next;
+                    }
+                    fprintf(file, "%s", "\n]\n");
+                    fclose(file);
+                }
+                list_free(list);
+            }
+        } while(strcmp(line, "exit") != 0);
+        free(line);
+        fflush(stdout);
     }
     printf("End of program Ash v%s.\n", VERSION);
     return EXIT_SUCCESS;

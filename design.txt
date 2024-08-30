@@ -1,76 +1,64 @@
-================================================================================
-=                                      Ash                                     =
-================================================================================
+# Introduction
 
-Sommaire
-========
+Ce document décrit un langage minimaliste de script, **Ash**.
 
-Introduction
-1. Bases
-    1.A Commentaires
-    1.B Encodage et case-sensitive
-    1.C Séparateur de ligne
-    1.D Mots-clés
-2. Types de base
-    2.A Scalaires
-    2.B Complexes
-    2.C Opérateurs
-3. Variables et constantes
-4. Contrôle du flux
-    4.A Séquence
-    4.B Sélection
-    4.C Répétition
-    4.D Modificateurs
-5. Sous-programmes
-    5.A Déclaration
-    5.B Appel
-6. Classes
-    6.A Définition
-    6.B Sous-programmes membres
+Ce document décrit des extensions futures possibles et des alternatives écartées en spécifiant la raison de la mise à l'écart.
 
-Introduction
-============
+Il se veut simple et stable, en réaction à à la complexification et à l'accélération des différents langages de programmation qui se mettent à changer tous les ans, même les plus anciens, en ajoutant à chaque fois plus de fonctionnalités, de syntaxes, de façons différentes de faire la même chose.
 
-Ce document décrit un langage minimaliste de script, Ash, qui se veut comme une
-syntaxe alternative pour Python.
+# 1. Bases
 
-On décrit des EXTENSION (EXT) et des ALTERNATIVES (ALT) possibles.
+Un programme Ash est composé d'instructions et d'expressions.
 
-Ce langage est très inspiré de :
-    1) Lua
-    2) Ruby
-    3) Pascal
+Seules les expressions peuvent être évalués : 2 + 3 est une expression qui peut être évaluée à l'entier 5.
 
-Il se veut simple et pérenne (pas de multiples versions tous les ans).
+Une instruction est composée de mots-clés, d'expressions et d'un bloc.
 
-Dernière révision du 11 mai 2021
+Un bloc est un ensemble de sous-instructions et sous-expressions relatifs à une instruction.
 
-1. Bases
-========
+Exemple de l'instruction while :
 
-1.A Commentaires
-----------------
+@@
+@@ while CONDITION do
+@@     BLOC
+@@ loop
+@@
 
-Les commentaires monolignes commençent par --
+L'instruction while comporte trois mots-clés : while, do et loop.
 
-Les commentaires multilignes commençent par --[[
+Une CONDITION est un sous-type d'expression qui est évalué à un résultat booléen, vrai ou faux.
 
-Cela permet de conserver "//" et "#" comme opérateurs de intdiv et longueur.
+Sa signifiation est tant que la CONDITION est évaluée à vrai, exécute le BLOC entre do et loop.
 
-1.B Encodage et case-sensitive
-------------------------------
+# 1.B Encodage et case-sensitive
 
-Tout est case-sensitive. Ab != Ba
-Le style est :
-    - a_b pour les méthodes, les attributs et les variables.
-    - Ab pour les classes et les constantes
+Tous les identifiants sont sensibles à la casse :
+
+@@Ab != aB@@
+
+Le style recommandé est :
+
+- snake_case pour les méthodes, les attributs et les variables,
+- PascalCase pour les classes,
+- MAJUSCULE pour les constantes.
 
 Les fichiers sont encodés en ASCII ou utf-8.
 
-1.C Séparateur de ligne
------------------------
+# 1.C Séparateur de ligne
 
-ligne_logique1 ; ligne_logique2
+Une instruction est terminée par un mot-clé (end ou loop) ou si elle termine .
+
+Le séparateur de ligne physique ("\n") termine une expression.
+
+Une fin de ligne physique ne termine pas une expression si :
+
+- une parenthèse est ouverte et n'est pas fermée
+- la ligne se termine par un opérateur binaire
+- la ligne d'après débute part un opérateur binaire
+
+Selon l'instruction, la fin de ligne physique "\n" est significative ou pas.
+
+Pour séparer des expressions sur une même ligne, on peut utiliser le point-virgule : @@2 + 3 ; 22@@
 
 1.D Mots-clés
 -------------
@@ -304,10 +292,6 @@ super
 6.B Sous-programmes membres
 ---------------------------
 
-get NAME [-> TYP]
-    ACTION
-end
-
 set NAME (VAR : TYP)
     ACTION
 end
@@ -390,23 +374,6 @@ Object
     o.respond_to?
     o.dump
     o.load
-List
-    l.flatten
-    l.pop/shift
-    l.push_front/back
-    l.insert
-    l.add / append
-    l.first
-    l.last a[-1]
-    l.find
-    l.find_all
-    l.include?
-    l.min
-    l.max
-    l.length/count
-    l.sort
-    l.reverse
-    l.uniq
 Hash
     d.delete
     d.find
@@ -634,3 +601,8 @@ raise (Expr)
 try (Action, whenList, finalAction)
 whenList (identifier, type, action)
 
+# 13. Fiche-résumé
+
+-- comment
+--[[ multiline
+--]]

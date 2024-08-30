@@ -1,4 +1,7 @@
 {
     "C_Cpp.default.cStandard" : "c99",
-    "makefile.compileCommandsPath": ".vscode/compile_commands.json"
+    "makefile.compileCommandsPath": ".vscode/compile_commands.json",
+    "files.associations": {
+        "string.h": "c"
+    }
 }
