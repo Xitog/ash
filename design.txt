@@ -1,11 +1,3 @@
-# Introduction
-
-Ce document décrit un langage minimaliste de script, **Ash**.
-
-Ce document décrit des extensions futures possibles et des alternatives écartées en spécifiant la raison de la mise à l'écart.
-
-Il se veut simple et stable, en réaction à à la complexification et à l'accélération des différents langages de programmation qui se mettent à changer tous les ans, même les plus anciens, en ajoutant à chaque fois plus de fonctionnalités, de syntaxes, de façons différentes de faire la même chose.
-
 # 1. Bases
 
 Un programme Ash est composé d'instructions et d'expressions.

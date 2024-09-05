@@ -1,6 +1,9 @@
 local Lexer = require("lexer")
+local Parser = require("parser")
 
 local lexer = Lexer:new()
+local parser = Parser:new()
+
 --lexer:lex("ab54_3")
 
 for i,v in pairs(lexer) do
@@ -15,7 +18,9 @@ while cmd ~= "exit" do
     io.flush()
     cmd = io.read()
     if cmd ~= "exit" then
-        lexer:lex(cmd)
+        local tokens = lexer:lex(cmd)
         lexer:info()
+        parser:parse(tokens)
+        parser:info()
     end
 end

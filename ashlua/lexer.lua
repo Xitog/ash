@@ -1,11 +1,32 @@
-local Lexer = {}
-Lexer.__index = Lexer
+-------------------------------------------------------------------------------
+-- Constants
+-------------------------------------------------------------------------------
 
-function Lexer.new()
-    local self = setmetatable({}, Lexer)
-    self.classname = 'Lexer'
-    return self
+local digit = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+local hexa = {"A", "B", "C", "D", "E", "F", "a", "b", "c", "d", "e", "f"}
+local identifier = {
+    "_", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
+    "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C",
+    "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
+    "S", "T", "U", "V", "W", "X", "Y", "Z"
+}
+local operators = {
+    "+", "-", "*", "/", "%", "**", "//", "=", "+=", "-=", "*=", "/=", "%=",
+    "**=", "//=", "==", "!=", ">", ">=", "=<", "<", "."
+}
+
+-------------------------------------------------------------------------------
+-- Tools
+-------------------------------------------------------------------------------
+
+local function contains(t, v)
+    for _, val in ipairs(t) do if val == v then return true end end
+    return false
 end
+
+-------------------------------------------------------------------------------
+-- Token class
+-------------------------------------------------------------------------------
 
 local Token = {}
 Token.__index = Token
@@ -25,23 +46,23 @@ function Token:__tostring()
                (self.start + self.length - 1) .. ", #" .. self.length .. ")"
 end
 
-local function contains(t, v)
-    for _, val in ipairs(t) do if val == v then return true end end
-    return false
+-------------------------------------------------------------------------------
+-- Lexer class
+-------------------------------------------------------------------------------
+
+local Lexer = {}
+Lexer.__index = Lexer
+
+function Lexer.new()
+    local self = setmetatable({}, Lexer)
+    self.classname = 'Lexer'
+    self.tokens = {}
+    return self
 end
 
-local digit = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-local hexa = {"A", "B", "C", "D", "E", "F", "a", "b", "c", "d", "e", "f"}
-local identifier = {
-    "_", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
-    "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C",
-    "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
-    "S", "T", "U", "V", "W", "X", "Y", "Z"
-}
-local operators = {
-    "+", "-", "*", "/", "%", "**", "//", "=", "+=", "-=", "*=", "/=", "%=",
-    "**=", "//=", "==", "!=", ">", ">=", "=<", "<", "."
-}
+function Lexer:tokens()
+    return self.tokens
+end
 
 function Lexer:lex(s)
     local i = 1
@@ -65,6 +86,7 @@ function Lexer:lex(s)
             i = i + 1
         end
     end
+    return self.tokens
 end
 
 function Lexer:info()
