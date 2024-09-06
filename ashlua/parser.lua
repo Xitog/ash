@@ -40,30 +40,33 @@ function Parser.new()
     return self
 end
 
-function Parser:info(lvl, n)
+function Parser:info(lvl, n, side)
     if lvl == nil then
         lvl = 0
     end
     if n == nil then
         n = self.root
     end
+    if side == nil then
+        side = 'root'
+    end
     if n.classname == 'Node' then
-        print(string.rep("    ", lvl) .. "Nod:" .. n.type)
+        print(string.rep("    ", lvl) .. "Nod:" .. n.type .. " (" .. side .. ")")
         if n.left ~= nil then
-            self:info(lvl + 1, n.left)
+            self:info(lvl + 1, n.left, "left")
         end
         if n.right ~= nil then
-            self:info(lvl + 1, n.right)
+            self:info(lvl + 1, n.right, "right")
         end
     elseif n.classname == 'Token' then
-        print(string.rep("    ", lvl + 1) .. "Tok:" .. tostring(n))
+        print(string.rep("    ", lvl + 1) .. "Tok:" .. tostring(n) .. " (" .. side .. ")")
     end
 end
 
 function Parser:parse(tokens)
     self.tokens = tokens
     self.current = 1
-    self.root = self:add()
+    self.root = self:addsub()
 end
 
 function Parser:test_value(v)
@@ -90,20 +93,20 @@ function Parser:advance()
     return t
 end
 
-function Parser:add ()
-    local n = self:mul()
-    while self:test_value("+") do
-        self:advance()
-        n = Node.new(n, "+", self:mul())
+function Parser:addsub ()
+    local n = self:muldiv()
+    while self:test_value("+") or self:test_value("-") do
+        local t = self:advance()
+        n = Node.new(n, t.value, self:muldiv())
     end
     return n
 end
 
-function Parser:mul()
+function Parser:muldiv()
     local n = self:litt()
-    while self:test_value("*") do
-        self:advance()
-        n = Node.new(n, "*", self:litt())
+    while self:test_value("*") or self:test_value("/") do
+        local t = self:advance()
+        n = Node.new(n, t.value, self:litt())
     end
     return n
 end
