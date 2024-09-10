@@ -25,10 +25,10 @@ while cmd ~= "exit" do
         parser:parse(tokens)
         parser:info()
         print("Lua code:")
-        local lua_code = transpiler:transpile(parser.root)
+        local lua_code = transpiler:transpile(parser.root, true)
         print(lua_code)
         print("Execute:")
-        local code, err = load("return " .. lua_code)
+        local code, err = load(lua_code)
         if code then
             local ok, res = pcall(code)
             if ok then

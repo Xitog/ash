@@ -1,12 +1,11 @@
 -------------------------------------------------------------------------------
 -- Node class
 -------------------------------------------------------------------------------
-
 local Node = {}
 Node.__index = Node
 
 function Node.new(left, t, right)
-    --print("Creating Node : " .. t)
+    -- print("Creating Node : " .. t)
     local self = setmetatable({}, Node)
     self.classname = 'Node'
     self.left = left
@@ -15,14 +14,19 @@ function Node.new(left, t, right)
     return self
 end
 
+function Node:is_type(ts)
+    if type(ts) == "table" then
+        for _, t in ipairs(ts) do if t == self.type then return true end end
+    else
+        return self.type == ts
+    end
+    return false
+end
+
 function Node:__tostring()
     local s = self.type .. "\n"
-    if self.left ~= nil then
-        s = s .. "\t" .. tostring(self.left) .. "\n"
-    end
-    if self.right ~= nil then
-        s = s .. "\t" .. tostring(self.right) .. "\n"
-    end
+    if self.left ~= nil then s = s .. "\t" .. tostring(self.left) .. "\n" end
+    if self.right ~= nil then s = s .. "\t" .. tostring(self.right) .. "\n" end
     return s
 end
 
@@ -41,51 +45,44 @@ function Parser.new()
 end
 
 function Parser:info(lvl, n, side)
-    if lvl == nil then
-        lvl = 0
-    end
-    if n == nil then
-        n = self.root
-    end
-    if side == nil then
-        side = 'root'
-    end
+    if lvl == nil then lvl = 0 end
+    if n == nil then n = self.root end
+    if side == nil then side = 'root' end
     if n.classname == 'Node' then
         print(string.rep("    ", lvl) .. "Nod:" .. n.type .. " (" .. side .. ")")
-        if n.left ~= nil then
-            self:info(lvl + 1, n.left, "left")
-        end
-        if n.right ~= nil then
-            self:info(lvl + 1, n.right, "right")
-        end
+        if n.left ~= nil then self:info(lvl + 1, n.left, "left") end
+        if n.right ~= nil then self:info(lvl + 1, n.right, "right") end
     elseif n.classname == 'Token' then
-        print(string.rep("    ", lvl + 1) .. "Tok:" .. tostring(n) .. " (" .. side .. ")")
+        print(string.rep("    ", lvl + 1) .. "Tok:" .. tostring(n) .. " (" ..
+                  side .. ")")
     end
 end
 
 function Parser:parse(tokens)
     self.tokens = tokens
     self.current = 1
-    self.root = self:addsub()
+    self.root = self:affectation()
+    self.scope = {}
 end
 
-function Parser:test_value(v)
-    if self.current > #self.tokens then
-        return false
-    end
-    return self.tokens[self.current].value == v
+function Parser:test_value(v, i)
+    if i == nil then i = self.current end
+    if i > #self.tokens then return false end
+    return self.tokens[i].value == v
+end
+
+function Parser:test_values(vs, i)
+    if i == nil then i = self.current end
+    for _, v in ipairs(vs) do if self:test_value(v, i) then return true end end
+    return false
 end
 
 function Parser:test_type(t)
-    if self.current > #self.tokens then
-        return false
-    end
+    if self.current > #self.tokens then return false end
     return self.tokens[self.current].type == t
 end
 
-function Parser:current()
-    return self.tokens[self.current]
-end
+function Parser:current() return self.tokens[self.current] end
 
 function Parser:advance()
     local t = self.tokens[self.current]
@@ -93,7 +90,26 @@ function Parser:advance()
     return t
 end
 
-function Parser:addsub ()
+function Parser:affectation()
+    print('affectation test')
+    local n = nil
+    while self:test_values({"=", "+="}, self.current + 1) do
+        print('affectation ok')
+        if not self:test_type("Identifier") then
+            error("Only identifier on left side of affectation")
+        end
+        n = Node.new(self:advance(), 'Identifier')
+        local op = self:advance()
+        n = Node.new(n, op.value, self:affectation())
+    end
+    if n == nil then
+        print('making node')
+        n = self:addsub()
+    end
+    return n
+end
+
+function Parser:addsub()
     local n = self:muldiv()
     while self:test_value("+") or self:test_value("-") do
         local t = self:advance()
