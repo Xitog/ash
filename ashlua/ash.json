@@ -1,0 +1,8 @@
+{
+	"name": "ash",
+	"symbols": {
+		"affectation": ["="],
+		"combined_affectation": ["+=", "-=", "*=", "/=", "%=", "//=", "**="],
+		"all_affectation": ["=", "+=", "-=", "*=", "/=", "%=", "//=", "**="]
+	}
+}

@@ -1,3 +1,4 @@
+local tools = require("tools")
 local Lexer = require("lexer")
 local Parser = require("parser")
 local Transpiler = require("transpiler")
@@ -10,6 +11,18 @@ local transpiler = Transpiler:new()
 
 for i, v in pairs(lexer) do
     if type(v) == "function" then print(i, v, debug.getinfo(v)) end
+end
+
+local tests = tools.load_json('tests')
+
+for i, t in ipairs(tests) do
+    local tokens = lexer:lex(t[1])
+    parser:parse(tokens)
+    local lua_code = transpiler:transpile(parser.root, true)
+    local code, _ = load(lua_code)
+    local _, res = pcall(code)
+    local text_result = ((res == t[2]) and "OK") or "KO"
+    print("[" .. text_result .. "] Test " .. i .. ": " .. t[1] .. " => " .. res .. " / " .. t[2] .. " (expected)")
 end
 
 local cmd = ""

@@ -81,7 +81,7 @@ function love.draw()
     love.graphics.line(0, MENU_HEIGHT, WIDTH, MENU_HEIGHT)
 end
 
-function love.update(dt)
+function love.update(_) -- dt
     if love.keyboard.isDown("escape") then
         love.event.quit()
     end

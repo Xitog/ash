@@ -93,7 +93,7 @@ end
 function Parser:affectation()
     print('affectation test')
     local n = nil
-    while self:test_values({"=", "+="}, self.current + 1) do
+    while self:test_values({"=", "+=", "-=", "*=", "%=", "/=", "**=", "//="}, self.current + 1) do
         print('affectation ok')
         if not self:test_type("Identifier") then
             error("Only identifier on left side of affectation")

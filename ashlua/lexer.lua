@@ -1,4 +1,9 @@
 -------------------------------------------------------------------------------
+-- Require
+-------------------------------------------------------------------------------
+local tools = require('tools')
+
+-------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
 
@@ -14,15 +19,6 @@ local operators = {
     "+", "-", "*", "/", "%", "**", "//", "=", "+=", "-=", "*=", "/=", "%=",
     "**=", "//=", "==", "!=", ">", ">=", "=<", "<", "."
 }
-
--------------------------------------------------------------------------------
--- Tools
--------------------------------------------------------------------------------
-
-local function contains(t, v)
-    for _, val in ipairs(t) do if val == v then return true end end
-    return false
-end
 
 -------------------------------------------------------------------------------
 -- Token class
@@ -60,9 +56,7 @@ function Lexer.new()
     return self
 end
 
-function Lexer:tokens()
-    return self.tokens
-end
+function Lexer:tokens() return self.tokens end
 
 function Lexer:lex(s)
     local i = 1
@@ -71,11 +65,11 @@ function Lexer:lex(s)
     -- for i = 1, string.len(s) do
     while i <= string.len(s) do
         local c = s:sub(i, i)
-        if contains(digit, c) then
+        if tools.contains(digit, c) then
             i = self:read_number(i)
-        elseif contains(identifier, c) then
+        elseif tools.contains(identifier, c) then
             i = self:read_identifier(i)
-        elseif contains(operators, c) then
+        elseif tools.contains(operators, c) then
             i = self:read_operator(i)
         elseif c == '"' then
             i = self:read_string(i)
@@ -120,10 +114,10 @@ function Lexer:read_operator(start)
     local mono = self.raw:sub(start, start)
     local double = self.raw:sub(start, start + 1)
     -- double == mono if self.raw not long enough
-    if string.len(double) == 2 and contains(operators, double) then
+    if string.len(double) == 2 and tools.contains(operators, double) then
         table.insert(self.tokens, Token.new('Operator', double, start, 2))
         start = start + 2
-    elseif contains(operators, mono) then
+    elseif tools.contains(operators, mono) then
         table.insert(self.tokens, Token.new('Operator', mono, start, 1))
         start = start + 1
     end
@@ -135,9 +129,12 @@ function Lexer:read_identifier(start)
     local i = start
     while i <= string.len(self.raw) do
         local c = self.raw:sub(i, i)
-        if c == " " then break end
-        length = length + 1
-        i = i + 1
+        if tools.contains(identifier, c) or tools.contains(digit, c) then
+            length = length + 1
+            i = i + 1
+        else
+            break
+        end
     end
     local value = self.raw:sub(start, start + length - 1)
     table.insert(self.tokens, Token.new('Identifier', value, start, length))
@@ -156,11 +153,11 @@ function Lexer:read_number(start)
     end
     while i <= string.len(self.raw) do
         local c = self.raw:sub(i, i)
-        if contains(digit, c) then
+        if tools.contains(digit, c) then
             length = length + 1
         elseif c == '_' then
             length = length + 1
-        elseif contains(hexa, c) and is_hexa then
+        elseif tools.contains(hexa, c) and is_hexa then
             length = length + 1
         elseif c == '.' and not is_float then
             is_float = true
