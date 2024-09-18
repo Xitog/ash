@@ -82,6 +82,12 @@ function Parser:test_type(t)
     return self.tokens[self.current].type == t
 end
 
+function Parser:test_types(ts, i)
+    if i == nil then i = self.current end
+    for _, v in ipairs(ts) do if self:test_type(v, i) then return true end end
+    return false
+end
+
 function Parser:current() return self.tokens[self.current] end
 
 function Parser:advance()
@@ -91,7 +97,7 @@ function Parser:advance()
 end
 
 function Parser:affectation()
-    print('affectation test')
+    --print('affectation test')
     local n = nil
     while self:test_values({"=", "+=", "-=", "*=", "%=", "/=", "**=", "//="}, self.current + 1) do
         print('affectation ok')
@@ -103,7 +109,7 @@ function Parser:affectation()
         n = Node.new(n, op.value, self:affectation())
     end
     if n == nil then
-        print('making node')
+        --print('making node')
         n = self:addsub()
     end
     return n
@@ -129,9 +135,11 @@ end
 
 function Parser:litt()
     local n = nil
-    if self:test_type("string") or self:test_type("Integer") then
+    if self:test_types({"Hexadecimal", "Octal", "Binary", "Integer", "Boolean", "String", "Identifier"}) then
         local t = self:advance()
         n = Node.new(t, t.type)
+    else
+        error("Unknow token type : " .. tostring(self.tokens[self.current]) .. " at " .. self.current)
     end
     return n
 end

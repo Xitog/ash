@@ -24,8 +24,12 @@ function Transpiler:transpile(node, is_root)
     if is_root == nil then is_root = false end
     local s = ""
     if is_root and not node:is_type(lang.symbols.all_affectation) then s = "return " end
-    if node.type == "Integer" then
+    if node:is_type({"String", "Integer", "Hexadecimal", "Boolean"}) then
         s = s .. tostring(node.left.value)
+    elseif node:is_type("Octal") then
+        s = s ..tostring(tonumber(string.sub(node.left.value, 3), 8))
+    elseif node:is_type("Binary") then
+        s = s ..tostring(tonumber(string.sub(node.left.value, 3), 2))
     elseif node.type == "Identifier" then
         s = s .. node.left.value
     elseif node.type == "+" then

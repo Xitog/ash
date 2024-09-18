@@ -13,16 +13,25 @@ for i, v in pairs(lexer) do
     if type(v) == "function" then print(i, v, debug.getinfo(v)) end
 end
 
-local tests = tools.load_json('tests')
+local DO_TEST = true -- <const>
 
-for i, t in ipairs(tests) do
-    local tokens = lexer:lex(t[1])
-    parser:parse(tokens)
-    local lua_code = transpiler:transpile(parser.root, true)
-    local code, _ = load(lua_code)
-    local _, res = pcall(code)
-    local text_result = ((res == t[2]) and "OK") or "KO"
-    print("[" .. text_result .. "] Test " .. i .. ": " .. t[1] .. " => " .. res .. " / " .. t[2] .. " (expected)")
+if DO_TEST then
+    local tests = tools.load_json('tests')
+    local good = 0
+    for i, t in ipairs(tests) do
+        local tokens = lexer:lex(t[1])
+        parser:parse(tokens)
+        local lua_code = transpiler:transpile(parser.root, true)
+        local code, _ = load(lua_code)
+        local _, res = pcall(code)
+        local text_result = ((res == t[2]) and "OK") or "KO"
+        print("[" .. text_result .. "] Test " .. i .. ": " .. t[1] .. " => " ..
+                  tostring(res) .. " / " .. tostring(t[2]) .. " (expected)")
+        if res == t[2] then
+            good = good + 1
+        end
+    end
+    print("Results of tests : " .. good .. " / " .. #tests)
 end
 
 local cmd = ""

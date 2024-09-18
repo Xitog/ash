@@ -2,6 +2,7 @@
 -- Require
 -------------------------------------------------------------------------------
 local tools = require('tools')
+local lang = tools.load_json('ash')
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -137,27 +138,42 @@ function Lexer:read_identifier(start)
         end
     end
     local value = self.raw:sub(start, start + length - 1)
-    table.insert(self.tokens, Token.new('Identifier', value, start, length))
+    local ttype = 'Identifier'
+    if tools.contains(lang.symbols.booleans, value) then
+        ttype = 'Boolean'
+    end
+    table.insert(self.tokens, Token.new(ttype, value, start, length))
     return i
 end
 
 function Lexer:read_number(start)
     local is_float = false
-    local is_hexa = false
+    local base = 10
     local length = 0
     local i = start
-    if self.raw:sub(1, 1) == '0' and self.raw:sub(2, 2) == 'x' then
-        is_hexa = true
-        i = i + 2
-        length = 2
+    if self.raw:sub(1, 1) == '0' then
+        if self.raw:sub(2, 2) == 'x' then
+            base = 16
+        elseif self.raw:sub(2,2) == 'c' then
+            base = 8
+        elseif self.raw:sub(2,2) == 'b' then
+            base = 2
+        end
+        if base ~= 10 then
+            i = i + 2
+            length = 2
+        end
     end
     while i <= string.len(self.raw) do
         local c = self.raw:sub(i, i)
         if tools.contains(digit, c) then
+            if tonumber(c) >= base then
+                error("Wrong digit for base " .. base .. " in " .. self.raw:sub(start, i))
+            end
             length = length + 1
         elseif c == '_' then
             length = length + 1
-        elseif tools.contains(hexa, c) and is_hexa then
+        elseif tools.contains(hexa, c) and base == 16 then
             length = length + 1
         elseif c == '.' and not is_float then
             is_float = true
@@ -170,7 +186,8 @@ function Lexer:read_number(start)
         i = i + 1
     end
     local value = self.raw:sub(start, start + length - 1)
-    local name = (is_float and "Number") or (is_hexa and "Hexadecimal") or
+    local name = (is_float and "Number") or ((base == 16) and "Hexadecimal") or
+                    ((base == 8) and "Octal") or ((base == 2) and "Binary") or
                      "Integer"
     table.insert(self.tokens, Token.new(name, value, start, length))
     return i

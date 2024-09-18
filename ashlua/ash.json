@@ -3,6 +3,7 @@
 	"symbols": {
 		"affectation": ["="],
 		"combined_affectation": ["+=", "-=", "*=", "/=", "%=", "//=", "**="],
-		"all_affectation": ["=", "+=", "-=", "*=", "/=", "%=", "//=", "**="]
+		"all_affectation": ["=", "+=", "-=", "*=", "/=", "%=", "//=", "**="],
+		"booleans": ["true", "false"]
 	}
 }
