@@ -125,8 +125,17 @@ function Parser:addsub()
 end
 
 function Parser:muldiv()
-    local n = self:litt()
+    local n = self:pow()
     while self:test_value("*") or self:test_value("/") do
+        local t = self:advance()
+        n = Node.new(n, t.value, self:pow())
+    end
+    return n
+end
+
+function Parser:pow()
+    local n = self:litt()
+    while self:test_value("**") do
         local t = self:advance()
         n = Node.new(n, t.value, self:litt())
     end
