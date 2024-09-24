@@ -22,4 +22,17 @@ function tools.load_json(name)
     return data
 end
 
+-- unused. Lua returns always a float with ^
+function tools.is_int(n)
+    return math.floor(n) == n
+end
+
+function tools.equal(v1, v2)
+    if type(v1) == "number" or type(v2) == "number" then
+        return tostring(v1) == tostring(v2) -- test 5.0 vs 5
+    else
+        return v1 == v2
+    end
+end
+
 return tools

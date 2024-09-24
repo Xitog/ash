@@ -16,10 +16,6 @@ local identifier = {
     "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
     "S", "T", "U", "V", "W", "X", "Y", "Z"
 }
-local operators = {
-    "+", "-", "*", "/", "%", "**", "//", "=", "+=", "-=", "*=", "/=", "%=",
-    "**=", "//=", "==", "!=", ">", ">=", "=<", "<", "."
-}
 
 -------------------------------------------------------------------------------
 -- Token class
@@ -70,7 +66,7 @@ function Lexer:lex(s)
             i = self:read_number(i)
         elseif tools.contains(identifier, c) then
             i = self:read_identifier(i)
-        elseif tools.contains(operators, c) then
+        elseif tools.contains(lang.symbols.operators, c) then
             i = self:read_operator(i)
         elseif c == '"' then
             i = self:read_string(i)
@@ -115,10 +111,10 @@ function Lexer:read_operator(start)
     local mono = self.raw:sub(start, start)
     local double = self.raw:sub(start, start + 1)
     -- double == mono if self.raw not long enough
-    if string.len(double) == 2 and tools.contains(operators, double) then
+    if string.len(double) == 2 and tools.contains(lang.symbols.operators, double) then
         table.insert(self.tokens, Token.new('Operator', double, start, 2))
         start = start + 2
-    elseif tools.contains(operators, mono) then
+    elseif tools.contains(lang.symbols.operators, mono) then
         table.insert(self.tokens, Token.new('Operator', mono, start, 1))
         start = start + 1
     end

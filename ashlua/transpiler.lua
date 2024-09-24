@@ -47,6 +47,9 @@ function Transpiler:transpile(node, is_root)
     elseif node.type == "**" then
         s = s .. self:transpile(node.left) .. " ^ " ..
                 self:transpile(node.right)
+            elseif node.type == "//" then
+                s = s .. self:transpile(node.left) .. " // " ..
+                        self:transpile(node.right)
     elseif node.type == "=" then
         s = s .. self:transpile(node.left) .. " = " ..
                 self:transpile(node.right)
