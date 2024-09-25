@@ -135,11 +135,17 @@ end
 
 function Parser:powintdiv()
     local n = self:litt()
+    local t = nil
+    local next = nil
     while self:test_value("**") or self:test_value("//") do
-        local t = self:advance()
-        n = Node.new(n, t.value, self:litt())
+        t = self:advance()
+        next = self:powintdiv()
     end
-    return n
+    if next == nil then
+        return n
+    else
+        return Node.new(n, t.value, next)
+    end
 end
 
 function Parser:litt()

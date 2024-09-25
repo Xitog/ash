@@ -29,7 +29,8 @@ end
 
 function tools.equal(v1, v2)
     if type(v1) == "number" or type(v2) == "number" then
-        return tostring(v1) == tostring(v2) -- test 5.0 vs 5
+        return v1 == v2 and math.type(v1) == math.type(v2)
+        -- ou tostring(v1) == tostring(v2) -- test 5.0 vs 5
     else
         return v1 == v2
     end

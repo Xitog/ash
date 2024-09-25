@@ -17,6 +17,59 @@ function Transpiler.new()
     return self
 end
 
+local scope = {}
+
+function Transpiler:eval_type(node, affectation)
+    if affectation == nil then affectation = false end
+    if node == nil then error("node parameter of eval_type is nil") end
+    if node:is_type("String") then
+        return 'str'
+    elseif node:is_type("Boolean") then
+        return 'bool'
+    elseif node:is_type("Number") then
+        return 'num'
+    elseif node:is_type({"Integer", "Hexadecimal", "Octal", "Binary"}) then
+        return 'int'
+    elseif node:is_type("Identifier") then
+        local id = node.left.value
+        if not affectation then
+            if tools.contains(scope, id) then
+                return scope[id]
+            else
+                error("Trying to access undefined variable " .. id)
+            end
+        else
+            return 'to_be_defined'
+        end
+    elseif node:is_type({"+", "-", "*", "**", "//"}) then
+        local left = self:eval_type(node.left)
+        local right = self:eval_type(node.right)
+        if left == 'int' and right == 'int' then
+            return 'int'
+        elseif left == 'num' or right == 'num' then
+            return 'num'
+        end
+    elseif node.is_type("/") then
+        return 'num'
+    elseif node.is_type("=") then
+        local id = node.left.left.value
+        local left = self:eval_type(node.left, true) -- in affectation mode, it can be undefined
+        local right = self:eval_type(node.right)
+        if left ~= 'to_be_defined' then
+            if left ~= right then
+                error("Trying to change variable " .. id .. " from " ..
+                          scope[id] .. " to " .. right)
+            end
+            -- else : la variable est déjà enregistré et on lui affecte une valeur de son type
+        else
+            scope[id] = right
+            -- on mémorise le type de l'identifier left
+        end
+    else
+        error("Unknow node type : " .. node.type)
+    end
+end
+
 function Transpiler:transpile(node, is_root)
     if node == nil then error("node parameter of transpile is nil") end
     if is_root == nil then is_root = false end
@@ -24,7 +77,7 @@ function Transpiler:transpile(node, is_root)
     if is_root and not node:is_type(lang.symbols.all_affectation) then
         s = "return "
     end
-    if node:is_type({"String", "Integer", "Hexadecimal", "Boolean"}) then
+    if node:is_type({"String", "Integer", "Hexadecimal", "Boolean", "Number"}) then
         s = s .. tostring(node.left.value)
     elseif node:is_type("Octal") then
         s = s .. tostring(tonumber(string.sub(node.left.value, 3), 8))
@@ -45,11 +98,19 @@ function Transpiler:transpile(node, is_root)
         s = s .. self:transpile(node.left) .. " / " ..
                 self:transpile(node.right)
     elseif node.type == "**" then
-        s = s .. self:transpile(node.left) .. " ^ " ..
+        local left_type = self:eval_type(node.left)
+        local right_type = self:eval_type(node.right)
+        -- int ** int => int
+        if left_type == 'int' and right_type == 'int' then
+            s = s .. "math.floor(" .. self:transpile(node.left) .. " ^ " ..
+                    self:transpile(node.right) .. ")"
+        else
+            s = s .. self:transpile(node.left) .. " ^ " ..
+                    self:transpile(node.right)
+        end
+    elseif node.type == "//" then
+        s = s .. self:transpile(node.left) .. " // " ..
                 self:transpile(node.right)
-            elseif node.type == "//" then
-                s = s .. self:transpile(node.left) .. " // " ..
-                        self:transpile(node.right)
     elseif node.type == "=" then
         s = s .. self:transpile(node.left) .. " = " ..
                 self:transpile(node.right)

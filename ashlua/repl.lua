@@ -18,24 +18,27 @@ local DO_TEST = true -- <const>
 if DO_TEST then
     local tests = tools.load_json('tests')
     local good = 0
+    local total = 0
     for i, t in ipairs(tests) do
         if t[1] ~= "comment" then
+            total = total + 1
             local tokens = lexer:lex(t[1])
             parser:parse(tokens)
             local lua_code = transpiler:transpile(parser.root, true)
+            local type = transpiler:eval_type(parser.root)
             local code, _ = load(lua_code)
             local _, res = pcall(code)
             local equal = tools.equal(res, t[2])
             local text_result = (equal and "OK") or "KO"
             print(
                 "[" .. text_result .. "] Test " .. i .. ": " .. t[1] .. " => " ..
-                    tostring(res) .. " / " .. tostring(t[2]) .. " (expected)")
+                    tostring(res) .. " / " .. tostring(t[2]) .. " (expected) (type = " .. type .. ")")
             if equal then good = good + 1 end
         else
             print("info " .. t[2])
         end
     end
-    print("Results of tests : " .. good .. " / " .. #tests)
+    print("Results of tests : " .. good .. " / " .. total)
 end
 
 local cmd = ""
