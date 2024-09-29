@@ -10,6 +10,11 @@ local json = require('json')
 -- Tools
 -------------------------------------------------------------------------------
 
+function tools.has_key(t, k)
+    for key, _ in pairs(t) do if key == k then return true end end
+    return false
+end
+
 function tools.contains(t, v)
     for _, val in ipairs(t) do if val == v then return true end end
     return false

@@ -20,7 +20,9 @@ if DO_TEST then
     local good = 0
     local total = 0
     for i, t in ipairs(tests) do
-        if t[1] ~= "comment" then
+        if t[1] == "exit" then
+            os.exit()
+        elseif t[1] ~= "comment" then
             total = total + 1
             local tokens = lexer:lex(t[1])
             parser:parse(tokens)
