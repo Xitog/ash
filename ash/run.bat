@@ -13,5 +13,5 @@ if "%~2"=="" (
 )
 
 if "%~2"=="SDL2" (
-    cl /W4 %~1 /I D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\include /link /LIBPATH:D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\lib\x86 SDL2.lib SDL2main.lib shell32.lib /SUBSYSTEM:CONSOLE
+    cl /W4 %~1.c /I D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\include /link /LIBPATH:D:\Perso\Projets\git\tallentaa\librairies\SDL2-2.30.3\lib\x86 SDL2.lib SDL2main.lib shell32.lib /SUBSYSTEM:CONSOLE
 )

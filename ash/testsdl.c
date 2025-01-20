@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "SDL.h"
+#include "..\..\tallentaa\librairies\SDL_2_0_4\include\SDL.h"
 
 const int SCREEN_WIDTH = 320;
 const int SCREEN_HEIGHT = 200;
 
+#undef main
 int main(int argc, char * argv[])
 {
     SDL_Window* window = NULL;
