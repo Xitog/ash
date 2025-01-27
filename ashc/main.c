@@ -103,18 +103,6 @@ AshObject * create_boolean(bool b)
     o->type = TYPE_BOOLEAN;
 }
 
-//-----------------------------------------------------------------------------
-// Node
-//-----------------------------------------------------------------------------
-
-struct sNode
-{
-	struct sNode * prev;
-	struct sNode * next;
-    char value;
-};
-typedef struct sNode Node;
-
 Node * node_alloc_n(int nb)
 {
     Node * nodes = malloc(sizeof(Node) * nb);
@@ -129,10 +117,6 @@ Node * node_alloc_n(int nb)
     nodes[nb-1].next = NULL;
     return nodes;
 }
-
-//-----------------------------------------------------------------------------
-// Liste
-//-----------------------------------------------------------------------------
 
 typedef struct
 {
@@ -151,15 +135,6 @@ List * list_create(void)
     ls->size = 0;
     ls->allocated_size = 4;
     return ls;
-}
-
-bool list_is_empty(List * ls)
-{
-    if (ls->size == 0 && ls->head == ls->tail)
-    {
-        return true;
-    }
-    return false;
 }
 
 void list_append(List * ls, char v)
@@ -182,51 +157,6 @@ void list_append(List * ls, char v)
     }
 }
 
-char list_get(List * ls, int i)
-{
-    // On divise par deux la taille pour savoir si commence par le début ou la fin
-    if (i < (ls->size >> 1))
-    {
-        // on parcourt depuis le début
-        Node * start = ls->head;
-        int cpt = 1;
-        while (start != NULL)
-        {
-            if (i == cpt)
-            {
-                return start->value;
-            }
-            start = start->next;
-            cpt += 1;
-        }
-    }
-    else
-    {
-        // on parcourt depuis la fin
-        Node * start = ls->tail;
-        int cpt = ls->size;
-        while (start != NULL)
-        {
-            if (i == cpt)
-            {
-                return start->value;
-            }
-            start = start->prev;
-            cpt -= 1;
-        }
-    }
-    return '\0';
-}
-
-int list_size(List * ls)
-{
-    if (ls != NULL)
-    {
-        return ls->size;
-    }
-    return 0; // Handle error
-}
-
 void list_free(List * ls)
 {
     //Node * tail = ls->tail;
@@ -242,20 +172,6 @@ char list_pop(List * ls)
     }
     ls->size -= 1;
     return value;
-}
-
-void list_reverse(List * ls)
-{
-    Node * start = ls->head;
-    ls->head = ls->tail;
-    ls->tail = start;
-    while (start != NULL)
-    {
-        Node * next = start->next;
-        start->next = start->prev;
-        start->prev = next;
-        start = next;
-    }
 }
 
 //-----------------------------------------------------------------------------

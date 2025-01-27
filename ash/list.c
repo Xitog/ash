@@ -12,11 +12,14 @@ unsigned int list_append(List * list, void * e) {
     ListElement * elem = (ListElement *) malloc(sizeof(ListElement));
     elem->node = e;
     elem->next = NULL;
+    elem->prev = NULL;
+    // Empty list
     if (list->head == NULL) {
         list->head = elem;
         list->tail = elem;
     } else {
         list->tail->next = elem;
+        elem->prev = list->tail;
         list->tail = elem;
     }
     list->count += 1;
@@ -24,16 +27,29 @@ unsigned int list_append(List * list, void * e) {
 }
 
 void * list_get(List * list, unsigned int index) {
-    unsigned int count = 0;
-    ListElement * current = list->head;
     if (index >= list->count) {
         return NULL;
     }
-    while (count < index) {
-        current = current->next;
-        count += 1;
+    // On divise par deux la taille pour savoir si commence par le début ou la fin
+    ListElement * current = list->head;
+    unsigned int count = 0;
+    int direction = 1;
+    if (index >= (list->count >> 1))
+    {
+        count = list->count - 1;
+        direction = -1;
+        current = list->tail;
     }
-    return current;
+    printf("start at %d direction %d\n", count, direction);
+    while (current != NULL && count != index) {
+        if (direction == 1) {
+            current = current->next;
+        } else {
+            current = current->prev;
+        }
+        count += direction;
+    }
+    return current->node;
 }
 
 void list_free(List * list) {
@@ -49,4 +65,42 @@ void list_free(List * list) {
     free(list);
 }
 
+unsigned int list_size(List * list) {
+    if (list == NULL) {
+        return 0;
+    }
+    return list->count;
+}
 
+bool list_is_empty(List * list) {
+    if (list->count == 0) {
+        return true;
+    }
+    return false;
+}
+
+void list_reverse(List * list)
+{
+    ListElement * start = list->head;
+    list->head = list->tail;
+    list->tail = start;
+    while (start != NULL)
+    {
+        ListElement * next = start->next;
+        start->next = start->prev;
+        start->prev = next;
+        start = next;
+    }
+}
+
+void list_print(List * list)
+{
+    ListElement * start = list->head;
+    unsigned int count = 0;
+    while (start != NULL)
+    {
+        printf("%d. %d\n", count, *((int *)(start->node)));
+        start = start->next;
+        count++;
+    }
+}

@@ -1,39 +1,3 @@
-# 1. Bases
-
-Un programme Ash est composé d'instructions et d'expressions.
-
-Seules les expressions peuvent être évalués : 2 + 3 est une expression qui peut être évaluée à l'entier 5.
-
-Une instruction est composée de mots-clés, d'expressions et d'un bloc.
-
-Un bloc est un ensemble de sous-instructions et sous-expressions relatifs à une instruction.
-
-Exemple de l'instruction while :
-
-@@
-@@ while CONDITION do
-@@     BLOC
-@@ loop
-@@
-
-L'instruction while comporte trois mots-clés : while, do et loop.
-
-Une CONDITION est un sous-type d'expression qui est évalué à un résultat booléen, vrai ou faux.
-
-Sa signifiation est tant que la CONDITION est évaluée à vrai, exécute le BLOC entre do et loop.
-
-# 1.B Encodage et case-sensitive
-
-Tous les identifiants sont sensibles à la casse :
-
-@@Ab != aB@@
-
-Le style recommandé est :
-
-- snake_case pour les méthodes, les attributs et les variables,
-- PascalCase pour les classes,
-- MAJUSCULE pour les constantes.
-
 Les fichiers sont encodés en ASCII ou utf-8.
 
 # 1.C Séparateur de ligne
@@ -265,22 +229,6 @@ ALT : forcer le ()
 ALT : doit on avoir des fonctions first class object ? Sans () obligatoire, il faut passer par &f
 ALT : is après ) si on a pas de paramètres et qu'on autorise de ne pas mettre ()
 
-6. Classes
-==========
-
-6.A Définition
---------------
-
-class NAME [< SUPER]
-    CODE
-end
-
-@attr doivent être déclaré uniquement dans init
-@@cls_attr
-
-self
-super
-
 6.B Sous-programmes membres
 ---------------------------
 
@@ -328,49 +276,6 @@ ALT : pas de gestion d'exceptions, on fait "à la C".
 Chaque type s'entend comme pouvant accueillir les valeurs nil et error.
 ALT rescure
 ALT except
-
-8. Modules
-==========
-
-import SYMBOL[.SYMBOL] [include ELEM1[, ELEMi]]
-import FILEPATH as SYMBOL [include ELEM1[, ELEMi]]
-
-Accès via symbol.membre
-
-Un fichier = un module
-
-Pour l'importer : require str ex :
-    - require "flat.ash"
-    - require "../flat.ash"
-
-module ID < SUPER
-    -- pas d'instanciation !
-    -- permet de faire :
-    -- des classes statiques
-    -- des interfaces
-end
-
-ALT : require, include, use ID
-ALT : import module ou include/extend pour importer dans une classe static ou d'instance
-
-9. Bibliothèque standard
-========================
-
-I/O
-    writeln
-    write
-    ALT : print, println, puts
-Object
-    o.clone
-    o.methods
-    o.respond_to?
-    o.dump
-    o.load
-Hash
-    d.delete
-    d.find
-    d.keys
-    d.values
 
 10. Syntaxe BNF
 ===============
@@ -592,9 +497,3 @@ parameter (identifier, type, litt)
 raise (Expr)
 try (Action, whenList, finalAction)
 whenList (identifier, type, action)
-
-# 13. Fiche-résumé
-
--- comment
---[[ multiline
---]]
