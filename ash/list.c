@@ -8,9 +8,9 @@ List * list_init() {
     return list;
 }
 
-unsigned int list_append(List * list, void * e) {
+unsigned int list_append(List * list, AshRef ref) {
     ListElement * elem = (ListElement *) malloc(sizeof(ListElement));
-    elem->node = e;
+    elem->node = ref;
     elem->next = NULL;
     elem->prev = NULL;
     // Empty list
@@ -26,9 +26,9 @@ unsigned int list_append(List * list, void * e) {
     return list->count;
 }
 
-void * list_get(List * list, unsigned int index) {
+AshRef list_get(List * list, unsigned int index) {
     if (index >= list->count) {
-        return NULL;
+        return NIL;
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
     ListElement * current = list->head;
@@ -52,17 +52,19 @@ void * list_get(List * list, unsigned int index) {
     return current->node;
 }
 
-void list_free(List * list) {
-    ListElement * current = list->head;
-    while (current != NULL) {
-        if (current->node != NULL) {
-            free(current->node);
-        }
-        ListElement * old = current;
-        current = current->next;
-        free(old);
+AshRef list_pop(List * list)
+{
+    AshRef value = NIL;
+    if (list->count > 0)
+    {
+        ListElement * last = list->tail;
+        value = last->node;
+        list->tail = last->prev;
+        list->tail->next = NULL;
+        list->count -= 1;
+        free(last);
     }
-    free(list);
+    return value;
 }
 
 unsigned int list_size(List * list) {
@@ -99,8 +101,21 @@ void list_print(List * list)
     unsigned int count = 0;
     while (start != NULL)
     {
-        printf("%d. %d\n", count, *((int *)(start->node)));
+        print(start->node);
         start = start->next;
         count++;
     }
+}
+
+void list_free(List * list) {
+    ListElement * current = list->head;
+    while (current != NULL) {
+        if (&current->node != &NIL) {
+            free((void *)&current->node);
+        }
+        ListElement * old = current;
+        current = current->next;
+        free(old);
+    }
+    free(list);
 }

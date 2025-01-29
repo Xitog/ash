@@ -1,3 +1,0 @@
-{
-    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\.vscode\\compile_commands.json"
-}
