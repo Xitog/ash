@@ -11,6 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include "value.h"
 #include "list.h"
 
 //-----------------------------------------------------------------------------
@@ -47,7 +48,7 @@ typedef struct _Token
 
 const char *VERSION = "0.0.52";
 
-char *TYPE_STRING[] = {
+char *TYPE_REPR_STRING[] = {
     "NONE",
     "INTEGER",
     "HEXADECIMAL",
@@ -173,7 +174,7 @@ void token_print(uint32_t count, Token *t, const char *cmd)
 {
     printf("%d. %s (@%d #%d) : |%s|\n",
            count,
-           TYPE_STRING[t->type], t->start, t->count,
+           TYPE_REPR_STRING[t->type], t->start, t->count,
            string_sub(cmd, t->start, t->count));
 }
 
@@ -490,7 +491,10 @@ List *lex(const char *cmd, bool debug)
             ref->count = t.count;
             ref->start = t.start;
             ref->type = t.type;
-            list_append(list, (void *)ref);
+            AshRef ar;
+            ar.type = TYPE_NIL;
+            ar.value.p = (void *) ref;
+            list_append(list, ar);
         }
     }
     return list;
@@ -634,7 +638,8 @@ int main(int argc, char *argv[])
                     while (current != NULL)
                     {
                         count += 1;
-                        token_print(count, (Token *)current->node, buffer);
+                        Token * tok = (Token *)current->node.value.p;
+                        token_print(count, tok, buffer);
                         current = current->next;
                     }
                 }
@@ -696,12 +701,13 @@ int main(int argc, char *argv[])
                 while (current != NULL)
                 {
                     count += 1;
-                    token_print(count, (Token *)current->node, line);
+                    Token * tok = (Token *)current->node.value.p;
+                    token_print(count, tok, line);
                     current = current->next;
                 }
                 if (output_json)
                 {
-                    char *buffer = NULL;
+                    //char *buffer = NULL;
                     FILE *file;
                     errno_t err = fopen_s(&file, "out.json", "w");
                     if (err != 0)
@@ -722,24 +728,25 @@ int main(int argc, char *argv[])
                         {
                             fprintf(file, ",\n");
                         }
-                        unsigned int start = ((Token *)current->node)->start;
-                        unsigned int count = ((Token *)current->node)->count;
+                        Token * tok = (Token *)current->node.value.p;
+                        unsigned int tstart = (tok)->start;
+                        unsigned int tcount = (tok)->count;
                         fprintf(file, "    {");
-                        fprintf(file, "        \"start\": %d,", start);
-                        fprintf(file, "        \"count\": %d,", count);
-                        fprintf(file, "        \"type\": \"%s\",", TYPE_STRING[((Token *)current->node)->type]);
-                        for (int j = 0; j < 11 - strlen(TYPE_STRING[((Token *)current->node)->type]); j++)
+                        fprintf(file, "        \"start\": %d,", tstart);
+                        fprintf(file, "        \"count\": %d,", tcount);
+                        fprintf(file, "        \"type\": \"%s\",", TYPE_REPR_STRING[(tok)->type]);
+                        for (unsigned int j = 0; j < 11 - strlen(TYPE_REPR_STRING[(tok)->type]); j++)
                         {
                             fprintf(file, " ");
                         }
-                        fprintf(file, "        \"value\": \"%.*s\"", count, line + start);
+                        fprintf(file, "        \"value\": \"%.*s\"", tcount, line + tstart);
                         fprintf(file, "}");
                         current = current->next;
                     }
                     fprintf(file, "%s", "\n]\n");
                     fclose(file);
                 }
-                list_free(list);
+                //list_free(list); BUG
             }
         } while (strcmp(line, "exit") != 0);
         free(line);
