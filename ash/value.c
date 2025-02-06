@@ -38,10 +38,10 @@ AshRef string_init(char *source, long source_size)
 {
     AshRef ref;
     ref.type = TYPE_STRING;
-    AshString * s = malloc(sizeof(AshString));
+    AshString * s = memory_get(sizeof(AshString));
     ref.value.p = (void *)s;
     s->size = source_size;
-    s->content = malloc(sizeof(char) * source_size);
+    s->content = memory_get(sizeof(char) * source_size);
     for (int i = 0; i < source_size; i++)
     {
         s->content[i] = source[i];

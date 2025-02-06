@@ -1,7 +1,7 @@
 #include "list.h"
 
 List * list_init() {
-    List * list = (List *) malloc(sizeof(List));
+    List * list = (List *) memory_get(sizeof(List));
     list->head = NULL;
     list->tail = NULL;
     list->count = 0;
@@ -9,7 +9,7 @@ List * list_init() {
 }
 
 unsigned int list_append(List * list, AshRef ref) {
-    ListElement * elem = (ListElement *) malloc(sizeof(ListElement));
+    ListElement * elem = (ListElement *) memory_get(sizeof(ListElement));
     elem->node = ref;
     elem->next = NULL;
     elem->prev = NULL;

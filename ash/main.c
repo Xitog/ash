@@ -487,7 +487,7 @@ List *lex(const char *cmd, bool debug)
             {
                 token_print(count, &t, cmd);
             }
-            Token *ref = (Token *)malloc(sizeof(Token));
+            Token *ref = (Token *)memory_get(sizeof(Token));
             ref->count = t.count;
             ref->start = t.start;
             ref->type = t.type;
@@ -567,12 +567,82 @@ void read_utf8(char *s)
     fclose(file);
 }
 
+typedef struct _Node {
+    struct _Node * left;
+    struct _Node * middle;
+    struct _Node * right;
+} Node;
+
+typedef struct {
+    Node * root;
+} Tree;
+
+Node * parse_addition(List * list);
+Node * parse_litteral(List * list);
+
+bool check(List * list, AshType expected)
+{
+    if (list == NULL) {
+        return false;
+    } else if (list_is_empty(list)) {
+        return false;
+    }
+    AshType at = list->head->node.type;
+    if (at != TYPE_CDATA) {
+        return false;
+    }
+    Token * t = (Token *) list->head->node.value.p;
+    return t->type == expected;
+}
+
+Tree * parse(List * list)
+{
+    Tree * t = (Tree *) memory_get(sizeof(Tree));
+    parse_addition(list);
+    return t;
+}
+
+Node * parse_addition(List * list)
+{
+    Node * result = (Node *) memory_get(sizeof(Node *));
+    result->left = parse_litteral(list);
+    // assert "+"
+    result->right = parse_litteral(list);
+    return result;
+}
+
+Node * parse_litteral(List * list)
+{
+    // assert integer, float
+    Node * result = (Node *) memory_get(sizeof(Node *));
+    return result;
+}
+
 //-----------------------------------------------------------------------------
 // Main
 //-----------------------------------------------------------------------------
 
 int main(int argc, char *argv[])
 {
+    List * lx = list_init();
+    Token *tx = (Token *) memory_get(sizeof(Token));
+    tx->count = 1;
+    tx->start = 0;
+    tx->type = DECIMAL;
+    // On est obligé "d'enrober" nos tokens dans une AshRef
+    AshRef ax;
+    ax.type = TYPE_CDATA;
+    ax.value.p = tx;
+    list_append(lx, ax);
+    if (check(lx, DECIMAL)) {
+        printf("Everything is awesome!\n");
+    } else {
+        printf("%p\n", lx->head);
+        printf("%p\n", lx->head->node.value.p);
+        Token * tt = (Token *) lx->head->node.value.p;
+        printf("Type is : %s\n", TYPE_REPR_STRING[tt->type]);
+    }
+
     printf("Ash %s\n", VERSION);
     bool debug = false;
     bool output_json = false;
@@ -653,7 +723,7 @@ int main(int argc, char *argv[])
     else
     {
         const size_t line_length = 1024;
-        char *line = malloc(line_length);
+        char *line = (line_length);
         do
         {
             memset(line, '\0', line_length);

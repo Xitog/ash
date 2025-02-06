@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "general.h"
 
 //-----------------------------------------------------------------------------
 // Types
@@ -23,7 +24,8 @@ typedef enum
     TYPE_LIST    = 6,
     TYPE_TABLE   = 7,
     TYPE_RECORD  = 8,
-    TYPE_NIL     = 9
+    TYPE_NIL     = 9,
+    TYPE_CDATA   = 10
 } AshType;
 
 typedef union

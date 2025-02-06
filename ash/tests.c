@@ -5,8 +5,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "list.h"
+
+#include "general.h"
 #include "value.h"
+#include "list.h"
 
 //-----------------------------------------------------------------------------
 // Main function
@@ -60,5 +62,6 @@ int main(int argc, char *argv[])
     printf("List size is now: %d\n", list_size(list2));
     printf("List is now:\n");
     list_print(list2);
+    memory_summary();
     return EXIT_SUCCESS;
 }
