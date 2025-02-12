@@ -8,9 +8,10 @@ List * list_init() {
     return list;
 }
 
-unsigned int list_append(List * list, AshRef ref) {
+unsigned int list_append(List * list, void * data) {
     ListElement * elem = (ListElement *) memory_get(sizeof(ListElement));
-    elem->node = ref;
+    elem->node = memory_get(memory_size(data));
+    memory_copy(elem->node, data);
     elem->next = NULL;
     elem->prev = NULL;
     // Empty list
@@ -26,9 +27,9 @@ unsigned int list_append(List * list, AshRef ref) {
     return list->count;
 }
 
-AshRef list_get(List * list, unsigned int index) {
+void * list_get(List * list, unsigned int index) {
     if (index >= list->count) {
-        return NIL;
+        return NULL;
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
     ListElement * current = list->head;
@@ -52,9 +53,9 @@ AshRef list_get(List * list, unsigned int index) {
     return current->node;
 }
 
-AshRef list_pop(List * list)
+void *  list_pop(List * list)
 {
-    AshRef value = NIL;
+    void * value = NULL;
     if (list->count > 0)
     {
         ListElement * last = list->tail;
@@ -62,7 +63,7 @@ AshRef list_pop(List * list)
         list->tail = last->prev;
         list->tail->next = NULL;
         list->count -= 1;
-        free(last);
+        memory_free(last);
     }
     return value;
 }
@@ -95,7 +96,7 @@ void list_reverse(List * list)
     }
 }
 
-void list_print(List * list)
+void list_print(List * list, void (*print)())
 {
     ListElement * start = list->head;
     unsigned int count = 0;
@@ -110,12 +111,10 @@ void list_print(List * list)
 void list_free(List * list) {
     ListElement * current = list->head;
     while (current != NULL) {
-        if (&current->node != &NIL) {
-            free((void *)&current->node);
-        }
+        memory_free(current->node);
         ListElement * old = current;
         current = current->next;
-        free(old);
+        memory_free(old);
     }
-    free(list);
+    memory_free(list);
 }

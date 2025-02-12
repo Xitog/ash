@@ -3,6 +3,7 @@
     "makefile.compileCommandsPath": ".vscode/compile_commands.json",
     "files.associations": {
         "string.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "stdint.h": "c"
     }
 }

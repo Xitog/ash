@@ -12,56 +12,16 @@
 #include <ctype.h>
 #include <stdint.h>
 #include "value.h"
-#include "list.h"
-
-//-----------------------------------------------------------------------------
-// Types
-//-----------------------------------------------------------------------------
-
-typedef enum _Type
-{
-    NONE = 0,
-    DECIMAL = 1,
-    HEXADECIMAL = 2,
-    BINARY = 3,
-    FLOAT = 4,
-    BOOLEAN = 5,
-    IDENTIFIER = 6,
-    KEYWORD = 7,
-    SPACE = 8,
-    OPERATOR = 9,
-    NEWLINE = 10,
-    SEPARATOR = 11,
-    STRING = 12
-} Type;
-
-typedef struct _Token
-{
-    Type type;
-    unsigned int start;
-    unsigned int count;
-} Token;
+//#include "list.h"
+#include "token.h"
+#include "token_list.h"
+#include "general.h"
 
 //-----------------------------------------------------------------------------
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.52";
-
-char *TYPE_REPR_STRING[] = {
-    "NONE",
-    "INTEGER",
-    "HEXADECIMAL",
-    "BINARY",
-    "FLOAT",
-    "BOOLEAN",
-    "IDENTIFIER",
-    "KEYWORD",
-    "SPACE",
-    "OPERATOR",
-    "NEWLINE",
-    "SEPARATOR",
-    "STRING"};
+const char *VERSION = "0.0.53";
 
 // Liste des caractères qui composent les opérateurs ou les hexadécimaux
 const char *OPERATOR_ELEMENTS = "+-/*%=<>!";
@@ -159,25 +119,6 @@ bool is_keyword(const char *cmd, Token t)
     return false;
 }
 
-char buffer_ss[250];
-char *string_sub(const char *cmd, unsigned int start, unsigned int count)
-{
-    memset(buffer_ss, '\0', 250);
-    for (unsigned int index = 0; index < count; index++)
-    {
-        buffer_ss[index] = cmd[start + index];
-    }
-    return buffer_ss;
-}
-
-void token_print(uint32_t count, Token *t, const char *cmd)
-{
-    printf("%d. %s (@%d #%d) : |%s|\n",
-           count,
-           TYPE_REPR_STRING[t->type], t->start, t->count,
-           string_sub(cmd, t->start, t->count));
-}
-
 Token read_space(const char *cmd, unsigned int start)
 {
     Token t;
@@ -195,9 +136,10 @@ Token read_space(const char *cmd, unsigned int start)
         }
         index += 1;
     }
+    t.text = cmd;
     t.start = start;
     t.count = count;
-    t.type = SPACE;
+    t.type = TOKEN_SPACE;
     return t;
 }
 
@@ -218,16 +160,17 @@ Token read_identifier(const char *cmd, unsigned int start)
         }
         index += 1;
     }
+    t.text = cmd;
     t.count = count;
     t.start = start;
-    t.type = IDENTIFIER;
+    t.type = TOKEN_IDENTIFIER;
     if (is_boolean(cmd, t))
     {
-        t.type = BOOLEAN;
+        t.type = TOKEN_BOOLEAN;
     }
     else if (is_keyword(cmd, t))
     {
-        t.type = KEYWORD;
+        t.type = TOKEN_KEYWORD;
     }
     return t;
 }
@@ -250,9 +193,10 @@ Token read_float(const char *cmd, unsigned int start, unsigned int current)
         }
         index += 1;
     }
+    t.text = cmd;
     t.count = count;
     t.start = start;
-    t.type = FLOAT;
+    t.type = TOKEN_FLOAT;
     return t;
 }
 
@@ -274,15 +218,16 @@ Token read_hexa(const char *cmd, unsigned int start, unsigned int current)
         }
         index += 1;
     }
+    t.text = cmd;
     t.count = count;
     t.start = start;
-    t.type = HEXADECIMAL;
+    t.type = TOKEN_HEXADECIMAL;
     return t;
 }
 
 Token read_digit(const char *cmd, unsigned int start)
 {
-    Token t = {.type = NONE, .start = 0, .count = 0};
+    Token t = {.text = cmd, .type = TOKEN_NONE, .start = 0, .count = 0};
     unsigned int index = start;
     unsigned int count = 0;
     if (index < strlen(cmd) && cmd[index] == '0' && index + 1 < strlen(cmd) && cmd[index + 1] == 'x')
@@ -313,9 +258,10 @@ Token read_digit(const char *cmd, unsigned int start)
         }
         if (!is_float)
         {
+            t.text = cmd;
             t.count = count;
             t.start = start;
-            t.type = DECIMAL;
+            t.type = TOKEN_DECIMAL;
         }
     }
     return t;
@@ -340,9 +286,10 @@ Token read_string(const char *cmd, unsigned int start)
         }
         index += 1;
     }
+    t.text = cmd;
     t.count = count;
     t.start = start;
-    t.type = STRING;
+    t.type = TOKEN_STRING;
     return t;
 }
 
@@ -396,12 +343,13 @@ Token read_operator(const char *cmd, unsigned int start)
     {
         t.count = 1;
     }
+    t.text = cmd;
     t.start = start;
-    t.type = OPERATOR;
+    t.type = TOKEN_OPERATOR;
     return t;
 }
 
-List *lex(const char *cmd, bool debug)
+TokenList *lex(const char *cmd, bool debug)
 {
     if (debug)
     {
@@ -414,8 +362,9 @@ List *lex(const char *cmd, bool debug)
     unsigned int old = 0;
     unsigned int index = 0;
     Token t;
+    t.text = cmd;
     bool discard = false;
-    List *list = list_init();
+    TokenList *list = token_list_init();
     unsigned int count = 0;
     while (index < strlen(cmd))
     {
@@ -438,19 +387,19 @@ List *lex(const char *cmd, bool debug)
         {
             t.count = 1;
             t.start = index;
-            t.type = OPERATOR;
+            t.type = TOKEN_OPERATOR;
         }
         else if (cmd[index] == '\n')
         {
             t.count = 1;
             t.start = index;
-            t.type = NEWLINE;
+            t.type = TOKEN_NEWLINE;
         }
         else if (char_is(cmd[index], SEPARATOR_ELEMENTS))
         {
             t.count = 1;
             t.start = index;
-            t.type = SEPARATOR;
+            t.type = TOKEN_SEPARATOR;
         }
         else if (char_is(cmd[index], OPERATOR_ELEMENTS))
         {
@@ -460,14 +409,14 @@ List *lex(const char *cmd, bool debug)
         {
             t.count = 1;
             t.start = index;
-            t.type = NEWLINE;
+            t.type = TOKEN_NEWLINE;
             discard = true;
         }
         else if (cmd[index] == '(' || cmd[index] == ')')
         {
             t.count = 1;
             t.start = index;
-            t.type = SEPARATOR;
+            t.type = TOKEN_SEPARATOR;
         }
         else if (cmd[index] == '"')
         {
@@ -485,16 +434,10 @@ List *lex(const char *cmd, bool debug)
         {
             if (debug)
             {
-                token_print(count, &t, cmd);
+                token_print(t);
             }
-            Token *ref = (Token *)memory_get(sizeof(Token));
-            ref->count = t.count;
-            ref->start = t.start;
-            ref->type = t.type;
-            AshRef ar;
-            ar.type = TYPE_NIL;
-            ar.value.p = (void *) ref;
-            list_append(list, ar);
+            Token nt = t;
+            token_list_append(list, nt);
         }
     }
     return list;
@@ -577,32 +520,29 @@ typedef struct {
     Node * root;
 } Tree;
 
-Node * parse_addition(List * list);
-Node * parse_litteral(List * list);
+Node * parse_addition(TokenList * list);
+Node * parse_litteral(TokenList * list);
 
-bool check(List * list, AshType expected)
+bool check(TokenList * list, AshType expected)
 {
     if (list == NULL) {
         return false;
-    } else if (list_is_empty(list)) {
+    } else if (token_list_is_empty(list)) {
         return false;
     }
-    AshType at = list->head->node.type;
-    if (at != TYPE_CDATA) {
-        return false;
-    }
-    Token * t = (Token *) list->head->node.value.p;
-    return t->type == expected;
+    Token t = list->head->token;
+    return t.type == expected;
 }
 
-Tree * parse(List * list)
+/*
+Tree * parse(TokenList * list)
 {
     Tree * t = (Tree *) memory_get(sizeof(Tree));
     parse_addition(list);
     return t;
 }
 
-Node * parse_addition(List * list)
+Node * parse_addition(TokenList * list)
 {
     Node * result = (Node *) memory_get(sizeof(Node *));
     result->left = parse_litteral(list);
@@ -611,12 +551,14 @@ Node * parse_addition(List * list)
     return result;
 }
 
-Node * parse_litteral(List * list)
+Node * parse_litteral(TokenList * list)
 {
     // assert integer, float
     Node * result = (Node *) memory_get(sizeof(Node *));
+    list = list;
     return result;
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Main
@@ -624,25 +566,6 @@ Node * parse_litteral(List * list)
 
 int main(int argc, char *argv[])
 {
-    List * lx = list_init();
-    Token *tx = (Token *) memory_get(sizeof(Token));
-    tx->count = 1;
-    tx->start = 0;
-    tx->type = DECIMAL;
-    // On est obligé "d'enrober" nos tokens dans une AshRef
-    AshRef ax;
-    ax.type = TYPE_CDATA;
-    ax.value.p = tx;
-    list_append(lx, ax);
-    if (check(lx, DECIMAL)) {
-        printf("Everything is awesome!\n");
-    } else {
-        printf("%p\n", lx->head);
-        printf("%p\n", lx->head->node.value.p);
-        Token * tt = (Token *) lx->head->node.value.p;
-        printf("Type is : %s\n", TYPE_REPR_STRING[tt->type]);
-    }
-
     printf("Ash %s\n", VERSION);
     bool debug = false;
     bool output_json = false;
@@ -702,16 +625,17 @@ int main(int argc, char *argv[])
                 if (file_and_buffer)
                 {
                     printf("%s", buffer);
-                    List *list = lex(buffer, debug);
-                    ListElement *current = list->head;
+                    TokenList *list = lex(buffer, debug);
+                    TokenListElement *current = list->head;
                     uint32_t count = 0;
                     while (current != NULL)
                     {
                         count += 1;
-                        Token * tok = (Token *)current->node.value.p;
-                        token_print(count, tok, buffer);
+                        Token tok = current->token;
+                        token_print(tok);
                         current = current->next;
                     }
+                    token_list_free(list);
                 }
             }
         }
@@ -723,7 +647,7 @@ int main(int argc, char *argv[])
     else
     {
         const size_t line_length = 1024;
-        char *line = (line_length);
+        char *line = memory_get(line_length);
         do
         {
             memset(line, '\0', line_length);
@@ -765,14 +689,14 @@ int main(int argc, char *argv[])
                 {
                     printf("Command : |%s| (#%d)\n", line, count);
                 }
-                List *list = lex(line, debug);
-                ListElement *current = list->head;
+                TokenList *list = lex(line, debug);
+                TokenListElement *current = list->head;
                 count = 0;
                 while (current != NULL)
                 {
                     count += 1;
-                    Token * tok = (Token *)current->node.value.p;
-                    token_print(count, tok, line);
+                    Token tok = current->token;
+                    token_print(tok);
                     current = current->next;
                 }
                 if (output_json)
@@ -798,14 +722,14 @@ int main(int argc, char *argv[])
                         {
                             fprintf(file, ",\n");
                         }
-                        Token * tok = (Token *)current->node.value.p;
-                        unsigned int tstart = (tok)->start;
-                        unsigned int tcount = (tok)->count;
+                        Token tok = current->token;
+                        unsigned int tstart = tok.start;
+                        unsigned int tcount = tok.count;
                         fprintf(file, "    {");
                         fprintf(file, "        \"start\": %d,", tstart);
                         fprintf(file, "        \"count\": %d,", tcount);
-                        fprintf(file, "        \"type\": \"%s\",", TYPE_REPR_STRING[(tok)->type]);
-                        for (unsigned int j = 0; j < 11 - strlen(TYPE_REPR_STRING[(tok)->type]); j++)
+                        fprintf(file, "        \"type\": \"%s\",", TYPE_REPR_STRING[tok.type]);
+                        for (unsigned int j = 0; j < 11 - strlen(TYPE_REPR_STRING[tok.type]); j++)
                         {
                             fprintf(file, " ");
                         }
@@ -816,12 +740,13 @@ int main(int argc, char *argv[])
                     fprintf(file, "%s", "\n]\n");
                     fclose(file);
                 }
-                //list_free(list); BUG
+                token_list_free(list);
             }
         } while (strcmp(line, "exit") != 0);
-        free(line);
         fflush(stdout);
+        memory_free(line);
     }
+    memory_summary();
     printf("End of program Ash v%s.\n", VERSION);
     return EXIT_SUCCESS;
 }
