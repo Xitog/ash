@@ -5,8 +5,11 @@
 // Imports
 //-----------------------------------------------------------------------------
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 //-----------------------------------------------------------------------------
 // Types
@@ -67,6 +70,7 @@ const extern char *KEYWORDS[];
 // Opérateur de portée       : .
 // Opérateur d'héritage      : <
 // Opérateur d'intervalle    : ..
+// Opérateur de décalage     : << >>
 // Caractères : + - * / % < > = ! .
 
 // Séparateurs              : ( ) [ ] { } , :
@@ -77,5 +81,8 @@ const extern char *KEYWORDS[];
 //-----------------------------------------------------------------------------
 
 void token_print(Token tok);
+bool token_cmp(Token t, const char *s);
+bool token_is_boolean(Token t);
+bool token_is_keyword(Token t);
 
 #endif
