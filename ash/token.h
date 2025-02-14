@@ -42,6 +42,35 @@ typedef struct _Token
 //-----------------------------------------------------------------------------
 
 const extern char *TYPE_REPR_STRING[];
+const extern char *OPERATOR_ELEMENTS;
+const extern char *HEXADECIMAL_ELEMENTS;
+const extern char *SEPARATOR_ELEMENTS;
+const extern char *KEYWORDS[];
+
+// Liste des keywords
+
+// Const, var  : const
+// Sélection   : if / then / elsif / else / end
+// Itération   : while / do / loop / for / in / next / break
+// Sous-prog   : fun / pro / end / return
+// Classes     : class end
+// Opérateurs  : and or not
+// Mots : const if then elsif else end while do loop for in next break fun pro return class and or not
+
+#define NB_KEYWORDS 20
+
+// Liste des caractères qui composent les opérateurs ou les hexadécimaux
+
+// Opérateurs mathématiques  : + - * / ** // %
+// Opérateurs de comparaison : < <= > >= !=
+// Opérateur d'affectation   : =
+// Opérateur de portée       : .
+// Opérateur d'héritage      : <
+// Opérateur d'intervalle    : ..
+// Caractères : + - * / % < > = ! .
+
+// Séparateurs              : ( ) [ ] { } , :
+// Caractères : ( ) [ ] { } , :
 
 //-----------------------------------------------------------------------------
 // Functions

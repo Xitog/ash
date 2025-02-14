@@ -21,21 +21,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.53";
-
-// Liste des caractères qui composent les opérateurs ou les hexadécimaux
-const char *OPERATOR_ELEMENTS = "+-/*%=<>!";
-const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
-const char *SEPARATOR_ELEMENTS = "([{}])";
-
-char *KEYWORDS[] = {
-    "if",
-    "else",
-    "elsif",
-    "end",
-    "while"};
-
-#define NB_KEYWORDS 5
+const char *VERSION = "0.0.54";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -339,6 +325,10 @@ Token read_operator(const char *cmd, unsigned int start)
     { // %=
         t.count = 2;
     }
+    else if (c == '.' && n == '.')
+    {
+        t.count = 2;
+    }
     else if (char_is(c, OPERATOR_ELEMENTS))
     {
         t.count = 1;
@@ -375,19 +365,13 @@ TokenList *lex(const char *cmd, bool debug)
         {
             t = read_identifier(cmd, index);
         }
-        else if (cmd[index] == ' ')
+        else if (cmd[index] == ' ' || cmd[index] == '\t')
         {
             t = read_space(cmd, index);
         }
         else if (isdigit(cmd[index]))
         {
             t = read_digit(cmd, index);
-        }
-        else if (cmd[index] == '.')
-        {
-            t.count = 1;
-            t.start = index;
-            t.type = TOKEN_OPERATOR;
         }
         else if (cmd[index] == '\n')
         {
@@ -411,12 +395,6 @@ TokenList *lex(const char *cmd, bool debug)
             t.start = index;
             t.type = TOKEN_NEWLINE;
             discard = true;
-        }
-        else if (cmd[index] == '(' || cmd[index] == ')')
-        {
-            t.count = 1;
-            t.start = index;
-            t.type = TOKEN_SEPARATOR;
         }
         else if (cmd[index] == '"')
         {
@@ -723,17 +701,15 @@ int main(int argc, char *argv[])
                             fprintf(file, ",\n");
                         }
                         Token tok = current->token;
-                        unsigned int tstart = tok.start;
-                        unsigned int tcount = tok.count;
                         fprintf(file, "    {");
-                        fprintf(file, "        \"start\": %d,", tstart);
-                        fprintf(file, "        \"count\": %d,", tcount);
+                        fprintf(file, "        \"start\": %d,", tok.start);
+                        fprintf(file, "        \"count\": %d,", tok.count);
                         fprintf(file, "        \"type\": \"%s\",", TYPE_REPR_STRING[tok.type]);
                         for (unsigned int j = 0; j < 11 - strlen(TYPE_REPR_STRING[tok.type]); j++)
                         {
                             fprintf(file, " ");
                         }
-                        fprintf(file, "        \"value\": \"%.*s\"", tcount, line + tstart);
+                        fprintf(file, "        \"value\": \"%.*s\"", tok.count, line + tok.start);
                         fprintf(file, "}");
                         current = current->next;
                     }

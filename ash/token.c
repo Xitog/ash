@@ -19,6 +19,32 @@ const char *TYPE_REPR_STRING[] = {
     "SEPARATOR",
     "STRING"};
 
+const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
+const char *OPERATOR_ELEMENTS = "+-*/%<>=!.";
+const char *SEPARATOR_ELEMENTS = "([{}]),:\n\t";
+
+const char *KEYWORDS[] = {
+    "const",
+    "if",
+    "then",
+    "else",
+    "elsif",
+    "end",
+    "while",
+    "do",
+    "loop",
+    "for",
+    "in",
+    "next",
+    "break",
+    "fun",
+    "pro",
+    "return",
+    "class",
+    "and",
+    "or",
+    "not"};
+
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
