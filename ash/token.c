@@ -4,7 +4,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *TYPE_REPR_STRING[] = {
+const char *TOKEN_TYPE_REPR_STRING[] = {
     "NONE",
     "INTEGER",
     "HEXADECIMAL",
@@ -17,10 +17,13 @@ const char *TYPE_REPR_STRING[] = {
     "OPERATOR",
     "NEWLINE",
     "SEPARATOR",
-    "STRING"};
+    "STRING",
+    "NIL",
+    "WRONG_LONELY_OPERATOR",
+    "WRONG_NUMBER_WITH_LETTER"};
 
 const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
-const char *OPERATOR_ELEMENTS = "+-*/%<>=!.";
+const char *OPERATOR_ELEMENTS = "+-*/%<>=!.~?&|^";
 const char *SEPARATOR_ELEMENTS = "([{}]),:\n\t";
 
 const char *KEYWORDS[] = {
@@ -43,7 +46,10 @@ const char *KEYWORDS[] = {
     "class",
     "and",
     "or",
-    "not"};
+    "not",
+    "true",
+    "false",
+    "nil"};
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -51,7 +57,7 @@ const char *KEYWORDS[] = {
 
 void token_print(Token tok)
 {
-    printf("{%s @%d #%d |%.*s|}\n", TYPE_REPR_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
+    printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_REPR_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
 }
 
 bool token_cmp(Token t, const char *str)
@@ -70,6 +76,11 @@ bool token_cmp(Token t, const char *str)
         i += 1;
     }
     return true;
+}
+
+bool token_is_nil(Token t)
+{
+    return token_cmp(t, "nil");
 }
 
 bool token_is_boolean(Token t)

@@ -47,6 +47,10 @@ Token read_identifier(const char *cmd, unsigned int start)
         {
             count += 1;
         }
+        else if (cmd[index] == '?' && ((index + 1) >= strlen(cmd) || (!isalpha(cmd[index + 1]) && cmd[index + 1] != '?')))
+        {
+            count += 1;
+        }
         else
         {
             break;
@@ -57,7 +61,11 @@ Token read_identifier(const char *cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = TOKEN_IDENTIFIER;
-    if (token_is_boolean(t))
+    if (token_is_nil(t))
+    {
+        t.type = TOKEN_NIL;
+    }
+    else if (token_is_boolean(t))
     {
         t.type = TOKEN_BOOLEAN;
     }
@@ -118,7 +126,32 @@ Token read_hexa(const char *cmd, unsigned int start, unsigned int current)
     return t;
 }
 
-Token read_digit(const char *cmd, unsigned int start)
+Token read_binary(const char *cmd, unsigned int start, unsigned int current)
+{
+    Token t;
+    unsigned int index = current;
+    unsigned int count = current - start;
+    while (index < strlen(cmd))
+    {
+        char c = cmd[index];
+        if (c == '0' || c == '1' || c == '_')
+        {
+            count += 1;
+        }
+        else
+        {
+            break;
+        }
+        index += 1;
+    }
+    t.text = cmd;
+    t.count = count;
+    t.start = start;
+    t.type = TOKEN_BINARY;
+    return t;
+}
+
+Token read_number(const char *cmd, unsigned int start)
 {
     Token t = {.text = cmd, .type = TOKEN_NONE, .start = 0, .count = 0};
     unsigned int index = start;
@@ -126,6 +159,10 @@ Token read_digit(const char *cmd, unsigned int start)
     if (index < strlen(cmd) && cmd[index] == '0' && index + 1 < strlen(cmd) && cmd[index + 1] == 'x')
     {
         t = read_hexa(cmd, start, index + 2);
+    }
+    else if (index < strlen(cmd) && cmd[index] == '0' && index + 1 < strlen(cmd) && cmd[index + 1] == 'b')
+    {
+        t = read_binary(cmd, start, index + 2);
     }
     else
     {
@@ -156,6 +193,10 @@ Token read_digit(const char *cmd, unsigned int start)
             t.start = start;
             t.type = TOKEN_DECIMAL;
         }
+    }
+    if (t.start + t.count + 1 < strlen(cmd) && isalpha(cmd[t.start + t.count + 1]))
+    {
+        t.type = WRONG_TOKEN_NUMBER_AND_LETTER;
     }
     return t;
 }
@@ -200,57 +241,63 @@ Token read_operator(const char *cmd, unsigned int start)
     {
         nn = cmd[start + 2];
     }
-    if (c == '+' && n == '=')
-    { // +=
-        t.count = 2;
-    }
-    else if (c == '-' && n == '=')
-    { // -=
-        t.count = 2;
-    }
-    else if (c == '*' && n == '=')
-    { // *=
-        t.count = 2;
-    }
-    else if (c == '*' && n == '*')
-    { // **
-        t.count = 2;
-    }
-    else if (c == '*' && n == '*' && nn == '=')
-    { // **=
+
+    // Opérateurs binaires
+    //  7 Opérateurs mathématiques  :
+    // Caractères : + - * / % < > = ! . ~ ? & | ^
+
+    if (
+        (c == '*' && n == '*' && nn == '=') ||
+        (c == '/' && n == '/' && nn == '=') ||
+        (c == '<' && n == '<' && nn == '=') ||
+        (c == '>' && n == '>' && nn == '=') ||
+        (c == '?' && n == '?' && nn == '='))
+    {
         t.count = 3;
+        t.type = TOKEN_OPERATOR;
     }
-    else if (c == '/' && n == '=')
-    { // /=
-        t.count = 2;
-    }
-    else if (c == '/' && n == '/' && nn == '=')
-    { // //=
-        t.count = 3;
-    }
-    else if (c == '%' && n == '=')
-    { // %=
-        t.count = 2;
-    }
-    else if (c == '.' && n == '.')
+    else if (
+        (c == '*' && n == '*') ||
+        (c == '/' && n == '/') ||
+        (c == '<' && n == '=') ||
+        (c == '>' && n == '=') ||
+        (c == '=' && n == '=') ||
+        (c == '!' && n == '=') ||
+        (c == '+' && n == '=') ||
+        (c == '-' && n == '=') ||
+        (c == '*' && n == '=') ||
+        (c == '/' && n == '=') ||
+        (c == '%' && n == '=') ||
+        (c == '&' && n == '=') ||
+        (c == '|' && n == '=') ||
+        (c == '^' && n == '=') ||
+        (c == '~' && n == '=') ||
+        (c == '<' && n == '<') ||
+        (c == '>' && n == '>') ||
+        (c == '?' && n == '?') ||
+        (c == '.' && n == '.'))
     {
         t.count = 2;
+        t.type = TOKEN_OPERATOR;
     }
-    else if (c == '<' && n == '<')
-    {
-        t.count = 2;
-    }
-    else if (c == '>' && n == '>')
-    {
-        t.count = 2;
-    }
-    else if (char_is(c, OPERATOR_ELEMENTS))
+    else if (c == '+' || c == '-' ||
+             c == '*' || c == '/' ||
+             c == '%' || c == '=' ||
+             c == '.' || c == '<' ||
+             c == '<' || c == '>' ||
+             c == '&' || c == '|' ||
+             c == '^' || c == '~')
     {
         t.count = 1;
+        t.type = TOKEN_OPERATOR;
+    }
+    else
+    {
+        t.count = 1;
+        t.type = WRONG_TOKEN_LONELY_OPERATOR;
     }
     t.text = cmd;
     t.start = start;
-    t.type = TOKEN_OPERATOR;
     return t;
 }
 
@@ -286,7 +333,7 @@ TokenList *lex(const char *cmd, bool debug)
         }
         else if (isdigit(cmd[index]))
         {
-            t = read_digit(cmd, index);
+            t = read_number(cmd, index);
         }
         else if (cmd[index] == '\n')
         {

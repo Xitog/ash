@@ -22,7 +22,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.54";
+const char *VERSION = "0.0.55";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -177,6 +177,7 @@ int main(int argc, char *argv[])
     printf("Ash %s\n", VERSION);
     bool debug = false;
     bool output_json = false;
+    bool clear_space = false;
     // argv[0] est toujours ash.exe
     if (argc > 1)
     {
@@ -291,6 +292,17 @@ int main(int argc, char *argv[])
                     printf("no producing json\n");
                 }
             }
+            else if (strcmp(line, "clear") == 0)
+            {
+                clear_space = !clear_space;
+                if (clear_space)
+                {
+                    printf("Clear spaces from output\n");
+                }
+                else{
+                    printf("Keep spaces from output\n");
+                }
+            }
             else if (strcmp(line, "exit") != 0)
             {
                 if (debug)
@@ -304,11 +316,22 @@ int main(int argc, char *argv[])
                 {
                     count += 1;
                     Token tok = current->token;
-                    token_print(tok);
+                    if (!clear_space || tok.type != TOKEN_SPACE)
+                    {
+                        token_print(tok);
+                    }
                     current = current->next;
                 }
                 if (output_json)
                 {
+                    unsigned int max_length = 0;
+                    for (int i = 0; i < NB_TOKEN_TYPES; i++)
+                    {
+                        if (max_length < strlen(TOKEN_TYPE_REPR_STRING[i]))
+                        {
+                            max_length = strlen(TOKEN_TYPE_REPR_STRING[i]);
+                        }
+                    }
                     //char *buffer = NULL;
                     FILE *file;
                     errno_t err = fopen_s(&file, "out.json", "w");
@@ -323,24 +346,33 @@ int main(int argc, char *argv[])
                     fprintf(file, "%s", "[\n");
                     current = list->head;
                     count = 0;
+                    bool printed = true;
                     while (current != NULL)
                     {
                         count += 1;
-                        if (count > 1)
+                        if (count > 1 && printed)
                         {
                             fprintf(file, ",\n");
                         }
                         Token tok = current->token;
-                        fprintf(file, "    {");
-                        fprintf(file, "        \"start\": %d,", tok.start);
-                        fprintf(file, "        \"count\": %d,", tok.count);
-                        fprintf(file, "        \"type\": \"%s\",", TYPE_REPR_STRING[tok.type]);
-                        for (unsigned int j = 0; j < 11 - strlen(TYPE_REPR_STRING[tok.type]); j++)
+                        if (!clear_space || tok.type != TOKEN_SPACE)
                         {
-                            fprintf(file, " ");
+                            printed = true;
+                            fprintf(file, "    {");
+                            fprintf(file, "        \"start\": %3d,", tok.start);
+                            fprintf(file, "        \"count\": %3d,", tok.count);
+                            fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_REPR_STRING[tok.type]);
+                            for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_REPR_STRING[tok.type]); j++)
+                            {
+                                fprintf(file, " ");
+                            }
+                            fprintf(file, "        \"value\": \"%.*s\"", tok.count, line + tok.start);
+                            fprintf(file, "}");
                         }
-                        fprintf(file, "        \"value\": \"%.*s\"", tok.count, line + tok.start);
-                        fprintf(file, "}");
+                        else
+                        {
+                            printed = false;
+                        }
                         current = current->next;
                     }
                     fprintf(file, "%s", "\n]\n");
