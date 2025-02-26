@@ -13,6 +13,6 @@ Token read_hexa(const char *cmd, unsigned int start, unsigned int current);
 Token read_number(const char *cmd, unsigned int start);
 Token read_string(const char *cmd, unsigned int start);
 Token read_operator(const char *cmd, unsigned int start);
-TokenList *lex(const char *cmd, bool debug);
+TokenList *lex(const char *cmd, bool skip_spaces, bool debug);
 
 #endif

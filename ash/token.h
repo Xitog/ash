@@ -15,7 +15,7 @@
 // Types
 //-----------------------------------------------------------------------------
 
-typedef enum _Type
+typedef enum _TokenType
 {
     TOKEN_NONE = 0,
     TOKEN_DECIMAL = 1,
@@ -33,14 +33,14 @@ typedef enum _Type
     TOKEN_NIL = 13,
     WRONG_TOKEN_LONELY_OPERATOR = 14,
     WRONG_TOKEN_NUMBER_AND_LETTER = 15
-} Type;
+} TokenType;
 
 #define NB_TOKEN_TYPES 16
 
 typedef struct _Token
 {
     const char * text;
-    Type type;
+    TokenType type;
     uint32_t start;
     uint32_t count;
 } Token;

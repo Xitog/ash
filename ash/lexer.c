@@ -301,7 +301,7 @@ Token read_operator(const char *cmd, unsigned int start)
     return t;
 }
 
-TokenList *lex(const char *cmd, bool debug)
+TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
 {
     if (debug)
     {
@@ -370,6 +370,10 @@ TokenList *lex(const char *cmd, bool debug)
         count += 1;
         index += t.count;
         // printf("EOL: start=%d index=%d count=%d\n", old, index, count);
+        if (t.type == TOKEN_SPACE && skip_spaces)
+        {
+            discard = true;
+        }
         if (!discard)
         {
             if (debug)

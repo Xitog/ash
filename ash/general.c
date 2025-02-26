@@ -46,3 +46,12 @@ void general_error(char * message)
     printf("%s\n", message);
     exit(EXIT_FAILURE);
 }
+
+// unsused
+char * string_copy(const char *source)
+{
+    size_t size = _msize((void *)source);
+    char *dest = memory_get(size * sizeof(char));
+    strncpy_s(dest, size, source, size);
+    return dest;
+}
