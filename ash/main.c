@@ -23,7 +23,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.55";
+const char *VERSION = "0.0.56";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -283,6 +283,7 @@ int main(int argc, char *argv[])
                 {
                     printf("Command : |%s| (#%d)\n", line, count);
                 }
+                printf("- Token list --------------------------------\n");
                 TokenList *list = lex(line, clear_space, debug);
                 TokenListElement *current = list->head;
                 count = 0;
@@ -290,11 +291,13 @@ int main(int argc, char *argv[])
                 {
                     count += 1;
                     Token tok = current->token;
+                    printf("%p : ", &current->token);
                     token_print(tok);
                     current = current->next;
                 }
                 if (output_json)
                 {
+                    printf("- Outputting to JSON ---\n");
                     unsigned int max_length = 0;
                     for (int i = 0; i < NB_TOKEN_TYPES; i++)
                     {
@@ -342,6 +345,7 @@ int main(int argc, char *argv[])
                 }
                 if (do_parsing && token_list_size(list) > 0)
                 {
+                    printf("- Parsing ----------------------------------\n");
                     Tree * ast = parse(list);
                     ast_print(ast);
                 }

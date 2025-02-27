@@ -48,7 +48,7 @@ Token token_list_get(TokenList *list, uint32_t index)
         direction = -1;
         current = list->tail;
     }
-    printf("token_list_get(%d) : start at %d direction %d\n", index, count, direction);
+    //printf("token_list_get(%d) : start at %d direction %d\n", index, count, direction);
     while (current != NULL && count != index)
     {
         if (direction == 1)

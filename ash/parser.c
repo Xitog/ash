@@ -66,14 +66,15 @@ Node *parse_addition(TokenList *list)
         #ifdef DEBUG
         printf("        operator + found at %d!\n", parser_index);
         #endif
-        parser_index += 1;
         Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
         Node *right = parse_multiplication(list);
-        node = (Node *)memory_get(sizeof(Node *));
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
         node->left = left;
         node->right = right;
-        //node->middle = NULL;
-        node->type = NODE_OPERATOR_ADD;
+        node->type = NODE_BINARY_OPERATOR;
     }
     return node;
 }
@@ -89,14 +90,15 @@ Node *parse_multiplication(TokenList *list)
         #ifdef DEBUG
         printf("            operator * found at %d!\n", parser_index);
         #endif
-        parser_index += 1;
         Node *left = node;
-        Node *right = parse_litteral(list);
-        node = (Node *)memory_get(sizeof(Node *));
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_multiplication(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
         node->left = left;
         node->right = right;
-        //node->middle = NULL;
-        node->type = NODE_OPERATOR_MUL;
+        node->type = NODE_BINARY_OPERATOR;
     }
     return node;
 }
@@ -111,9 +113,9 @@ Node *parse_litteral(TokenList *list)
         #ifdef DEBUG
         printf("                litteral found at %d!\n", parser_index);
         #endif
-        Node *node = (Node *)memory_get(sizeof(Node *));
+        Node *node = (Node *)memory_get(sizeof(Node));
         node->token = token_list_get(list, parser_index);
-        printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
+        //printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_INTEGER;
@@ -134,23 +136,19 @@ void node_print(Node *node, uint32_t level)
     {
         printf("    ");
     }
-    if (node->type == NODE_OPERATOR_ADD)
+    if (node->type == NODE_BINARY_OPERATOR)
     {
-        printf("ADDITION\n");
-    }
-    else if (node->type == NODE_OPERATOR_MUL)
-    {
-        printf("MULTIPLICATION\n");
+        printf("BINARY OPERATOR %.*s\n", node->token.count, node->token.text + node->token.start);
     }
     else if (node->type == NODE_INTEGER)
     {
-        printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
-        //printf("INTEGER %.*s\n", node->token.count, node->token.text + node->token.start);
+        //printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
+        printf("INTEGER %.*s\n", node->token.count, node->token.text + node->token.start);
     }
     else
     {
         printf("Node type : %d\n", node->type);
-        general_error("UNKNOWN NODE TYPE");
+        general_error("ERROR: UNKNOWN NODE TYPE");
     }
     if (node->left != NULL)
     {
