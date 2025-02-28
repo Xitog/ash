@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 extern unsigned int total_allocated;
 extern unsigned int total_freed;
@@ -14,7 +15,7 @@ void memory_free(void * ptr);
 unsigned int memory_size(void * ptr);
 void memory_copy(void * dest, void * source);
 void memory_summary();
-void general_error(char * message);
+void general_error(char * message, ...);
 char * string_copy(const char *source);
 
 #endif

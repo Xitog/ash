@@ -35,8 +35,7 @@ Token token_list_get(TokenList *list, uint32_t index)
 {
     if (index >= list->count)
     {
-        printf("Index %d out of boundaries [0, %d]", index, list->count);
-        general_error("Index out of boundaries");
+        general_error("Index %d out of boundaries [0, %d]", index, list->count);
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
     TokenListElement *current = list->head;

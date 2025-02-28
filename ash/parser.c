@@ -124,8 +124,7 @@ Node *parse_litteral(TokenList *list)
     }
     else
     {
-        printf("NOT A LITTERAL AT %d\n", parser_index);
-        general_error("NOT A LITTERAL ERROR");
+        general_error("Not a literal at %d", parser_index);
     }
     return NULL;
 }
@@ -147,8 +146,7 @@ void node_print(Node *node, uint32_t level)
     }
     else
     {
-        printf("Node type : %d\n", node->type);
-        general_error("ERROR: UNKNOWN NODE TYPE");
+        general_error("Unknown node type: %d", node->type);
     }
     if (node->left != NULL)
     {
