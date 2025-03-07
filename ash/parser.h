@@ -38,6 +38,8 @@ bool check_value(TokenList *list, uint32_t index, TokenType expected_type, const
 
 Tree *parse(TokenList *list);
 Node *parse_expression(TokenList *list);
+Node *parse_equality(TokenList *list);
+Node *parse_comparison(TokenList *list);
 Node *parse_addition(TokenList *list);
 Node *parse_multiplication(TokenList *list);
 Node *parse_litteral(TokenList *list);

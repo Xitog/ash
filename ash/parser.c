@@ -1,6 +1,9 @@
 #include "parser.h"
 
+#define SPACES 4
+
 unsigned int parser_index = 0;
+unsigned int parser_level = 0;
 
 bool check_type(TokenList *list, uint32_t index, TokenType expected)
 {
@@ -27,17 +30,26 @@ bool check_value(TokenList *list, uint32_t index, TokenType expected_type, const
         return false;
     }
     Token t = token_list_get(list, index);
-    //printf("%d vs expected: %d\n", t.type, expected_type);
-    //printf("expected: %s\n", expected_value);
-    //token_print(t);
+    // printf("%d vs expected: %d\n", t.type, expected_type);
+    // printf("expected: %s\n", expected_value);
+    // token_print(t);
     return t.type == expected_type && token_cmp(t, expected_value);
+}
+
+void tab()
+{
+    for (unsigned int i = 0; i < parser_level * SPACES; i++)
+    {
+        printf(" ");
+    }
 }
 
 Tree *parse(TokenList *list)
 {
     parser_index = 0;
+    parser_level = 0;
 #ifdef DEBUG
-    printf("parse at %d\n", parser_index);
+    printf("? parse at %d\n", parser_index);
 #endif
     Tree *t = (Tree *)memory_get(sizeof(Tree));
     t->root = parse_expression(list);
@@ -49,23 +61,54 @@ Tree *parse(TokenList *list)
 
 Node *parse_expression(TokenList *list)
 {
+    parser_level++;
 #ifdef DEBUG
-    printf("    parse_expression at %d\n", parser_index);
+    tab();
+    printf("? parse_expression at %d\n", parser_index);
 #endif
-    return parse_addition(list);
+    Node *n = parse_equality(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_equality(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_equality at %d\n", parser_index);
+#endif
+    Node *n = parse_comparison(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_comparison(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_comparison at %d\n", parser_index);
+#endif
+    Node *n = parse_addition(list);
+    parser_level--;
+    return n;
 }
 
 Node *parse_addition(TokenList *list)
 {
+    parser_level++;
 #ifdef DEBUG
-    printf("        parse_addition at %d\n", parser_index);
+    tab();
+    printf("? parse_addition at %d\n", parser_index);
 #endif
     Node *node = parse_multiplication(list);
     if (check_value(list, parser_index, TOKEN_OPERATOR, "+"))
     {
-        #ifdef DEBUG
-        printf("        operator + found at %d!\n", parser_index);
-        #endif
+#ifdef DEBUG
+        tab();
+        printf("! operator + found at %d!\n", parser_index);
+#endif
         Node *left = node;
         Token t = token_list_get(list, parser_index);
         parser_index += 1;
@@ -76,20 +119,24 @@ Node *parse_addition(TokenList *list)
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
     }
+    parser_level--;
     return node;
 }
 
 Node *parse_multiplication(TokenList *list)
 {
+    parser_level++;
 #ifdef DEBUG
-    printf("            parse_multiplication at %d\n", parser_index);
+    tab();
+    printf("? parse_multiplication at %d\n", parser_index);
 #endif
     Node *node = parse_litteral(list);
     if (check_value(list, parser_index, TOKEN_OPERATOR, "*"))
     {
-        #ifdef DEBUG
-        printf("            operator * found at %d!\n", parser_index);
-        #endif
+#ifdef DEBUG
+        tab();
+        printf("! operator * found at %d!\n", parser_index);
+#endif
         Node *left = node;
         Token t = token_list_get(list, parser_index);
         parser_index += 1;
@@ -100,32 +147,38 @@ Node *parse_multiplication(TokenList *list)
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
     }
+    parser_level--;
     return node;
 }
 
 Node *parse_litteral(TokenList *list)
 {
+    parser_level++;
 #ifdef DEBUG
-    printf("                parse_litteral at %d\n", parser_index);
+    tab();
+    printf("? parse_litteral at %d\n", parser_index);
 #endif
     if (check_type(list, parser_index, TOKEN_DECIMAL))
     {
-        #ifdef DEBUG
-        printf("                litteral found at %d!\n", parser_index);
-        #endif
+#ifdef DEBUG
+        tab();
+        printf("! litteral found at %d\n", parser_index);
+#endif
         Node *node = (Node *)memory_get(sizeof(Node));
         node->token = token_list_get(list, parser_index);
-        //printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
+        // printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_INTEGER;
         parser_index += 1;
+        parser_level--;
         return node;
     }
     else
     {
         general_error("Not a literal at %d", parser_index);
     }
+    parser_level--;
     return NULL;
 }
 
@@ -141,7 +194,7 @@ void node_print(Node *node, uint32_t level)
     }
     else if (node->type == NODE_INTEGER)
     {
-        //printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
+        // printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         printf("INTEGER %.*s\n", node->token.count, node->token.text + node->token.start);
     }
     else
