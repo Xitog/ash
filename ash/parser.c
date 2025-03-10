@@ -40,7 +40,14 @@ void tab()
 {
     for (unsigned int i = 0; i < parser_level * SPACES; i++)
     {
-        printf(" ");
+        if (i % SPACES == 0)
+        {
+            printf("|");
+        }
+        else
+        {
+            printf(" ");
+        }
     }
 }
 
@@ -66,6 +73,90 @@ Node *parse_expression(TokenList *list)
     tab();
     printf("? parse_expression at %d\n", parser_index);
 #endif
+    Node *n = parse_combined_affectation_binary(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_combined_affectation_binary(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_combined_affectation_binary at %d\n", parser_index);
+#endif
+    Node *n = parse_combined_affectation_shift(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_combined_affectation_shift(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_combined_affectation_shift at %d\n", parser_index);
+#endif
+    Node *n = parse_combined_affectation(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_combined_affectation(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_combined_affectation at %d\n", parser_index);
+#endif
+    Node *n = parse_affectation(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_affectation(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_affectation at %d\n", parser_index);
+#endif
+    Node *n = parse_interval(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_interval(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_interval at %d\n", parser_index);
+#endif
+    Node *n = parse_logical_or(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_logical_or(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_logical_or at %d\n", parser_index);
+#endif
+    Node *n = parse_logical_and(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_logical_and(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_logical_and at %d\n", parser_index);
+#endif
     Node *n = parse_equality(list);
     parser_level--;
     return n;
@@ -90,19 +181,55 @@ Node *parse_comparison(TokenList *list)
     tab();
     printf("? parse_comparison at %d\n", parser_index);
 #endif
-    Node *n = parse_addition(list);
+    Node *n = parse_binary_or_xor(list);
     parser_level--;
     return n;
 }
 
-Node *parse_addition(TokenList *list)
+Node *parse_binary_or_xor(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_binary_or_xor at %d\n", parser_index);
+#endif
+    Node *n = parse_binary_and(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_binary_and(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_binary_and at %d\n", parser_index);
+#endif
+    Node *n = parse_shift(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_shift(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_shift at %d\n", parser_index);
+#endif
+    Node *n = parse_addition_soustraction(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_addition_soustraction(TokenList *list)
 {
     parser_level++;
 #ifdef DEBUG
     tab();
     printf("? parse_addition at %d\n", parser_index);
 #endif
-    Node *node = parse_multiplication(list);
+    Node *node = parse_multiplication_division_modulo(list);
     if (check_value(list, parser_index, TOKEN_OPERATOR, "+"))
     {
 #ifdef DEBUG
@@ -112,7 +239,7 @@ Node *parse_addition(TokenList *list)
         Node *left = node;
         Token t = token_list_get(list, parser_index);
         parser_index += 1;
-        Node *right = parse_multiplication(list);
+        Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
         node->token = t;
         node->left = left;
@@ -123,14 +250,14 @@ Node *parse_addition(TokenList *list)
     return node;
 }
 
-Node *parse_multiplication(TokenList *list)
+Node *parse_multiplication_division_modulo(TokenList *list)
 {
     parser_level++;
 #ifdef DEBUG
     tab();
     printf("? parse_multiplication at %d\n", parser_index);
 #endif
-    Node *node = parse_litteral(list);
+    Node *node = parse_unary_minus(list);
     if (check_value(list, parser_index, TOKEN_OPERATOR, "*"))
     {
 #ifdef DEBUG
@@ -140,7 +267,7 @@ Node *parse_multiplication(TokenList *list)
         Node *left = node;
         Token t = token_list_get(list, parser_index);
         parser_index += 1;
-        Node *right = parse_multiplication(list);
+        Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
         node->token = t;
         node->left = left;
@@ -149,6 +276,42 @@ Node *parse_multiplication(TokenList *list)
     }
     parser_level--;
     return node;
+}
+
+Node *parse_unary_minus(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_unary_minus at %d\n", parser_index);
+#endif
+    Node *n = parse_pow(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_pow(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_pow at %d\n", parser_index);
+#endif
+    Node *n = parse_unary_complement(list);
+    parser_level--;
+    return n;
+}
+
+Node *parse_unary_complement(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_unary_complement at %d\n", parser_index);
+#endif
+    Node *n = parse_litteral(list);
+    parser_level--;
+    return n;
 }
 
 Node *parse_litteral(TokenList *list)
