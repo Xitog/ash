@@ -1,5 +1,6 @@
 ﻿// cl main.c list.c /Fe:ash.exe
 // .\main.exe
+// Working with lua-5.4.2_Win32_vc17_lib
 
 //-----------------------------------------------------------------------------
 // Includes
@@ -18,12 +19,13 @@
 #include "general.h"
 #include "lexer.h"
 #include "parser.h"
+#include "interpreter.h"
 
 //-----------------------------------------------------------------------------
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.56";
+const char *VERSION = "0.0.57";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -348,6 +350,7 @@ int main(int argc, char *argv[])
                     printf("- Parsing ----------------------------------\n");
                     Tree * ast = parse(list);
                     ast_print(ast);
+                    execute(ast);
                 }
                 token_list_free(list);
             }

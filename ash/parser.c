@@ -230,7 +230,8 @@ Node *parse_addition_soustraction(TokenList *list)
     printf("? parse_addition at %d\n", parser_index);
 #endif
     Node *node = parse_multiplication_division_modulo(list);
-    if (check_value(list, parser_index, TOKEN_OPERATOR, "+"))
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "+")
+            || check_value(list, parser_index, TOKEN_OPERATOR, "-"))
     {
 #ifdef DEBUG
         tab();

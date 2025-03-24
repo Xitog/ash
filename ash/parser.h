@@ -56,6 +56,7 @@ Node *parse_multiplication_division_modulo(TokenList *list);
 Node *parse_unary_minus(TokenList *list);
 Node *parse_pow(TokenList *list);
 Node *parse_unary_complement(TokenList *list);
+// () [] .
 Node *parse_litteral(TokenList *list);
 
 void ast_print(Tree *tree);
