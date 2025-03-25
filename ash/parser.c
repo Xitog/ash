@@ -259,11 +259,13 @@ Node *parse_multiplication_division_modulo(TokenList *list)
     printf("? parse_multiplication at %d\n", parser_index);
 #endif
     Node *node = parse_unary_minus(list);
-    if (check_value(list, parser_index, TOKEN_OPERATOR, "*"))
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "*")
+        || check_value(list, parser_index, TOKEN_OPERATOR, "/")
+        || check_value(list, parser_index, TOKEN_OPERATOR, "%"))
     {
 #ifdef DEBUG
         tab();
-        printf("! operator * found at %d!\n", parser_index);
+        printf("! operator *, /, %% found at %d!\n", parser_index);
 #endif
         Node *left = node;
         Token t = token_list_get(list, parser_index);

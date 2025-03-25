@@ -22,7 +22,9 @@ void execute_node(Node *node)
     {
         if (token_cmp(node->token, "+")
             || token_cmp(node->token, "-")
-            || token_cmp(node->token, "*")) {
+            || token_cmp(node->token, "*")
+            || token_cmp(node->token, "/")
+            || token_cmp(node->token, "%")) {
             execute_node(node->left);
             emit(node->token);
             execute_node(node->right);
