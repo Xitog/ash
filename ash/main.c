@@ -25,7 +25,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.57";
+const char *VERSION = "0.0.58";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -349,6 +349,7 @@ int main(int argc, char *argv[])
                 {
                     printf("- Parsing ----------------------------------\n");
                     Tree * ast = parse(list);
+                    printf("- Abstract Syntax Tree ---------------------\n");
                     ast_print(ast);
                     execute(ast);
                 }

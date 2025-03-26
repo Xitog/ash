@@ -14,7 +14,9 @@
 typedef enum _NodeType
 {
     NODE_INTEGER = 0,
-    NODE_BINARY_OPERATOR = 1
+    NODE_FLOAT = 1,
+    NODE_STRING = 2,
+    NODE_BINARY_OPERATOR = 3
 } NodeType;
 
 typedef struct _Node

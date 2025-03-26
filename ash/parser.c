@@ -230,8 +230,7 @@ Node *parse_addition_soustraction(TokenList *list)
     printf("? parse_addition at %d\n", parser_index);
 #endif
     Node *node = parse_multiplication_division_modulo(list);
-    while (check_value(list, parser_index, TOKEN_OPERATOR, "+")
-            || check_value(list, parser_index, TOKEN_OPERATOR, "-"))
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "+") || check_value(list, parser_index, TOKEN_OPERATOR, "-"))
     {
 #ifdef DEBUG
         tab();
@@ -259,9 +258,7 @@ Node *parse_multiplication_division_modulo(TokenList *list)
     printf("? parse_multiplication at %d\n", parser_index);
 #endif
     Node *node = parse_unary_minus(list);
-    while (check_value(list, parser_index, TOKEN_OPERATOR, "*")
-        || check_value(list, parser_index, TOKEN_OPERATOR, "/")
-        || check_value(list, parser_index, TOKEN_OPERATOR, "%"))
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "*") || check_value(list, parser_index, TOKEN_OPERATOR, "/") || check_value(list, parser_index, TOKEN_OPERATOR, "%") || check_value(list, parser_index, TOKEN_OPERATOR, "//"))
     {
 #ifdef DEBUG
         tab();
@@ -319,6 +316,7 @@ Node *parse_unary_complement(TokenList *list)
 
 Node *parse_litteral(TokenList *list)
 {
+    Node *node = NULL;
     parser_level++;
 #ifdef DEBUG
     tab();
@@ -328,28 +326,53 @@ Node *parse_litteral(TokenList *list)
     {
 #ifdef DEBUG
         tab();
-        printf("! litteral found at %d\n", parser_index);
+        printf("! litteral integer found at %d\n", parser_index);
 #endif
-        Node *node = (Node *)memory_get(sizeof(Node));
+        node = (Node *)memory_get(sizeof(Node));
         node->token = token_list_get(list, parser_index);
         // printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_INTEGER;
         parser_index += 1;
-        parser_level--;
-        return node;
+    }
+    else if (check_type(list, parser_index, TOKEN_FLOAT))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! litteral flaot found at %d\n", parser_index);
+#endif
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = token_list_get(list, parser_index);
+        node->left = NULL;
+        node->right = NULL;
+        node->type = NODE_FLOAT;
+        parser_index += 1;
+    }
+    else if (check_type(list, parser_index, TOKEN_STRING))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! litteral string found at %d\n", parser_index);
+#endif
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = token_list_get(list, parser_index);
+        node->left = NULL;
+        node->right = NULL;
+        node->type = NODE_STRING;
+        parser_index += 1;
     }
     else
     {
         general_error("Not a literal at %d", parser_index);
     }
     parser_level--;
-    return NULL;
+    return node;
 }
 
 void node_print(Node *node, uint32_t level)
 {
+    // printf("DEBUG node_print (level=%d)\n", level);
     for (uint32_t i = 0; i < level; i++)
     {
         printf("    ");
@@ -363,9 +386,17 @@ void node_print(Node *node, uint32_t level)
         // printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         printf("INTEGER %.*s\n", node->token.count, node->token.text + node->token.start);
     }
+    else if (node->type == NODE_FLOAT)
+    {
+        printf("FLOAT %.*s\n", node->token.count, node->token.text + node->token.start);
+    }
+    else if (node->type == NODE_STRING)
+    {
+        printf("STRING %.*s\n", node->token.count, node->token.text + node->token.start);
+    }
     else
     {
-        general_error("Unknown node type: %d", node->type);
+        general_error("Parser: Unknown node type: %d", node->type);
     }
     if (node->left != NULL)
     {
