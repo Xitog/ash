@@ -59,11 +59,49 @@ Tree *parse(TokenList *list)
     printf("? parse at %d\n", parser_index);
 #endif
     Tree *t = (Tree *)memory_get(sizeof(Tree));
-    t->root = parse_expression(list);
+    t->root = parse_zero(list);
 #ifdef DEBUG
     printf("end of parsing at %d / %d\n", parser_index, token_list_size(list));
 #endif
     return t;
+}
+
+Node *parse_zero(TokenList *list)
+{
+    Node * root = NULL;
+    if (check_value(list, parser_index, TOKEN_KEYWORD, "if")) {
+        root = parse_if(list);
+    }
+    else
+    {
+        root = parse_expression(list);
+    }
+}
+
+Node *parse_if(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("? parse_if at %d\n", parser_index);
+#endif
+    Node *node = node = (Node *)memory_get(sizeof(Node));
+    Token t = token_list_get(list, parser_index);
+    node->token = t; // keyword:if
+    parser_index += 1;
+    Node *condition = parse_expression(list);
+    if (!check_value(list, parser_index, TOKEN_KEYWORD, "then")) {
+        general_error("if not followed by then.");
+    }
+    Node *action = parse_zero(list);
+    if (!check_value(list, parser_index, TOKEN_KEYWORD, "end")) {
+        general_error("if not terminated by end.");
+    }
+    node->left = condition;
+    node->right = action;
+    node->type = NODE_IF;
+    parser_level--;
+    return node;
 }
 
 Node *parse_expression(TokenList *list)

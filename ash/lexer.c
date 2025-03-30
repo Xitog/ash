@@ -194,7 +194,7 @@ Token read_number(const char *cmd, unsigned int start)
             t.type = TOKEN_DECIMAL;
         }
     }
-    if (t.start + t.count + 1 < strlen(cmd) && isalpha(cmd[t.start + t.count + 1]))
+    if (t.start + t.count < strlen(cmd) && isalpha(cmd[t.start + t.count]))
     {
         t.type = WRONG_TOKEN_NUMBER_AND_LETTER;
     }

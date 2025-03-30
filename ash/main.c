@@ -276,6 +276,7 @@ int main(int argc, char *argv[])
                     "help  : display this help\n"
                     "clear : discard blank tokens\n"
                     "json  : export to out.json file the last command\n"
+                    "parse : activate or desactivate parsing\n"
                     "exit  : exit the REPL\n"
                 );
             }
