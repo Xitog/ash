@@ -68,14 +68,16 @@ Tree *parse(TokenList *list)
 
 Node *parse_zero(TokenList *list)
 {
-    Node * root = NULL;
-    if (check_value(list, parser_index, TOKEN_KEYWORD, "if")) {
+    Node *root = NULL;
+    if (check_value(list, parser_index, TOKEN_KEYWORD, "if"))
+    {
         root = parse_if(list);
     }
     else
     {
         root = parse_expression(list);
     }
+    return root;
 }
 
 Node *parse_if(TokenList *list)
@@ -83,18 +85,20 @@ Node *parse_if(TokenList *list)
     parser_level++;
 #ifdef DEBUG
     tab();
-    printf("? parse_if at %d\n", parser_index);
+    printf("! parse_if at %d\n", parser_index);
 #endif
     Node *node = node = (Node *)memory_get(sizeof(Node));
     Token t = token_list_get(list, parser_index);
     node->token = t; // keyword:if
     parser_index += 1;
     Node *condition = parse_expression(list);
-    if (!check_value(list, parser_index, TOKEN_KEYWORD, "then")) {
+    if (!check_value(list, parser_index, TOKEN_KEYWORD, "then"))
+    {
         general_error("if not followed by then.");
     }
     Node *action = parse_zero(list);
-    if (!check_value(list, parser_index, TOKEN_KEYWORD, "end")) {
+    if (!check_value(list, parser_index, TOKEN_KEYWORD, "end"))
+    {
         general_error("if not terminated by end.");
     }
     node->left = condition;
@@ -109,7 +113,7 @@ Node *parse_expression(TokenList *list)
     parser_level++;
 #ifdef DEBUG
     tab();
-    printf("? parse_expression at %d\n", parser_index);
+    printf("! parse_expression at %d\n", parser_index);
 #endif
     Node *n = parse_combined_affectation_binary(list);
     parser_level--;
@@ -183,9 +187,25 @@ Node *parse_logical_or(TokenList *list)
     tab();
     printf("? parse_logical_or at %d\n", parser_index);
 #endif
-    Node *n = parse_logical_and(list);
+    Node *node = parse_logical_and(list);
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "or"))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! operator or found at %d!\n", parser_index);
+#endif
+        Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_logical_and(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
+        node->left = left;
+        node->right = right;
+        node->type = NODE_BINARY_OPERATOR;
+    }
     parser_level--;
-    return n;
+    return node;
 }
 
 Node *parse_logical_and(TokenList *list)
@@ -195,9 +215,25 @@ Node *parse_logical_and(TokenList *list)
     tab();
     printf("? parse_logical_and at %d\n", parser_index);
 #endif
-    Node *n = parse_equality(list);
+    Node *node = parse_equality(list);
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "and"))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! operator and found at %d!\n", parser_index);
+#endif
+        Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_equality(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
+        node->left = left;
+        node->right = right;
+        node->type = NODE_BINARY_OPERATOR;
+    }
     parser_level--;
-    return n;
+    return node;
 }
 
 Node *parse_equality(TokenList *list)
@@ -207,9 +243,25 @@ Node *parse_equality(TokenList *list)
     tab();
     printf("? parse_equality at %d\n", parser_index);
 #endif
-    Node *n = parse_comparison(list);
+    Node *node = parse_multiplication_division_modulo(list);
+    while (check_value(list, parser_index, TOKEN_OPERATOR, "=="))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! operator == found at %d!\n", parser_index);
+#endif
+        Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_comparison(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
+        node->left = left;
+        node->right = right;
+        node->type = NODE_BINARY_OPERATOR;
+    }
     parser_level--;
-    return n;
+    return node;
 }
 
 Node *parse_comparison(TokenList *list)
@@ -387,6 +439,19 @@ Node *parse_litteral(TokenList *list)
         node->type = NODE_FLOAT;
         parser_index += 1;
     }
+    else if (check_type(list, parser_index, TOKEN_BOOLEAN))
+    {
+#ifdef DEBUG
+        tab();
+        printf("! litteral boolean found at %d\n", parser_index);
+#endif
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = token_list_get(list, parser_index);
+        node->left = NULL;
+        node->right = NULL;
+        node->type = NODE_BOOLEAN;
+        parser_index += 1;
+    }
     else if (check_type(list, parser_index, TOKEN_STRING))
     {
 #ifdef DEBUG
@@ -427,6 +492,10 @@ void node_print(Node *node, uint32_t level)
     else if (node->type == NODE_FLOAT)
     {
         printf("FLOAT %.*s\n", node->token.count, node->token.text + node->token.start);
+    }
+    else if (node->type == NODE_BOOLEAN)
+    {
+        printf("BOOLEAN %.*s\n", node->token.count, node->token.text + node->token.start);
     }
     else if (node->type == NODE_STRING)
     {

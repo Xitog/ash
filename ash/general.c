@@ -70,6 +70,13 @@ void general_error(char *message, ...)
                 printf("%s", s);
                 c++;
             }
+            else if (message[c + 1] == 't')
+            {
+                Token t = va_arg(args, Token);
+                token_print(t);
+                c++;
+
+            }
             else
             {
                 printf("%c", message[c]);

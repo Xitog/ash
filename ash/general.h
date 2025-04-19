@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "token.h"
 
 extern unsigned int total_allocated;
 extern unsigned int total_freed;

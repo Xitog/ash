@@ -69,6 +69,10 @@ Token read_identifier(const char *cmd, unsigned int start)
     {
         t.type = TOKEN_BOOLEAN;
     }
+    else if (token_is_operator(t))
+    {
+        t.type = TOKEN_OPERATOR;
+    }
     else if (token_is_keyword(t))
     {
         t.type = TOKEN_KEYWORD;

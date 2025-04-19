@@ -97,6 +97,7 @@ void token_print(Token tok);
 bool token_cmp(Token t, const char *s);
 bool token_is_nil(Token t);
 bool token_is_boolean(Token t);
+bool token_is_operator(Token t);
 bool token_is_keyword(Token t);
 
 #endif

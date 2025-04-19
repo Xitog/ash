@@ -4,6 +4,7 @@
     "files.associations": {
         "string.h": "c",
         "stdlib.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "lauxlib.h": "c"
     }
 }

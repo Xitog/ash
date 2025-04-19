@@ -88,6 +88,11 @@ bool token_is_boolean(Token t)
     return token_cmp(t, "true") || token_cmp(t, "false");
 }
 
+bool token_is_operator(Token t)
+{
+    return token_cmp(t, "and") || token_cmp(t, "or") || token_cmp(t, "not");
+}
+
 bool token_is_keyword(Token t)
 {
     // Il faut parcourir les keywords et tester si on reconnaît l'un d'entre eux
