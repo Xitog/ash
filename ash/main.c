@@ -292,11 +292,11 @@ int main(int argc, char *argv[])
                 count = 0;
                 while (current != NULL)
                 {
-                    count += 1;
                     Token tok = current->token;
-                    printf("%p : ", &current->token);
+                    printf("%03d. %p : ", count, &current->token);
                     token_print(tok);
                     current = current->next;
+                    count += 1;
                 }
                 if (output_json)
                 {

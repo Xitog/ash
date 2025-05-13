@@ -128,6 +128,14 @@ void execute_node(Node *node)
     {
         emit_t(node->token);
     }
+    else if (node->type == NODE_IF)
+    {
+        emit_s("if ");
+        execute_node(node->extra);
+        emit_s(" then ");
+        execute_node(node->left);
+        emit_s(" end");
+    }
     else
     {
         general_error("Interpreter: Node type unknown.");
@@ -156,6 +164,10 @@ void execute(Tree *ast)
     {
         lua_getglobal(L, "_"); // push onto the stack the value of the global "_"
         int top = lua_gettop(L);
+        size_t string_size;
+        const char *msg = luaL_tolstring(L, top, &string_size);
+        printf("Res: %s\n", msg);
+        /*
         if (lua_isinteger(L, top) || lua_isstring(L, top))
         {
             const char *msg = lua_tostring(L, top);
@@ -186,6 +198,12 @@ void execute(Tree *ast)
             printf("top: %d\n", top);
             printf("type: %s\n", lua_typename(L, lua_type(L, top)));
         }
+        */
+    }
+    else
+    {
+        printf("Error: %s\n", lua_tostring(L, -1));
+        lua_pop(L, 1); // pop error message
     }
     lua_close(L);
     memory_free(buffer);

@@ -26,6 +26,7 @@ typedef struct _Node
     struct _Node *left;
     //struct _Node *middle;
     struct _Node *right;
+    struct _Node *extra; // for if condition
     Token token;
     NodeType type;
 } Node;
