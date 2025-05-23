@@ -3,7 +3,12 @@
 char *buffer;
 uint32_t current;
 
-void emit_t(Token t)
+// Private function signatures
+void emit_token(Token t);
+void emit_string(char *s);
+void emit_node(Node *node);
+
+void emit_token(Token t)
 {
     for (uint32_t i = t.start; i < t.start + t.count; i++, current++)
     {
@@ -11,7 +16,7 @@ void emit_t(Token t)
     }
 }
 
-void emit_s(char *s)
+void emit_string(char *s)
 {
     for (uint32_t i = 0; i < strlen(s); i++, current++)
     {
@@ -19,9 +24,8 @@ void emit_s(char *s)
     }
 }
 
-void execute_node(Node *node)
+void emit_node(Node *node)
 {
-    printf("Node type: %d\n", node->type);
     if (node == NULL)
     {
         printf("INTERPRETER ERROR");
@@ -39,9 +43,9 @@ void execute_node(Node *node)
             {
                 if (node->right->type == NODE_BOOLEAN)
                 {
-                    execute_node(node->left);
-                    emit_s(" == ");
-                    execute_node(node->right);
+                    emit_node(node->left);
+                    emit_string(" == ");
+                    emit_node(node->right);
                 }
                 else
                 {
@@ -52,9 +56,9 @@ void execute_node(Node *node)
             {
                 if (node->right->type == NODE_BOOLEAN)
                 {
-                    execute_node(node->left);
-                    emit_s(" and ");
-                    execute_node(node->right);
+                    emit_node(node->left);
+                    emit_string(" and ");
+                    emit_node(node->right);
                 }
                 else
                 {
@@ -65,9 +69,9 @@ void execute_node(Node *node)
             {
                 if (node->right->type == NODE_BOOLEAN)
                 {
-                    execute_node(node->left);
-                    emit_s(" or ");
-                    execute_node(node->right);
+                    emit_node(node->left);
+                    emit_string(" or ");
+                    emit_node(node->right);
                 }
                 else
                 {
@@ -85,9 +89,9 @@ void execute_node(Node *node)
             {
                 if (node->right->type == NODE_STRING)
                 {
-                    execute_node(node->left);
-                    emit_s("..");
-                    execute_node(node->right);
+                    emit_node(node->left);
+                    emit_string("..");
+                    emit_node(node->right);
                 }
                 else
                 {
@@ -98,11 +102,11 @@ void execute_node(Node *node)
             {
                 if (node->right->type == NODE_INTEGER)
                 {
-                    emit_s("string.rep(");
-                    execute_node(node->left);
-                    emit_s(",");
-                    execute_node(node->right);
-                    emit_s(")");
+                    emit_string("string.rep(");
+                    emit_node(node->left);
+                    emit_string(",");
+                    emit_node(node->right);
+                    emit_string(")");
                 }
                 else
                 {
@@ -118,23 +122,45 @@ void execute_node(Node *node)
         {
             if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//"))
             {
-                execute_node(node->left);
-                emit_t(node->token);
-                execute_node(node->right);
+                emit_node(node->left);
+                emit_token(node->token);
+                emit_node(node->right);
             }
         }
     }
     else if (node->type == NODE_INTEGER || node->type == NODE_FLOAT || node->type == NODE_STRING || node->type == NODE_BOOLEAN)
     {
-        emit_t(node->token);
+        emit_token(node->token);
+    }
+    else if (node->type == NODE_BLOCK)
+    {
+        if (node->left != NULL)
+        {
+            emit_node(node->left);
+        }
+        if (node->right != NULL)
+        {
+            emit_node(node->right);
+        }
     }
     else if (node->type == NODE_IF)
     {
-        emit_s("if ");
-        execute_node(node->extra);
-        emit_s(" then ");
-        execute_node(node->left);
-        emit_s(" end");
+        emit_string("if ");
+        emit_node(node->extra);
+        emit_string(" then ");
+        emit_node(node->left);
+        emit_string(" end");
+    }
+    else if (node->type == NODE_FUNCTION_CALL)
+    {
+        if (token_cmp(node->left->token, "print"))
+        {
+            emit_string("print('hello')");
+        }
+        else
+        {
+            general_error("Interpreter: unknown function: &t.", node->left->token);
+        }
     }
     else
     {
@@ -148,25 +174,39 @@ void execute(Tree *ast)
     {
         return;
     }
+    // Initialisation du buffer de sortie
     buffer = memory_get(sizeof(char) * 1000);
     current = 0;
-    buffer[current] = '_';
-    current++;
-    buffer[current] = '=';
-    current++;
-    lua_State *L = luaL_newstate();
-    luaL_openlibs(L);
-    execute_node(ast->root);
+    bool is_expression = false;
+    if (node_is_type(ast->root, NODE_INTEGER) || node_is_type(ast->root, NODE_FLOAT) || node_is_type(ast->root, NODE_STRING) || node_is_type(ast->root, NODE_BOOLEAN) || node_is_type(ast->root, NODE_BINARY_OPERATOR))
+    {
+        buffer[current] = '_';
+        current++;
+        buffer[current] = '=';
+        current++;
+        is_expression = true;
+    }
+    else if (node_is_type(ast->root, NODE_IF) || node_is_type(ast->root, NODE_BLOCK))
+    {
+        is_expression = false;
+    }
+    emit_node(ast->root);
     buffer[current] = '\0';
     printf("Trans> %s\n", buffer);
+    // Initialisation et exécution de la VM Lua
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
     int res = luaL_dostring(L, buffer);
     if (res == LUA_OK)
     {
-        lua_getglobal(L, "_"); // push onto the stack the value of the global "_"
-        int top = lua_gettop(L);
-        size_t string_size;
-        const char *msg = luaL_tolstring(L, top, &string_size);
-        printf("Res: %s\n", msg);
+        if (is_expression)
+        {
+            lua_getglobal(L, "_"); // push onto the stack the value of the global "_"
+            int top = lua_gettop(L);
+            size_t string_size;
+            const char *msg = luaL_tolstring(L, top, &string_size);
+            printf("Res: %s\n", msg);
+        }
         /*
         if (lua_isinteger(L, top) || lua_isstring(L, top))
         {

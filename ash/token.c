@@ -24,7 +24,7 @@ const char *TOKEN_TYPE_REPR_STRING[] = {
 
 const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
 const char *OPERATOR_ELEMENTS = "+-*/%<>=!.~?&|^";
-const char *SEPARATOR_ELEMENTS = "([{}]),:\n\t";
+const char *SEPARATOR_ELEMENTS = "([{}]),;:\n\t";
 
 const char *KEYWORDS[] = {
     "const",

@@ -3,6 +3,8 @@
 //-----------------------------------------------------------------------------
 
 #define DEBUG
+#define DEBUG_MODE_FULL 2
+#define DEBUG_MODE_CLEVER 1
 
 #ifndef __PARSER__
 #define __PARSER__
@@ -11,14 +13,19 @@
 #include "token.h"
 #include "token_list.h"
 
+extern uint8_t DEBUG_MODE;
+
 typedef enum _NodeType
 {
     NODE_INTEGER = 0,
     NODE_FLOAT = 1,
     NODE_BOOLEAN = 2,
     NODE_STRING = 3,
-    NODE_BINARY_OPERATOR = 4,
-    NODE_IF = 5
+    NODE_IDENTIFIER = 4,
+    NODE_BINARY_OPERATOR = 5,
+    NODE_IF = 6,
+    NODE_FUNCTION_CALL = 7,
+    NODE_BLOCK = 8
 } NodeType;
 
 typedef struct _Node
@@ -36,14 +43,18 @@ typedef struct
     Node *root;
 } Tree;
 
+bool node_is_type(Node * node, NodeType type);
+void node_print(Node *node);
+void node_print_level(Node *node, uint32_t level);
+
 extern unsigned int parser_index;
 
-bool check_type(TokenList *list, uint32_t index, TokenType expected);
-bool check_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
+bool check_token_type(TokenList *list, uint32_t index, TokenType expected);
+bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
 
 Tree *parse(TokenList *list);
 
-Node *parse_zero(TokenList *list);
+Node *parse_block(TokenList *list);
 Node *parse_if(TokenList *list);
 Node *parse_expression(TokenList *list);
 Node *parse_combined_affectation_binary(TokenList *list);
@@ -63,7 +74,8 @@ Node *parse_multiplication_division_modulo(TokenList *list);
 Node *parse_unary_minus(TokenList *list);
 Node *parse_pow(TokenList *list);
 Node *parse_unary_complement(TokenList *list);
-// () [] .
+// [] .
+Node *parse_call(TokenList *list);
 Node *parse_litteral(TokenList *list);
 
 void ast_print(Tree *tree);
