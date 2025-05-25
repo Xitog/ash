@@ -48,6 +48,7 @@ void node_print(Node *node);
 void node_print_level(Node *node, uint32_t level);
 
 extern unsigned int parser_index;
+const extern char *NODE_TYPE_REPR_STRING[];
 
 bool check_token_type(TokenList *list, uint32_t index, TokenType expected);
 bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
@@ -77,6 +78,8 @@ Node *parse_unary_complement(TokenList *list);
 // [] .
 Node *parse_call(TokenList *list);
 Node *parse_litteral(TokenList *list);
+
+NodeType node_compute_type(Node *node);
 
 void ast_print(Tree *tree);
 

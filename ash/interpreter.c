@@ -146,9 +146,19 @@ void emit_node(Node *node)
     else if (node->type == NODE_IF)
     {
         emit_string("if ");
+        NodeType nt = node_compute_type(node->extra);
+        if (nt != NODE_BOOLEAN)
+        {
+            general_error("Interpreter: IF expression should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
+        }
         emit_node(node->extra);
         emit_string(" then ");
         emit_node(node->left);
+        if (node->right != NULL)
+        {
+            emit_string(" else ");
+            emit_node(node->right);
+        }
         emit_string(" end");
     }
     else if (node->type == NODE_FUNCTION_CALL)
@@ -157,9 +167,13 @@ void emit_node(Node *node)
         {
             emit_string("print('hello')");
         }
+        else if (token_cmp(node->left->token, "print2"))
+        {
+            emit_string("print('goodbye')");
+        }
         else
         {
-            general_error("Interpreter: unknown function: &t.", node->left->token);
+            general_error("Interpreter: unknown function: %t.", node->left->token);
         }
     }
     else

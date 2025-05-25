@@ -2,6 +2,18 @@
 
 #define SPACES 4
 
+const char *NODE_TYPE_REPR_STRING[] = {
+    "NODE_INTEGER",
+    "NODE_FLOAT",
+    "NODE_BOOLEAN",
+    "NODE_STRING",
+    "NODE_IDENTIFIER",
+    "NODE_BINARY_OPERATOR",
+    "NODE_IF",
+    "NODE_FUNCTION_CALL",
+    "NODE_BLOCK"
+};
+
 uint8_t DEBUG_MODE = DEBUG_MODE_FULL; // DEBUG_MODE_CLEVER;
 
 unsigned int parser_index = 0;
@@ -152,6 +164,16 @@ Node *parse_if(TokenList *list)
 #endif
     parser_index += 1; // pass keyword then
     Node *action = parse_block(list);
+    Node *else_action = NULL;
+    if (check_token_value(list, parser_index, TOKEN_KEYWORD, "else"))
+    {
+#ifdef DEBUG
+        tab();
+        printf("> parse ELSE\n");
+#endif
+        parser_index += 1; // pass keyword else
+        else_action = parse_block(list);
+    }
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "end"))
     {
         general_error("if not terminated by end.");
@@ -163,7 +185,7 @@ Node *parse_if(TokenList *list)
     parser_index += 1; // pass keyword end
     node->extra = condition;
     node->left = action;
-    node->right = NULL;
+    node->right = else_action;
     node->type = NODE_IF;
     parser_level--;
     return node;
@@ -708,6 +730,33 @@ void node_print_level(Node *node, uint32_t level)
     else
     {
         general_error("Parser: Unknown node type: %d", node->type);
+    }
+}
+
+NodeType node_compute_type(Node *node)
+{
+    if (node->type == NODE_BOOLEAN)
+    {
+        return NODE_BOOLEAN;
+    }
+    else if (node->type == NODE_INTEGER)
+    {
+        return NODE_INTEGER;
+    }
+    else if (node->type == NODE_FLOAT)
+    {
+        return NODE_FLOAT;
+    }
+    else if (node->type == NODE_BINARY_OPERATOR)
+    {
+        if (token_cmp(node->token, "and") && node_compute_type(node->right) == NODE_BOOLEAN && node_compute_type(node->left) == NODE_BOOLEAN)
+        {
+            return NODE_BOOLEAN;
+        }
+        else if (token_cmp(node->token, "or") && node_compute_type(node->right) == NODE_BOOLEAN && node_compute_type(node->left) == NODE_BOOLEAN)
+        {
+            return NODE_BOOLEAN;
+        }
     }
 }
 

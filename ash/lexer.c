@@ -43,8 +43,12 @@ Token read_identifier(const char *cmd, unsigned int start)
     unsigned int count = 0;
     while (index < strlen(cmd))
     {
-        if (isalpha(cmd[index]))
+        if (isalpha(cmd[index]) || isdigit(cmd[index]))
         {
+            if (count == 0 && isdigit(cmd[index]))
+            {
+                general_error("Lexer error: Identifier cannot start by a number.\n");
+            }
             count += 1;
         }
         else if (cmd[index] == '?' && ((index + 1) >= strlen(cmd) || (!isalpha(cmd[index + 1]) && cmd[index + 1] != '?')))

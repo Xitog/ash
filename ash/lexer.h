@@ -2,6 +2,7 @@
 #define __LEXER__
 
 #include <stdbool.h>
+#include "general.h"
 #include "token.h"
 #include "token_list.h"
 
