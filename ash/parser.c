@@ -11,8 +11,7 @@ const char *NODE_TYPE_REPR_STRING[] = {
     "NODE_BINARY_OPERATOR",
     "NODE_IF",
     "NODE_FUNCTION_CALL",
-    "NODE_BLOCK"
-};
+    "NODE_BLOCK"};
 
 uint8_t DEBUG_MODE = DEBUG_MODE_FULL; // DEBUG_MODE_CLEVER;
 
@@ -150,10 +149,11 @@ Node *parse_if(TokenList *list)
     printf("> parse_if at %d\n", parser_index);
 #endif
     Node *node = node = (Node *)memory_get(sizeof(Node));
+    node->type = NODE_IF;
     Token t = token_list_get(list, parser_index);
     node->token = t;   // keyword if
     parser_index += 1; // pass keyword if
-    Node *condition = parse_expression(list);
+    node->extra = parse_expression(list);
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
     {
         general_error("if not followed by then.");
@@ -163,8 +163,29 @@ Node *parse_if(TokenList *list)
     printf("> parse THEN\n");
 #endif
     parser_index += 1; // pass keyword then
-    Node *action = parse_block(list);
-    Node *else_action = NULL;
+    node->left = parse_block(list);
+    node->right = NULL;
+    Node *first_if = node;
+    while (check_token_value(list, parser_index, TOKEN_KEYWORD, "elsif"))
+    {
+#ifdef DEBUG
+        tab();
+        printf("> parse ELSIF\n");
+#endif
+        Node *elsif = (Node *)memory_get(sizeof(Node));
+        elsif->type = NODE_IF;
+        parser_index += 1; // pass keyword elsif
+        elsif->extra = parse_expression(list);
+        if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
+        {
+            general_error("elsif not followed by then.");
+        }
+        parser_index += 1; // pass keyword then
+        elsif->left = parse_block(list);
+        elsif->right = NULL;
+        node->right = elsif;
+        node = elsif;
+    }
     if (check_token_value(list, parser_index, TOKEN_KEYWORD, "else"))
     {
 #ifdef DEBUG
@@ -172,7 +193,7 @@ Node *parse_if(TokenList *list)
         printf("> parse ELSE\n");
 #endif
         parser_index += 1; // pass keyword else
-        else_action = parse_block(list);
+        node->right = parse_block(list);
     }
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "end"))
     {
@@ -183,12 +204,8 @@ Node *parse_if(TokenList *list)
     printf("> parse END\n");
 #endif
     parser_index += 1; // pass keyword end
-    node->extra = condition;
-    node->left = action;
-    node->right = else_action;
-    node->type = NODE_IF;
     parser_level--;
-    return node;
+    return first_if;
 }
 
 Node *parse_expression(TokenList *list)
@@ -705,7 +722,9 @@ void node_print_level(Node *node, uint32_t level)
     }
     else if (node->type == NODE_FUNCTION_CALL)
     {
-        printf("FUNCTION CALL print\n");
+        printf("FUNCTION CALL ");
+        token_print_value(node->left->token);
+        printf("\n");
     }
     else if (node->type == NODE_BLOCK)
     {
@@ -726,6 +745,12 @@ void node_print_level(Node *node, uint32_t level)
         spaces(level + 1);
         printf("ACTION\n");
         node_print_level(node->left, level + 2);
+        if (node->right != NULL)
+        {
+            spaces(level + 1);
+            printf("ELSE\n");
+            node_print_level(node->right, level + 2);
+        }
     }
     else
     {
@@ -758,6 +783,7 @@ NodeType node_compute_type(Node *node)
             return NODE_BOOLEAN;
         }
     }
+    return NODE_BLOCK;
 }
 
 void ast_print(Tree *tree)

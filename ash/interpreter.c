@@ -154,10 +154,22 @@ void emit_node(Node *node)
         emit_node(node->extra);
         emit_string(" then ");
         emit_node(node->left);
-        if (node->right != NULL)
+        Node *parcours = node->right;
+        while (parcours != NULL)
         {
-            emit_string(" else ");
-            emit_node(node->right);
+            if (parcours->type == NODE_IF)
+            {
+                emit_string( " elseif ");
+                emit_node(parcours->extra);
+                emit_string(" then ");
+                emit_node(parcours->left);
+            }
+            else
+            {
+                emit_string(" else ");
+                emit_node(parcours);
+            }
+            parcours = parcours->right;
         }
         emit_string(" end");
     }
@@ -165,9 +177,13 @@ void emit_node(Node *node)
     {
         if (token_cmp(node->left->token, "print"))
         {
+            emit_string("print('print')");
+        }
+        else if (token_cmp(node->left->token, "hello"))
+        {
             emit_string("print('hello')");
         }
-        else if (token_cmp(node->left->token, "print2"))
+        else if (token_cmp(node->left->token, "goodbye"))
         {
             emit_string("print('goodbye')");
         }

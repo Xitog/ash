@@ -94,6 +94,7 @@ const extern char *KEYWORDS[];
 //-----------------------------------------------------------------------------
 
 void token_print(Token tok);
+void token_print_value(Token tok);
 bool token_cmp(Token t, const char *s);
 bool token_is_nil(Token t);
 bool token_is_boolean(Token t);

@@ -60,6 +60,11 @@ void token_print(Token tok)
     printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_REPR_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
 }
 
+void token_print_value(Token tok)
+{
+    printf("%.*s", tok.count, tok.text + tok.start);
+}
+
 bool token_cmp(Token t, const char *str)
 {
     if (strlen(str) != t.count)
