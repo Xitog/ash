@@ -31,7 +31,19 @@ void emit_node(Node *node)
         printf("INTERPRETER ERROR");
         return;
     }
-    if (node->type == NODE_BINARY_OPERATOR)
+    if (node->type == NODE_BINARY_OPERATOR && token_cmp(node->token, "="))
+    {
+        if (node->left->type != NODE_IDENTIFIER)
+        {
+            general_error("Interpreter: left part of affectation operator should be an identifier.");
+        }
+        emit_node(node->left);
+        emit_string(" = ");
+        emit_node(node->right);
+        emit_string("\n_ = ");
+        emit_node(node->left);
+    }
+    else if (node->type == NODE_BINARY_OPERATOR)
     {
         if (node->left->type == NODE_BINARY_OPERATOR)
         {
@@ -118,9 +130,23 @@ void emit_node(Node *node)
                 general_error("Interpreter: unknown operator for string.");
             }
         }
+        else if (token_cmp(node->token, "=="))
+        {
+            // Il faudra vérifier les types aussi
+            emit_node(node->left);
+            emit_token(node->token);
+            emit_node(node->right);
+        }
+        else if (token_cmp(node->token, "!="))
+        {
+            // Il faudra vérifier les types aussi
+            emit_node(node->left);
+            emit_string("~=");
+            emit_node(node->right);
+        }
         else
         {
-            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//"))
+            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">"))
             {
                 emit_node(node->left);
                 emit_token(node->token);
@@ -128,7 +154,7 @@ void emit_node(Node *node)
             }
         }
     }
-    else if (node->type == NODE_INTEGER || node->type == NODE_FLOAT || node->type == NODE_STRING || node->type == NODE_BOOLEAN)
+    else if (node->type == NODE_INTEGER || node->type == NODE_FLOAT || node->type == NODE_STRING || node->type == NODE_BOOLEAN || node->type == NODE_IDENTIFIER)
     {
         emit_token(node->token);
     }
@@ -143,13 +169,26 @@ void emit_node(Node *node)
             emit_node(node->right);
         }
     }
+    else if (node->type == NODE_WHILE)
+    {
+        emit_string("while ");
+        NodeType nt = node_compute_type(node->extra);
+        if (nt != NODE_BOOLEAN)
+        {
+            general_error("Interpreter: WHILE condition should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
+        }
+        emit_node(node->extra);
+        emit_string(" do ");
+        emit_node(node->left);
+        emit_string(" end");
+    }
     else if (node->type == NODE_IF)
     {
         emit_string("if ");
         NodeType nt = node_compute_type(node->extra);
         if (nt != NODE_BOOLEAN)
         {
-            general_error("Interpreter: IF expression should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
+            general_error("Interpreter: IF condission should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
         }
         emit_node(node->extra);
         emit_string(" then ");
@@ -177,15 +216,15 @@ void emit_node(Node *node)
     {
         if (token_cmp(node->left->token, "print"))
         {
-            emit_string("print('print')");
+            emit_string(" print('print') ");
         }
         else if (token_cmp(node->left->token, "hello"))
         {
-            emit_string("print('hello')");
+            emit_string(" print('hello') ");
         }
         else if (token_cmp(node->left->token, "goodbye"))
         {
-            emit_string("print('goodbye')");
+            emit_string(" print('goodbye') ");
         }
         else
         {
@@ -198,6 +237,20 @@ void emit_node(Node *node)
     }
 }
 
+lua_State *L = NULL;
+
+void reinit()
+{
+    // Initialisation et exécution de la VM Lua
+    L = luaL_newstate();
+    luaL_openlibs(L);
+}
+
+void close()
+{
+    lua_close(L);
+}
+
 void execute(Tree *ast)
 {
     if (ast == NULL)
@@ -208,13 +261,18 @@ void execute(Tree *ast)
     buffer = memory_get(sizeof(char) * 1000);
     current = 0;
     bool is_expression = false;
-    if (node_is_type(ast->root, NODE_INTEGER) || node_is_type(ast->root, NODE_FLOAT) || node_is_type(ast->root, NODE_STRING) || node_is_type(ast->root, NODE_BOOLEAN) || node_is_type(ast->root, NODE_BINARY_OPERATOR))
+    if (node_is_type(ast->root, NODE_INTEGER) || node_is_type(ast->root, NODE_FLOAT) || node_is_type(ast->root, NODE_STRING) || node_is_type(ast->root, NODE_BOOLEAN) || node_is_type(ast->root, NODE_IDENTIFIER) || (node_is_type(ast->root, NODE_BINARY_OPERATOR) && !token_cmp(ast->root->token, "=")))
     {
         buffer[current] = '_';
         current++;
         buffer[current] = '=';
         current++;
         is_expression = true;
+    }
+    else if ((node_is_type(ast->root, NODE_BINARY_OPERATOR) && token_cmp(ast->root->token, "=")))
+    {
+        is_expression = true;
+        // L'affichage est géré par l'emit_node
     }
     else if (node_is_type(ast->root, NODE_IF) || node_is_type(ast->root, NODE_BLOCK))
     {
@@ -223,9 +281,10 @@ void execute(Tree *ast)
     emit_node(ast->root);
     buffer[current] = '\0';
     printf("Trans> %s\n", buffer);
-    // Initialisation et exécution de la VM Lua
-    lua_State *L = luaL_newstate();
-    luaL_openlibs(L);
+    if (L == NULL)
+    {
+        reinit();
+    }
     int res = luaL_dostring(L, buffer);
     if (res == LUA_OK)
     {
@@ -275,6 +334,5 @@ void execute(Tree *ast)
         printf("Error: %s\n", lua_tostring(L, -1));
         lua_pop(L, 1); // pop error message
     }
-    lua_close(L);
     memory_free(buffer);
 }

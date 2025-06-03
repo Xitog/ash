@@ -10,6 +10,7 @@ const char *NODE_TYPE_REPR_STRING[] = {
     "NODE_IDENTIFIER",
     "NODE_BINARY_OPERATOR",
     "NODE_IF",
+    "NODE_WHILE",
     "NODE_FUNCTION_CALL",
     "NODE_BLOCK"};
 
@@ -103,6 +104,10 @@ Node *parse_block(TokenList *list)
         if (check_token_value(list, parser_index, TOKEN_KEYWORD, "if"))
         {
             next = parse_if(list);
+        }
+        else if (check_token_value(list, parser_index, TOKEN_KEYWORD, "while"))
+        {
+            next = parse_while(list);
         }
         else if (parser_index < token_list_size(list))
         {
@@ -208,6 +213,43 @@ Node *parse_if(TokenList *list)
     return first_if;
 }
 
+Node *parse_while(TokenList *list)
+{
+    parser_level++;
+#ifdef DEBUG
+    tab();
+    printf("> parse_while at %d\n", parser_index);
+#endif
+    Node *node = node = (Node *)memory_get(sizeof(Node));
+    node->type = NODE_WHILE;
+    Token t = token_list_get(list, parser_index);
+    node->token = t;   // keyword while
+    parser_index += 1; // pass keyword while
+    node->extra = parse_expression(list);
+    if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "do"))
+    {
+        general_error("while not followed by do.");
+    }
+#ifdef DEBUG
+    tab();
+    printf("> parse DO\n");
+#endif
+    parser_index += 1; // pass keyword do
+    node->left = parse_block(list);
+    node->right = NULL;
+    if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "loop"))
+    {
+        general_error("while not terminated by loop.");
+    }
+#ifdef DEBUG
+    tab();
+    printf("> parse LOOP\n");
+#endif
+    parser_index += 1; // pass keyword loop
+    parser_level--;
+    return node;
+}
+
 Node *parse_expression(TokenList *list)
 {
     parser_level++;
@@ -278,9 +320,25 @@ Node *parse_affectation(TokenList *list)
         printf("? parse_affectation at %d\n", parser_index);
     }
 #endif
-    Node *n = parse_interval(list);
+    Node *node = parse_interval(list);
+    while (check_token_value(list, parser_index, TOKEN_OPERATOR, "="))
+    {
+#ifdef DEBUG
+        tab();
+        printf("> operator = found at %d!\n", parser_index);
+#endif
+        Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_logical_and(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
+        node->left = left;
+        node->right = right;
+        node->type = NODE_BINARY_OPERATOR;
+    }
     parser_level--;
-    return n;
+    return node;
 }
 
 Node *parse_interval(TokenList *list)
@@ -371,11 +429,11 @@ Node *parse_equality(TokenList *list)
     }
 #endif
     Node *node = parse_comparison(list);
-    while (check_token_value(list, parser_index, TOKEN_OPERATOR, "=="))
+    while (check_token_value(list, parser_index, TOKEN_OPERATOR, "==") || check_token_value(list, parser_index, TOKEN_OPERATOR, "!="))
     {
 #ifdef DEBUG
         tab();
-        printf("> operator == found at %d!\n", parser_index);
+        printf("> operator == or != found at %d!\n", parser_index);
 #endif
         Node *left = node;
         Token t = token_list_get(list, parser_index);
@@ -401,9 +459,25 @@ Node *parse_comparison(TokenList *list)
         printf("? parse_comparison at %d\n", parser_index);
     }
 #endif
-    Node *n = parse_binary_or_xor(list);
+    Node *node = parse_binary_or_xor(list);
+    if (check_token_value(list, parser_index, TOKEN_OPERATOR, "<") || check_token_value(list, parser_index, TOKEN_OPERATOR, ">"))
+    {
+#ifdef DEBUG
+        tab();
+        printf("> operator < or > found at %d!\n", parser_index);
+#endif
+        Node *left = node;
+        Token t = token_list_get(list, parser_index);
+        parser_index += 1;
+        Node *right = parse_comparison(list);
+        node = (Node *)memory_get(sizeof(Node));
+        node->token = t;
+        node->left = left;
+        node->right = right;
+        node->type = NODE_BINARY_OPERATOR;
+    }
     parser_level--;
-    return n;
+    return node;
 }
 
 Node *parse_binary_or_xor(TokenList *list)
@@ -720,6 +794,10 @@ void node_print_level(Node *node, uint32_t level)
     {
         printf("STRING %.*s\n", node->token.count, node->token.text + node->token.start);
     }
+    else if (node->type == NODE_IDENTIFIER)
+    {
+        printf("IDENTIFIER %.*s\n", node->token.count, node->token.text + node->token.start);
+    }
     else if (node->type == NODE_FUNCTION_CALL)
     {
         printf("FUNCTION CALL ");
@@ -752,6 +830,16 @@ void node_print_level(Node *node, uint32_t level)
             node_print_level(node->right, level + 2);
         }
     }
+    else if (node->type == NODE_WHILE)
+    {
+        printf("WHILE\n");
+        spaces(level + 1);
+        printf("CONDITION\n");
+        node_print_level(node->extra, level + 2);
+        spaces(level + 1);
+        printf("ACTION\n");
+        node_print_level(node->left, level + 2);
+    }
     else
     {
         general_error("Parser: Unknown node type: %d", node->type);
@@ -779,6 +867,10 @@ NodeType node_compute_type(Node *node)
             return NODE_BOOLEAN;
         }
         else if (token_cmp(node->token, "or") && node_compute_type(node->right) == NODE_BOOLEAN && node_compute_type(node->left) == NODE_BOOLEAN)
+        {
+            return NODE_BOOLEAN;
+        }
+        else if (token_cmp(node->token, ">") || token_cmp(node->token, "<") || token_cmp(node->token, "==") || token_cmp(node->token, "!="))
         {
             return NODE_BOOLEAN;
         }

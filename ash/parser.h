@@ -24,8 +24,9 @@ typedef enum _NodeType
     NODE_IDENTIFIER = 4,
     NODE_BINARY_OPERATOR = 5,
     NODE_IF = 6,
-    NODE_FUNCTION_CALL = 7,
-    NODE_BLOCK = 8
+    NODE_WHILE = 7,
+    NODE_FUNCTION_CALL = 8,
+    NODE_BLOCK = 9
 } NodeType;
 
 typedef struct _Node
@@ -57,6 +58,7 @@ Tree *parse(TokenList *list);
 
 Node *parse_block(TokenList *list);
 Node *parse_if(TokenList *list);
+Node *parse_while(TokenList *list);
 Node *parse_expression(TokenList *list);
 Node *parse_combined_affectation_binary(TokenList *list);
 Node *parse_combined_affectation_shift(TokenList *list);
