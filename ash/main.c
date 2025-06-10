@@ -25,7 +25,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.61";
+const char *VERSION = "0.0.62";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -130,8 +130,11 @@ int main(int argc, char *argv[])
     printf("Ash %s\n", VERSION);
     bool debug = false;
     bool output_json = false;
+    bool output_dot = false;
     bool clear_space = true; // only on printing!
     bool do_parsing = true;
+    const char * OUTPUT_JSON_FILENAME = "output.json";
+    const char * OUTPUT_DOT_FILENAME = "output.dot";
     // argv[0] est toujours ash.exe
     if (argc > 1)
     {
@@ -240,12 +243,17 @@ int main(int argc, char *argv[])
                 output_json = !output_json;
                 if (output_json)
                 {
-                    printf("producing json output in out.json\n");
+                    printf("producing json output in %s\n", OUTPUT_JSON_FILENAME);
                 }
                 else
                 {
                     printf("no producing json\n");
                 }
+            }
+            else if (strcmp(line, "dot") == 0)
+            {
+                output_dot = true;
+                printf("producing dot output in %s\n", OUTPUT_DOT_FILENAME);
             }
             else if (strcmp(line, "clear") == 0)
             {
@@ -275,9 +283,12 @@ int main(int argc, char *argv[])
                 printf(
                     "help  : display this help\n"
                     "clear : discard blank tokens\n"
-                    "json  : export to out.json file the last command\n"
+                    "json  : export to %s file the last command\n"
+                    "dot   : export to %s file the next command\n"
                     "parse : activate or desactivate parsing\n"
-                    "exit  : exit the REPL\n"
+                    "exit  : exit the REPL\n",
+                    OUTPUT_JSON_FILENAME,
+                    OUTPUT_DOT_FILENAME
                 );
             }
             else if (strcmp(line, "exit") != 0)
@@ -311,7 +322,7 @@ int main(int argc, char *argv[])
                     }
                     //char *buffer = NULL;
                     FILE *file;
-                    errno_t err = fopen_s(&file, "out.json", "w");
+                    errno_t err = fopen_s(&file, OUTPUT_JSON_FILENAME, "w");
                     if (err != 0)
                     {
                         printf("Something bad happened writing json output file\n");
@@ -349,11 +360,29 @@ int main(int argc, char *argv[])
                 if (do_parsing && token_list_size(list) > 0)
                 {
                     printf("- Parsing ----------------------------------\n");
-                    Tree * ast = parse(list);
+                    AST * ast = parse(list);
                     printf("- Abstract Syntax Tree ---------------------\n");
                     ast_print(ast);
                     printf("- Interpreting -----------------------------\n");
-                    execute(ast);
+                    const char * res = execute(ast);
+                    if (output_dot)
+                    {
+                        printf("- Writing dot file -------------------------\n");
+                        ast_to_dot(ast, res);
+                        const size_t command_length = 1024;
+                        char *command = memory_get(command_length);
+                        memset(command, '\0', command_length);
+                        printf("DOT file written.\n");
+                        sprintf(command, "dot -Tpng %s > output.png", OUTPUT_DOT_FILENAME);
+                        int err = system(command);
+                        memory_free(command);
+                        if (err != EXIT_SUCCESS)
+                        {
+                            printf("Unable to generate dot and png files.\n");
+                        }
+                        printf("PNG file written.\n");
+                        output_dot = false;
+                    }
                 }
                 token_list_free(list);
             }

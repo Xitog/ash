@@ -10,6 +10,6 @@
 #include "token.h"
 #include "parser.h"
 
-void execute(Tree *ast);
+const char * execute(AST *ast);
 
 #endif

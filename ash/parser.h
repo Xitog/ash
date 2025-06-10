@@ -42,7 +42,7 @@ typedef struct _Node
 typedef struct
 {
     Node *root;
-} Tree;
+} AST;
 
 bool node_is_type(Node * node, NodeType type);
 void node_print(Node *node);
@@ -54,7 +54,7 @@ const extern char *NODE_TYPE_REPR_STRING[];
 bool check_token_type(TokenList *list, uint32_t index, TokenType expected);
 bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
 
-Tree *parse(TokenList *list);
+AST *parse(TokenList *list);
 
 Node *parse_block(TokenList *list);
 Node *parse_if(TokenList *list);
@@ -83,6 +83,7 @@ Node *parse_litteral(TokenList *list);
 
 NodeType node_compute_type(Node *node);
 
-void ast_print(Tree *tree);
+void ast_print(AST *tree);
+void ast_to_dot(AST *tree, const char * res);
 
 #endif

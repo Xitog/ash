@@ -1,0 +1,17 @@
+graph "Output parser"
+{
+    fontname="Helvetica,Arial,sans-serif"
+    node [fontname="Helvetica,Arial,sans-serif"]
+    label = "Abstract syntax tree (Result = 90)"
+    subgraph s1
+    {
+        n1 ;
+        n1 [label="*"]
+        n2 ;
+        n2 [label="45"]
+        n1 -- n2 ;
+        n3 ;
+        n3 [label="2"]
+        n1 -- n3 ;
+    }
+}

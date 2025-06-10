@@ -70,14 +70,14 @@ void tab()
     }
 }
 
-Tree *parse(TokenList *list)
+AST *parse(TokenList *list)
 {
     parser_index = 0;
     parser_level = 0;
 #ifdef DEBUG
     printf("> parse at %d\n", parser_index);
 #endif
-    Tree *t = (Tree *)memory_get(sizeof(Tree));
+    AST *t = (AST *)memory_get(sizeof(AST));
     t->root = parse_block(list);
 #ifdef DEBUG
     printf("end of parsing at %d / %d\n", parser_index, token_list_size(list));
@@ -762,6 +762,66 @@ void spaces(uint32_t level)
     }
 }
 
+int node_dot_count = 0;
+
+// Private, must be only used by tree_to_dot
+void node_to_dot_sub(Node * node, FILE *f, int father, int num)
+{
+    fprintf(f, "        n%d ;\n", num);
+    fprintf(f, "        n%d [label=\"%.*s\"]\n", num, node->token.count, node->token.text + node->token.start);
+    // Link to the father node
+    if (father != 0)
+    {
+        fprintf(f, "        n%d -- n%d ;\n", father, num);
+    }
+    // Go extra
+    if (node->extra != NULL)
+    {
+        node_dot_count += 1;
+        node_to_dot_sub(node->left, f, num, node_dot_count);
+    }
+    // Go left
+    if (node->left != NULL)
+    {
+        node_dot_count += 1;
+        node_to_dot_sub(node->left, f, num, node_dot_count);
+    }
+    // Go right
+    if (node->right != NULL)
+    {
+        node_dot_count += 1;
+        node_to_dot_sub(node->right, f, num, node_dot_count);
+    }
+}
+
+void ast_to_dot(AST * tree, const char * res)
+{
+    node_dot_count = 0;
+    FILE *f = NULL;
+    errno_t err = fopen_s(&f, "output.dot", "w"); //, ccs=UTF-8");
+    //f = fopen("output.dot", "w");
+    //if (err != 0 || f == NULL)
+    if (f == NULL)
+    {
+        printf("Error opening file!\n");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(f, "graph \"Output parser\"\n");
+    fprintf(f, "{\n");
+    fprintf(f, "    fontname=\"Helvetica,Arial,sans-serif\"\n");
+    fprintf(f, "    node [fontname=\"Helvetica,Arial,sans-serif\"]\n");
+    fprintf(f, "    label = \"Abstract syntax tree (Result = %s)\"\n", res);
+    fprintf(f, "    subgraph s1\n");
+    fprintf(f, "    {\n");
+    if (tree->root != NULL)
+    {
+        node_dot_count += 1;
+        node_to_dot_sub(tree->root, f, 0, node_dot_count);
+    }
+    fprintf(f, "    }\n}\n");
+    fclose(f);
+}
+
 void node_print(Node *node)
 {
     node_print_level(node, 0);
@@ -878,7 +938,7 @@ NodeType node_compute_type(Node *node)
     return NODE_BLOCK;
 }
 
-void ast_print(Tree *tree)
+void ast_print(AST *tree)
 {
     node_print_level(tree->root, 0);
 }

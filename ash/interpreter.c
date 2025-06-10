@@ -251,12 +251,14 @@ void close()
     lua_close(L);
 }
 
-void execute(Tree *ast)
+const char * execute(AST *ast)
 {
     if (ast == NULL)
     {
-        return;
+        return NULL;
     }
+    // Final result (as a string for now)
+    const char *msg = NULL;
     // Initialisation du buffer de sortie
     buffer = memory_get(sizeof(char) * 1000);
     current = 0;
@@ -293,7 +295,7 @@ void execute(Tree *ast)
             lua_getglobal(L, "_"); // push onto the stack the value of the global "_"
             int top = lua_gettop(L);
             size_t string_size;
-            const char *msg = luaL_tolstring(L, top, &string_size);
+            msg = luaL_tolstring(L, top, &string_size);
             printf("Res: %s\n", msg);
         }
         /*
@@ -335,4 +337,5 @@ void execute(Tree *ast)
         lua_pop(L, 1); // pop error message
     }
     memory_free(buffer);
+    return msg;
 }

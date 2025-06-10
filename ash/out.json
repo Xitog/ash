@@ -1,6 +1,0 @@
-[
-    {        "start":   0,        "count":   3,        "type": "INTEGER",                         "value": "512"},
-    {        "start":   4,        "count":   1,        "type": "OPERATOR",                        "value": "*"},
-    {        "start":   6,        "count":   4,        "type": "HEXADECIMAL",                     "value": "0xAA"},
-    {        "start":  11,        "count":   1,        "type": "WRONG_LONELY_OPERATOR",           "value": "?"}
-]
