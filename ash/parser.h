@@ -54,6 +54,9 @@ const extern char *NODE_TYPE_REPR_STRING[];
 bool check_token_type(TokenList *list, uint32_t index, TokenType expected);
 bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
 
+bool parser_set_debug(bool debug);
+bool parser_get_debug();
+
 AST *parse(TokenList *list);
 
 Node *parse_block(TokenList *list);

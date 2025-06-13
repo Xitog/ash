@@ -125,10 +125,21 @@ void read_utf8(char *s)
 // Main
 //-----------------------------------------------------------------------------
 
+bool g_debug = false;
+
+void log(const char * msg)
+{
+    if (g_debug)
+    {
+        printf("%s\n", msg);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     printf("Ash %s\n", VERSION);
     bool debug = false;
+    parser_set_debug(debug);
     bool output_json = false;
     bool output_dot = false;
     bool clear_space = true; // only on printing!
@@ -192,7 +203,7 @@ int main(int argc, char *argv[])
                 if (file_and_buffer)
                 {
                     printf("%s", buffer);
-                    TokenList *list = lex(buffer, false, debug);
+                    TokenList *list = lex(buffer, true, debug); // we clear spaces
                     TokenListElement *current = list->head;
                     uint32_t count = 0;
                     while (current != NULL)
@@ -202,6 +213,13 @@ int main(int argc, char *argv[])
                         token_print(tok);
                         current = current->next;
                     }
+                    printf("- Parsing ----------------------------------\n");
+                    parser_set_debug(true);
+                    AST * ast = parse(list);
+                    printf("- Abstract Syntax Tree ---------------------\n");
+                    ast_print(ast);
+                    printf("- Interpreting -----------------------------\n");
+                    execute(ast); // const char * res =
                     token_list_free(list);
                 }
             }
@@ -229,13 +247,14 @@ int main(int argc, char *argv[])
             if (strcmp(line, "debug") == 0)
             {
                 debug = !debug;
+                parser_set_debug(debug);
                 if (debug)
                 {
-                    printf("debug set to true\n");
+                    printf("debug is ON\n");
                 }
                 else
                 {
-                    printf("debug set to false\n");
+                    printf("debug is OFF\n");
                 }
             }
             else if (strcmp(line, "json") == 0)
@@ -282,6 +301,7 @@ int main(int argc, char *argv[])
                 printf("Ash %s available commands:\n", VERSION);
                 printf(
                     "help  : display this help\n"
+                    "debug : display debug information\n"
                     "clear : discard blank tokens\n"
                     "json  : export to %s file the last command\n"
                     "dot   : export to %s file the next command\n"
@@ -297,17 +317,20 @@ int main(int argc, char *argv[])
                 {
                     printf("Command : |%s| (#%d)\n", line, count);
                 }
-                printf("- Token list --------------------------------\n");
+                log("- Token list --------------------------------\n");
                 TokenList *list = lex(line, clear_space, debug);
                 TokenListElement *current = list->head;
-                count = 0;
-                while (current != NULL)
+                if (debug)
                 {
-                    Token tok = current->token;
-                    printf("%03d. %p : ", count, &current->token);
-                    token_print(tok);
-                    current = current->next;
-                    count += 1;
+                    count = 0;
+                    while (current != NULL)
+                    {
+                        Token tok = current->token;
+                        printf("%03d. %p : ", count, &current->token);
+                        token_print(tok);
+                        current = current->next;
+                        count += 1;
+                    }
                 }
                 if (output_json)
                 {
@@ -359,11 +382,14 @@ int main(int argc, char *argv[])
                 }
                 if (do_parsing && token_list_size(list) > 0)
                 {
-                    printf("- Parsing ----------------------------------\n");
+                    log("- Parsing ----------------------------------\n");
                     AST * ast = parse(list);
-                    printf("- Abstract Syntax Tree ---------------------\n");
-                    ast_print(ast);
-                    printf("- Interpreting -----------------------------\n");
+                    log("- Abstract Syntax Tree ---------------------\n");
+                    if (debug)
+                    {
+                        ast_print(ast);
+                    }
+                    log("- Interpreting -----------------------------\n");
                     const char * res = execute(ast);
                     if (output_dot)
                     {
@@ -373,7 +399,7 @@ int main(int argc, char *argv[])
                         char *command = memory_get(command_length);
                         memset(command, '\0', command_length);
                         printf("DOT file written.\n");
-                        sprintf(command, "dot -Tpng %s > output.png", OUTPUT_DOT_FILENAME);
+                        sprintf_s(command, 1024, "dot -Tpng %s > output.png", OUTPUT_DOT_FILENAME);
                         int err = system(command);
                         memory_free(command);
                         if (err != EXIT_SUCCESS)

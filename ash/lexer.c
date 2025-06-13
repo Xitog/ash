@@ -235,6 +235,32 @@ Token read_string(const char *cmd, unsigned int start)
     return t;
 }
 
+Token read_comment(const char *cmd, unsigned int start)
+{
+    Token t;
+    unsigned int index = start + 2; // On presuppose que les deux premiers c'est --
+    unsigned int count = 1;
+    while (index < strlen(cmd))
+    {
+        char c = cmd[index];
+        if (c != '\n')
+        {
+            count += 1;
+        }
+        else
+        {
+            count += 1;
+            break;
+        }
+        index += 1;
+    }
+    t.text = cmd;
+    t.count = count;
+    t.start = start;
+    t.type = TOKEN_COMMENT;
+    return t;
+}
+
 Token read_operator(const char *cmd, unsigned int start)
 {
     Token t;
@@ -349,6 +375,10 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
             t.start = index;
             t.type = TOKEN_NEWLINE;
         }
+        else if (cmd[index] == '-' && index + 1 < strlen(cmd) && cmd[index + 1] == '-')
+        {
+            t = read_comment(cmd, index);
+        }
         else if (char_is(cmd[index], SEPARATOR_ELEMENTS))
         {
             t.count = 1;
@@ -378,7 +408,7 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
         count += 1;
         index += t.count;
         // printf("EOL: start=%d index=%d count=%d\n", old, index, count);
-        if (t.type == TOKEN_SPACE && skip_spaces)
+        if ((t.type == TOKEN_SPACE && skip_spaces) || t.type == TOKEN_COMMENT)
         {
             discard = true;
         }

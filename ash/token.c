@@ -19,12 +19,13 @@ const char *TOKEN_TYPE_REPR_STRING[] = {
     "SEPARATOR",
     "STRING",
     "NIL",
+    "COMMENT",
     "WRONG_LONELY_OPERATOR",
     "WRONG_NUMBER_WITH_LETTER"};
 
 const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
 const char *OPERATOR_ELEMENTS = "+-*/%<>=!.~?&|^";
-const char *SEPARATOR_ELEMENTS = "([{}]),;:\n\t";
+const char *SEPARATOR_ELEMENTS = "([{}]),;:\t";
 
 const char *KEYWORDS[] = {
     "const",

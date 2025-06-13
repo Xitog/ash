@@ -40,8 +40,7 @@ void emit_node(Node *node)
         emit_node(node->left);
         emit_string(" = ");
         emit_node(node->right);
-        emit_string("\n_ = ");
-        emit_node(node->left);
+        emit_string(" ");
     }
     else if (node->type == NODE_BINARY_OPERATOR)
     {
@@ -274,13 +273,18 @@ const char * execute(AST *ast)
     else if ((node_is_type(ast->root, NODE_BINARY_OPERATOR) && token_cmp(ast->root->token, "=")))
     {
         is_expression = true;
-        // L'affichage est géré par l'emit_node
     }
     else if (node_is_type(ast->root, NODE_IF) || node_is_type(ast->root, NODE_BLOCK))
     {
         is_expression = false;
     }
     emit_node(ast->root);
+    if ((node_is_type(ast->root, NODE_BINARY_OPERATOR) && token_cmp(ast->root->token, "=")))
+    {
+        // Pour l'affichage
+        emit_string("\n_ = ");
+        emit_node(ast->root->left);
+    }
     buffer[current] = '\0';
     printf("Trans> %s\n", buffer);
     if (L == NULL)
