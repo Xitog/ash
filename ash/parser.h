@@ -12,8 +12,11 @@
 #include <stdint.h>
 #include "token.h"
 #include "token_list.h"
+#include "value.h"
+#include "dict.h"
 
 extern uint8_t DEBUG_MODE;
+extern Dict * root_scope;
 
 typedef enum _NodeType
 {
@@ -37,6 +40,7 @@ typedef struct _Node
     struct _Node *extra; // for if condition
     Token token;
     NodeType type;
+    Type value_type;
 } Node;
 
 typedef struct

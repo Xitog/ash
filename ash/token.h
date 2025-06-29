@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "general.h"
 
 //-----------------------------------------------------------------------------
 // Types
@@ -40,7 +41,7 @@ typedef enum _TokenType
 
 typedef struct _Token
 {
-    const char * text;
+    const char *text;
     TokenType type;
     uint32_t start;
     uint32_t count;
@@ -94,6 +95,7 @@ const extern char *KEYWORDS[];
 // Functions
 //-----------------------------------------------------------------------------
 
+char *token_value(Token tok);
 void token_print(Token tok);
 void token_print_value(Token tok);
 bool token_cmp(Token t, const char *s);

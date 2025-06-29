@@ -17,6 +17,7 @@
 #include "token.h"
 #include "token_list.h"
 #include "general.h"
+#include "dict.h"
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
@@ -25,7 +26,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.62";
+const char *VERSION = "0.0.64";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -271,8 +272,15 @@ int main(int argc, char *argv[])
             }
             else if (strcmp(line, "dot") == 0)
             {
-                output_dot = true;
-                printf("producing dot output in %s\n", OUTPUT_DOT_FILENAME);
+                output_dot = !output_dot;
+                if (output_dot)
+                {
+                    printf("The next statement will produce a dot output in file %s\n", OUTPUT_DOT_FILENAME);
+                }
+                else
+                {
+                    printf("DOT output desactivated.\n");
+                }
             }
             else if (strcmp(line, "clear") == 0)
             {

@@ -5,9 +5,6 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include "general.h"
 
 //-----------------------------------------------------------------------------
@@ -16,6 +13,7 @@
 
 typedef enum
 {
+    TYPE_NIL     = 0,
     TYPE_INTEGER = 1,
     TYPE_FLOAT   = 2,
     TYPE_BOOLEAN = 3,
@@ -24,23 +22,25 @@ typedef enum
     TYPE_LIST    = 6,
     TYPE_TABLE   = 7,
     TYPE_RECORD  = 8,
-    TYPE_NIL     = 9,
-    TYPE_CDATA   = 10
-} AshType;
+    TYPE_CDATA   = 9,
+    TYPE_TYPE    = 10, // autoref
+    TYPE_ANY     = 11
+} Type;
 
 typedef union
 {
-    long   i;   // 32
-    float  f;   // 32
-    bool   b;
-    void * p;
-} AshValue;
+    int32_t as_int;
+    float as_float; // 32
+    bool as_bool;
+    char * as_cstring;
+    void * as_any;
+} Data;
 
 typedef struct
 {
-    AshType type;
-    AshValue value;
-} AshRef;
+    Type type;
+    Data value;
+} Value;
 
 typedef struct
 {
@@ -52,16 +52,24 @@ typedef struct
 // Constantes
 //-----------------------------------------------------------------------------
 
-extern const AshRef NIL;
+extern const Value NIL;
+const extern char *TYPE_REPR_STRING[];
 
 //-----------------------------------------------------------------------------
 // Fonctions
 //-----------------------------------------------------------------------------
 
-AshRef integer_init(long i);
-AshRef float_init(float f);
-AshRef boolean_init(bool b);
-AshRef string_init(char * source, long source_size);
-void print(AshRef ref);
+bool is_nil(Value v);
+bool is_primitive(Value v);
+bool strict_equality(Value v1, Value v2);
+bool equality(Value v1, Value v2);
+Value integer_init(long i);
+Value float_init(float f);
+Value boolean_init(bool b);
+Value string_wrapper(char * source);
+void string_wrapper_delete(Value v);
+Value string_init(char * source, long source_size);
+void value_print(Value val);
+void value_print_message(char *message, ...);
 
 #endif

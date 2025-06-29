@@ -56,6 +56,17 @@ const char *KEYWORDS[] = {
 // Functions
 //-----------------------------------------------------------------------------
 
+char *token_value(Token tok)
+{
+    char *s = (char *)memory_get(tok.count + 1);
+    memset(s, '\0', tok.count + 1);
+    for (unsigned int i = 0; i < tok.count; i++)
+    {
+        s[i] = tok.text[tok.start + i];
+    }
+    return s;
+}
+
 void token_print(Token tok)
 {
     printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_REPR_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);

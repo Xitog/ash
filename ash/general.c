@@ -31,6 +31,15 @@ unsigned int memory_size(void *ptr)
     return _msize(ptr);
 }
 
+// On initialise un objet mémoire à partir d'une char * (probablement non supervisée par notre système)
+void *memory_get_from_str(char * source)
+{
+    size_t s = strlen(source) + 1; // for \0 char
+    void * p = memory_get(s);
+    memcpy(p, (void *) source, s);
+    return p;
+}
+
 void memory_copy(void *dest, void *source)
 {
     memcpy(dest, source, memory_size(source));

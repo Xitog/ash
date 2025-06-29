@@ -5,10 +5,6 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include "general.h"
 #include "value.h"
 
 //-----------------------------------------------------------------------------
@@ -16,7 +12,7 @@
 //-----------------------------------------------------------------------------
 
 typedef struct _ListElement {
-    void * node;
+    Value node;
     struct _ListElement * next;
     struct _ListElement * prev;
 } ListElement;
@@ -25,21 +21,33 @@ typedef struct _List {
     ListElement * head;
     ListElement * tail;
     unsigned int count;
+    Type elem_type;
 } List;
+
+typedef struct _Iterator {
+    List * list;
+    int index;
+} Iterator;
 
 //-----------------------------------------------------------------------------
 // Fonctions
 //-----------------------------------------------------------------------------
 
-List * list_init();
-unsigned int list_append(List * list, void * data);
-void * list_get(List * list, unsigned int index);
-void * list_pop(List * list);
+List * list_init(Type t);
+unsigned int list_append(List * list, Value val);
+Value list_get(List * list, int index);
+void list_set(List * list, int index, Value val);
+// list_insert :TODO:
+Value list_pop(List * list);
 void list_free(List * list);
-unsigned int  list_size(List * list);
+size_t list_size(List * list);
 bool list_is_empty(List * list);
 void list_reverse(List * list);
-void list_print(List * list, void (*print)());
+//void list_print(List * list, void (*print)());
+void list_print(List * list);
 void list_free(List * list);
+
+Iterator iterator_init(List * list);
+Value iterator_next(Iterator * it);
 
 #endif
