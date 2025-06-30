@@ -47,6 +47,44 @@ void test_list()
     printf("End of test_list()\n");
 }
 
+void test_list_str()
+{
+    printf("\n--------------------------------------------------\n");
+    printf("Start of test_list_str()\n");
+    printf("--------------------------------------------------\n");
+    memory_summary();
+    printf("Creating objets\n");
+    Value a = string_init("bonjour");
+    Value b = string_init("le");
+    Value c = string_init("monde");
+    List *list = list_init(TYPE_STRING);
+    memory_summary();
+    printf("Its size is : %d / 0\n", list_size(list));
+    value_print_message("Adding first element %v\n", a);
+    list_append(list, a);
+    value_print_message("Adding second element %v\n", b);
+    list_append(list, b);
+    value_print_message("Adding third element %v\n", c);
+    list_append(list, c);
+    printf("Its size is : %d / 3\n", list_size(list));
+    list_print(list);
+    printf("Replacing value at 1\n");
+    Value d = string_init("du");;
+    list_set(list, 1, d);
+    list_print(list);
+    printf("Replaced value is:\n");
+    value_print(b);
+    printf("\n");
+    printf("Freeing memory\n");
+    list_free(list);
+    string_delete(a);
+    string_delete(b);
+    string_delete(c);
+    string_delete(d);
+    memory_summary();
+    printf("End of test_list_str()\n");
+}
+
 void test_dict()
 {
     printf("Start of test_dict()\n");
@@ -79,6 +117,43 @@ void test_dict()
     printf("End of test_dict()\n");
 }
 
+void test_dict_str()
+{
+    printf("\n--------------------------------------------------\n");
+    printf("Start of test_dict_str()\n");
+    printf("--------------------------------------------------\n");
+    memory_summary();
+    printf("Creating objets for a str => int dict\n");
+    Value k1 = string_init("bonjour");
+    Value k2 = string_init("le");
+    Value k3 = string_init("monde");
+    Value v1 = integer_init(10);
+    Value v2 = integer_init(50);
+    Value v3 = integer_init(100);
+    Dict * dict = dict_init(TYPE_STRING, TYPE_INTEGER);
+    memory_summary();
+    printf("Its size is : %d / 0\n", dict_size(dict));
+    printf("Adding first element\n");
+    dict_set(dict, k1, v1);
+    printf("Adding second element\n");
+    dict_set(dict, k2, v2);
+    printf("Adding third element\n");
+    dict_set(dict, k3, v3);
+    printf("Its size is : %d / 3\n", dict_size(dict));
+    dict_print(dict);
+    printf("Replacing value at key 'le' by 99\n");
+    Value v4 = integer_init(99);
+    dict_set(dict, k2, v4);
+    dict_print(dict);
+    printf("Replaced value is:\n");
+    value_print(k2);
+    printf("\n");
+    printf("Freeing memory\n");
+    dict_free(dict);
+    memory_summary();
+    printf("End of test_dict()\n");
+}
+
 const int TEST = 1;
 
 int main(int argc, char *argv[])
@@ -91,8 +166,10 @@ int main(int argc, char *argv[])
 
     if (TEST == 1)
     {
-        test_list();
-        test_dict();
+        //test_list();
+        test_list_str();
+        //test_dict();
+        test_dict_str();
     }
     else if (TEST == 2)
     {

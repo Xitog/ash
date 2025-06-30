@@ -4,7 +4,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const Value NIL = { .type = TYPE_NIL, .value.as_any = NULL};
+const Value NIL = {.type = TYPE_NIL, .value.as_any = NULL};
 
 const char *TYPE_REPR_STRING[] = {
     "NIL",
@@ -12,6 +12,7 @@ const char *TYPE_REPR_STRING[] = {
     "FLOAT",
     "BOOLEAN",
     "STRING",
+    "CSTRING",
     "ARRAY",
     "LIST",
     "TABLE",
@@ -44,13 +45,22 @@ bool strict_equality(Value v1, Value v2)
     {
         return v1.value.as_int == v2.value.as_int;
     }
-    if (v2.type == TYPE_FLOAT)
+    else if (v1.type == TYPE_FLOAT)
     {
         return v1.value.as_float == v2.value.as_float;
     }
-    if (v2.type == TYPE_BOOLEAN)
+    else if (v1.type == TYPE_BOOLEAN)
     {
         return v1.value.as_bool == v2.value.as_bool;
+    }
+    else if (v1.type == TYPE_CSTRING)
+    {
+        return strcmp(v1.value.as_cstring, v2.value.as_cstring) == 0;
+    }
+    else if (v1.type == TYPE_STRING)
+    {
+        //printf("strict_equality :: %s vs %s = %d\n", v1.value.as_string->content, v2.value.as_string->content, strcmp(v1.value.as_string->content, v2.value.as_string->content));
+        return strcmp(v1.value.as_string->content, v2.value.as_string->content) == 0;
     }
     general_error("Type unknown for strict_equality");
     return false;
@@ -60,11 +70,11 @@ bool equality(Value v1, Value v2)
 {
     if (v1.type == TYPE_INTEGER && v2.type == TYPE_FLOAT)
     {
-        return (float) v1.value.as_int == v2.value.as_float;
+        return (float)v1.value.as_int == v2.value.as_float;
     }
     else if (v2.type == TYPE_INTEGER && v1.type == TYPE_FLOAT)
     {
-        return (float) v2.value.as_int == v1.value.as_float;
+        return (float)v2.value.as_int == v1.value.as_float;
     }
     else
     {
@@ -77,6 +87,14 @@ Value integer_init(long i)
     Value v;
     v.type = TYPE_INTEGER;
     v.value.as_int = i;
+    return v;
+}
+
+Value type_init(Type t)
+{
+    Value v;
+    v.type = TYPE_TYPE;
+    v.value.as_int = t;
     return v;
 }
 
@@ -96,33 +114,43 @@ Value boolean_init(bool b)
     return v;
 }
 
-// Will handle memory liberation ! source must not be freed !
-Value string_wrapper(char * source)
+Value cstring_init(char *s)
 {
     Value v;
-    v.type = TYPE_STRING;
-    v.value.as_cstring = source;
+    v.type = TYPE_CSTRING;
+    v.value.as_cstring = s;
     return v;
 }
 
-void string_wrapper_delete(Value v)
+void cstring_delete(Value v)
 {
     memory_free(v.value.as_cstring);
 }
 
-Value string_init(char *source, long source_size)
+Value string_init(char *s)
 {
+    XString * str = memory_get(sizeof(XString));
+    str->size = strlen(s);
+    str->content = memory_get(sizeof(char) * (str->size + 1));
+    str->refcount = 1;
     Value v;
     v.type = TYPE_STRING;
-    AshString * s = memory_get(sizeof(AshString));
-    v.value.as_cstring = (void *)s;
-    s->size = source_size;
-    s->content = memory_get(sizeof(char) * source_size);
-    for (int i = 0; i < source_size; i++)
+    v.value.as_string = str;
+    for (int i = 0; i < str->size + 1; i++)
     {
-        s->content[i] = source[i];
+        str->content[i] = s[i];
     }
     return v;
+}
+
+void string_delete(Value v)
+{
+    v.value.as_string->refcount -= 1;
+    if (v.value.as_string->refcount == 0)
+    {
+        memory_free(v.value.as_string->content);
+        memory_free(v.value.as_string);
+    }
 }
 
 void value_print(Value v)
@@ -148,14 +176,18 @@ void value_print(Value v)
             printf("false");
         }
         break;
+    case TYPE_CSTRING:
+        printf("%s (#%d)", v.value.as_cstring, strlen(v.value.as_cstring));
+        break;
     case TYPE_STRING:
-        AshString *s = (AshString *)v.value.as_any;
-        printf("%s (%d)", s->content, s->size);
+        XString *s = v.value.as_string;
+        printf("%s (#%d) (ref=%d)", s->content, s->size, s->refcount);
         break;
     case TYPE_NIL:
         printf("nil");
+        break;
     default:
-        printf("ERREUR : TYPE INCONNU\n");
+        printf("ERREUR : TYPE INCONNU %d\n", v.type);
         break;
     }
 }
@@ -184,7 +216,7 @@ void value_print_message(char *message, ...)
             }
             else if (message[c + 1] == 's')
             {
-                char * s = va_arg(args, char *);
+                char *s = va_arg(args, char *);
                 printf("%s", s);
                 c++;
             }
@@ -193,7 +225,6 @@ void value_print_message(char *message, ...)
                 Value val = va_arg(args, Value);
                 value_print(val);
                 c++;
-
             }
             else
             {

@@ -145,7 +145,7 @@ void emit_node(Node *node)
         }
         else
         {
-            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">"))
+            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">") || token_cmp(node->token, "="))
             {
                 emit_node(node->left);
                 emit_token(node->token);
@@ -197,7 +197,7 @@ void emit_node(Node *node)
         {
             if (parcours->type == NODE_IF)
             {
-                emit_string( " elseif ");
+                emit_string(" elseif ");
                 emit_node(parcours->extra);
                 emit_string(" then ");
                 emit_node(parcours->left);
@@ -250,7 +250,7 @@ void close()
     lua_close(L);
 }
 
-const char * execute(AST *ast)
+const char *execute(AST *ast)
 {
     if (ast == NULL)
     {
@@ -281,7 +281,7 @@ const char * execute(AST *ast)
     emit_node(ast->root);
     if ((node_is_type(ast->root, NODE_BINARY_OPERATOR) && token_cmp(ast->root->token, "=")))
     {
-        // Pour l'affichage
+        // Pour l'affichage, on fait _ = id
         emit_string("\n_ = ");
         emit_node(ast->root->left);
     }

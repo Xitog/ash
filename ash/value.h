@@ -18,35 +18,39 @@ typedef enum
     TYPE_FLOAT   = 2,
     TYPE_BOOLEAN = 3,
     TYPE_STRING  = 4,
-    TYPE_ARRAY   = 5,
-    TYPE_LIST    = 6,
-    TYPE_TABLE   = 7,
-    TYPE_RECORD  = 8,
-    TYPE_CDATA   = 9,
-    TYPE_TYPE    = 10, // autoref
-    TYPE_ANY     = 11
+    TYPE_CSTRING = 5,
+    TYPE_ARRAY   = 6,
+    TYPE_LIST    = 7,
+    TYPE_TABLE   = 8,
+    TYPE_RECORD  = 9,
+    TYPE_CDATA   = 10,
+    TYPE_TYPE    = 11, // autoref
+    TYPE_ANY     = 12
 } Type;
 
-typedef union
+typedef struct _String
+{
+    bool copied;
+    long size;
+    char * content;
+    long refcount;
+} XString;
+
+typedef union _Data
 {
     int32_t as_int;
     float as_float; // 32
     bool as_bool;
     char * as_cstring;
+    XString * as_string;
     void * as_any;
 } Data;
 
-typedef struct
+typedef struct _Value
 {
     Type type;
     Data value;
 } Value;
-
-typedef struct
-{
-    long size;
-    char * content;
-} AshString;
 
 //-----------------------------------------------------------------------------
 // Constantes
@@ -64,11 +68,14 @@ bool is_primitive(Value v);
 bool strict_equality(Value v1, Value v2);
 bool equality(Value v1, Value v2);
 Value integer_init(long i);
+Value type_init(Type t);
 Value float_init(float f);
 Value boolean_init(bool b);
-Value string_wrapper(char * source);
-void string_wrapper_delete(Value v);
-Value string_init(char * source, long source_size);
+Value cstring_init(char *s);
+void cstring_delete(Value v);
+Value string_init(char * source);
+Value string_init_copy(char *s);
+void string_delete(Value v);
 void value_print(Value val);
 void value_print_message(char *message, ...);
 

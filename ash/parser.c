@@ -86,11 +86,11 @@ bool parser_get_debug()
 
 AST *parse(TokenList *list)
 {
-    if (root_scope == NULL)
+    if (root_scope != NULL)
     {
-        // :TODO: clear at start if not NULL!
-        root_scope = dict_init(TYPE_STRING, TYPE_TYPE);
+        dict_free(root_scope);
     }
+    root_scope = dict_init(TYPE_CSTRING, TYPE_TYPE);
     parser_index = 0;
     parser_level = 0;
     if (parser_debug)
@@ -368,18 +368,20 @@ Node *parse_affectation(TokenList *list)
             printf("? parse_affectation at %d\n", parser_index);
         }
     }
-    Node *node = parse_interval(list);
-    while (check_token_value(list, parser_index, TOKEN_OPERATOR, "="))
+    Node *node = NULL;
+    // :TODO check if parser_index + 1 in list
+    if (check_token_type(list, parser_index, TOKEN_IDENTIFIER) && check_token_value(list, parser_index + 1, TOKEN_OPERATOR, "="))
     {
         if (parser_debug)
         {
             tab();
             printf("> operator = found at %d!\n", parser_index);
         }
-        Node *left = node;
-        Token t = token_list_get(list, parser_index);
-        parser_index += 1;
-        Node *right = parse_logical_and(list);
+        // Affectation
+        Node *left = parse_identifier_left_aff(list);
+        Token t = token_list_get(list, parser_index); // to get the '='
+        parser_index += 1; // to remove the '='
+        Node *right = parse_interval(list);
         node = (Node *)memory_get(sizeof(Node));
         node->token = t;
         node->left = left;
@@ -387,11 +389,20 @@ Node *parse_affectation(TokenList *list)
         node->type = NODE_BINARY_OPERATOR;
         node->value_type = node->right->value_type;
         char * tval = token_value(node->left->token);
-        // :TODO: save but a number!
         memory_free(tval);
+    }
+    else
+    {
+        // On passe après
+        node = parse_interval(list);
     }
     parser_level--;
     return node;
+    // Recyclé
+    // Node *node = parse_identifier_left_aff(list);
+    // while (check_token_value(list, parser_index, TOKEN_OPERATOR, "="))
+    // {
+    // }
 }
 
 Node *parse_interval(TokenList *list)
@@ -801,6 +812,28 @@ Node *parse_call(TokenList *list)
     return node;
 }
 
+Node *parse_identifier_left_aff(TokenList *list)
+{
+    Node *node = NULL;
+    parser_level++;
+    if (!check_token_type(list, parser_index, TOKEN_IDENTIFIER))
+    {
+        general_error("This function is only for left part of affectation.\n");
+    }
+    node = (Node *)memory_get(sizeof(Node));
+    node->token = token_list_get(list, parser_index);
+    node->left = NULL;
+    node->right = NULL;
+    node->type = NODE_IDENTIFIER;
+    node->value_type = TYPE_ANY;
+    parser_index += 1;
+    // Registering variable
+    char * tval = token_value(node->token);
+    Value key = cstring_init(tval);
+    dict_set(root_scope, key, type_init(TYPE_ANY));
+    return node;
+}
+
 Node *parse_litteral(TokenList *list)
 {
     Node *node = NULL;
@@ -886,15 +919,19 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_IDENTIFIER;
-        // :TODO: List of var with their type
-        char * tval = token_value(node->left->token);
-        Value key = string_wrapper(tval);
+        // List of var with their type
+        char * tval = token_value(node->token);
+        Value key = cstring_init(tval);
         if (dict_key_exists(root_scope, key))
         {
             Value value = dict_get(root_scope, key);
             node->value_type = value.type;
         }
-        string_wrapper_delete(key);
+        else
+        {
+            general_error("Variable %t not found in current scope.", node->token);
+        }
+        cstring_delete(key);
         parser_index += 1;
     }
     else

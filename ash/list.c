@@ -1,7 +1,8 @@
 #include "list.h"
 
-List * list_init(Type elem_type) {
-    List * list = (List *) memory_get(sizeof(List));
+List *list_init(Type elem_type)
+{
+    List *list = (List *)memory_get(sizeof(List));
     list->head = NULL;
     list->tail = NULL;
     list->count = 0;
@@ -9,29 +10,28 @@ List * list_init(Type elem_type) {
     return list;
 }
 
-unsigned int list_append(List * list, Value val) {
+unsigned int list_append(List *list, Value val)
+{
     if (val.type != list->elem_type)
     {
         general_error("Impossible to add type %s to list of %s", TYPE_REPR_STRING[val.type], TYPE_REPR_STRING[list->elem_type]);
     }
-    ListElement * elem = (ListElement *) memory_get(sizeof(ListElement));
-    if (is_primitive(val))
+    ListElement *elem = (ListElement *)memory_get(sizeof(ListElement));
+    elem->node = val;
+    if (!is_primitive(val))
     {
-        elem->node = val;
-    }
-    else
-    {
-        // :TODO:
-        // elem->node = memory_get(memory_size(data));
-        // memory_copy(elem->node, data);
+        val.value.as_string->refcount += 1;
     }
     elem->next = NULL;
     elem->prev = NULL;
     // Empty list
-    if (list->head == NULL) {
+    if (list->head == NULL)
+    {
         list->head = elem;
         list->tail = elem;
-    } else {
+    }
+    else
+    {
         list->tail->next = elem;
         elem->prev = list->tail;
         list->tail = elem;
@@ -40,15 +40,17 @@ unsigned int list_append(List * list, Value val) {
     return list->count;
 }
 
-Value list_get(List * list, int index) {
+Value list_get(List *list, int index)
+{
     // :TODO: negative index
-    //printf("list_get at %d on list of size %d\n", index, list_size(list));
-    unsigned int u_index = (unsigned int) index;
-    if (u_index > 0 && u_index >= list->count) {
+    // printf("list_get at %d on list of size %d\n", index, list_size(list));
+    unsigned int u_index = (unsigned int)index;
+    if (u_index > 0 && u_index >= list->count)
+    {
         return NIL;
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
-    ListElement * current = list->head;
+    ListElement *current = list->head;
     unsigned int count = 0;
     int direction = 1;
     if (u_index >= (list->count >> 1))
@@ -57,11 +59,15 @@ Value list_get(List * list, int index) {
         direction = -1;
         current = list->tail;
     }
-    while (current != NULL && count != u_index) {
-        //printf("searching at %d direction %d\n", count, direction);
-        if (direction == 1) {
+    while (current != NULL && count != u_index)
+    {
+        // printf("searching at %d direction %d\n", count, direction);
+        if (direction == 1)
+        {
             current = current->next;
-        } else {
+        }
+        else
+        {
             current = current->prev;
         }
         count += direction;
@@ -69,14 +75,16 @@ Value list_get(List * list, int index) {
     return current->node;
 }
 
-void list_set(List * list, int index, Value val) {
+void list_set(List *list, int index, Value val)
+{
     // :TODO: negative index
-    unsigned int u_index = (unsigned int) index;
-    if (u_index > 0 && u_index >= list->count) {
+    unsigned int u_index = (unsigned int)index;
+    if (u_index > 0 && u_index >= list->count)
+    {
         general_error("Cannot set at %d index for a list of size %d", index, list->count);
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
-    ListElement * current = list->head;
+    ListElement *current = list->head;
     unsigned int count = 0;
     int direction = 1;
     if (u_index >= (list->count >> 1))
@@ -85,31 +93,36 @@ void list_set(List * list, int index, Value val) {
         direction = -1;
         current = list->tail;
     }
-    //printf("start at %d direction %d\n", count, direction);
-    while (current != NULL && count != u_index) {
-        if (direction == 1) {
+    // printf("start at %d direction %d\n", count, direction);
+    while (current != NULL && count != u_index)
+    {
+        if (direction == 1)
+        {
             current = current->next;
-        } else {
+        }
+        else
+        {
             current = current->prev;
         }
         count += direction;
     }
-    if (is_primitive(current->node))
+    if (!is_primitive(current->node))
     {
-        current->node = val;
+        string_delete(current->node);
     }
-    else
+    current->node = val;
+    if (!is_primitive(current->node))
     {
-        // :TODO:
+        current->node.value.as_string->refcount += 1;
     }
 }
 
-Value list_pop(List * list)
+Value list_pop(List *list)
 {
     Value value = NIL;
     if (list->count > 0)
     {
-        ListElement * last = list->tail;
+        ListElement *last = list->tail;
         value = last->node;
         list->tail = last->prev;
         list->tail->next = NULL;
@@ -119,35 +132,39 @@ Value list_pop(List * list)
     return value;
 }
 
-size_t list_size(List * list) {
-    if (list == NULL) {
+size_t list_size(List *list)
+{
+    if (list == NULL)
+    {
         return 0;
     }
     return list->count;
 }
 
-bool list_is_empty(List * list) {
-    if (list->count == 0) {
+bool list_is_empty(List *list)
+{
+    if (list->count == 0)
+    {
         return true;
     }
     return false;
 }
 
-void list_reverse(List * list)
+void list_reverse(List *list)
 {
-    ListElement * start = list->head;
+    ListElement *start = list->head;
     list->head = list->tail;
     list->tail = start;
     while (start != NULL)
     {
-        ListElement * next = start->next;
+        ListElement *next = start->next;
         start->next = start->prev;
         start->prev = next;
         start = next;
     }
 }
 
-void list_print(List * list)
+void list_print(List *list)
 {
     size_t size = list_size(list);
     printf("List <%s> [#%d] :\n", TYPE_REPR_STRING[list->elem_type], size);
@@ -176,26 +193,23 @@ void list_print(List * list, void (*print)())
 }
 */
 
-void list_free(List * list) {
-    ListElement * current = list->head;
-    while (current != NULL) {
-        if (is_primitive(current->node))
+void list_free(List *list)
+{
+    ListElement *current = list->head;
+    while (current != NULL)
+    {
+        if (!is_primitive(current->node))
         {
-            // do nothing;
+            string_delete(current->node);
         }
-        else
-        {
-            // : TODO:
-            // memory_free(current->node);
-        }
-        ListElement * old = current;
+        ListElement *old = current;
         current = current->next;
         memory_free(old);
     }
     memory_free(list);
 }
 
-Iterator iterator_init(List * list)
+Iterator iterator_init(List *list)
 {
     Iterator it;
     it.index = -1;
@@ -203,7 +217,7 @@ Iterator iterator_init(List * list)
     return it;
 }
 
-Value iterator_next(Iterator * it)
+Value iterator_next(Iterator *it)
 {
     if (it->list->count == 0)
     {

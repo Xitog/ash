@@ -25,13 +25,13 @@ void dict_set(Dict * dict, Value key, Value value)
     Iterator it = iterator_init(dict->keys);
     unsigned int count = 0;
     bool found = false;
-    printf("Iterator next\n");
     Value current_key = iterator_next(&it);
     while (!is_nil(current_key))
     {
-        printf("Test of equality\n");
+        value_print_message("dict_set :: Test of equality between (current=) %v and (searched=) %v\n", current_key, key);
         if (equality(current_key, key))
         {
+            printf("dict_set :: Adding at %d\n", count);
             list_set(dict->values, count, value);
             found = true;
             break;
@@ -41,7 +41,7 @@ void dict_set(Dict * dict, Value key, Value value)
     }
     if (!found)
     {
-        printf("Adding at the end of dict\n");
+        printf("dict_set :: Adding at the end of dict\n");
         list_append(dict->keys, key);
         list_append(dict->values, value);
     }
