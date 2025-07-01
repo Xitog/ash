@@ -20,7 +20,7 @@ void dict_set(Dict * dict, Value key, Value value)
 {
     if (key.type != dict->key_type)
     {
-        general_error("Impossible to set with a key of type %s into a dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to set with a key of type %s into a dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     unsigned int count = 0;
@@ -51,7 +51,7 @@ Value dict_get(Dict * dict, Value key)
 {
     if (key.type != dict->key_type)
     {
-        general_error("Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     unsigned int count = 0;
@@ -77,7 +77,7 @@ bool dict_key_exists(Dict * dict, Value key)
 {
     if (key.type != dict->key_type)
     {
-        general_error("Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     bool found = false;

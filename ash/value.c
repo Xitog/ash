@@ -41,7 +41,7 @@ bool strict_equality(Value v1, Value v2)
     {
         return false;
     }
-    if (v1.type == TYPE_INTEGER)
+    if (v1.type == TYPE_INTEGER || v1.type == TYPE_TYPE)
     {
         return v1.value.as_int == v2.value.as_int;
     }
@@ -62,7 +62,7 @@ bool strict_equality(Value v1, Value v2)
         //printf("strict_equality :: %s vs %s = %d\n", v1.value.as_string->content, v2.value.as_string->content, strcmp(v1.value.as_string->content, v2.value.as_string->content));
         return strcmp(v1.value.as_string->content, v2.value.as_string->content) == 0;
     }
-    general_error("Type unknown for strict_equality");
+    general_message(FATAL, "Type unknown for strict_equality");
     return false;
 }
 
@@ -182,6 +182,9 @@ void value_print(Value v)
     case TYPE_STRING:
         XString *s = v.value.as_string;
         printf("%s (#%d) (ref=%d)", s->content, s->size, s->refcount);
+        break;
+    case TYPE_TYPE:
+        printf("%s", TYPE_REPR_STRING[v.value.as_int]);
         break;
     case TYPE_NIL:
         printf("nil");

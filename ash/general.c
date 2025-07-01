@@ -50,7 +50,7 @@ void memory_summary()
     printf("Memory usage: %d allocated %d freed %+d diff\n", total_allocated, total_freed, total_allocated - total_freed);
 }
 
-void general_error(char *message, ...)
+void general_message(ErrorLevel lvl, char *message, ...)
 {
     va_list args;
     va_start(args, message); // enable the variable arguments after message parameter
@@ -99,7 +99,10 @@ void general_error(char *message, ...)
     }
     va_end(args);
     printf("\n");
-    exit(EXIT_FAILURE);
+    if (lvl == FATAL)
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 // unsused

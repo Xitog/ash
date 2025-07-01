@@ -86,7 +86,7 @@ Node *parse_pow(TokenList *list);
 Node *parse_unary_complement(TokenList *list);
 // [] .
 Node *parse_call(TokenList *list);
-Node *parse_identifier_left_aff(TokenList *list);
+Node *parse_identifier_left_aff(TokenList *list, Type type_to_set);
 Node *parse_litteral(TokenList *list);
 
 NodeType node_compute_type(Node *node);

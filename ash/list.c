@@ -14,7 +14,7 @@ unsigned int list_append(List *list, Value val)
 {
     if (val.type != list->elem_type)
     {
-        general_error("Impossible to add type %s to list of %s", TYPE_REPR_STRING[val.type], TYPE_REPR_STRING[list->elem_type]);
+        general_message(FATAL, "Impossible to add type %s to list of %s", TYPE_REPR_STRING[val.type], TYPE_REPR_STRING[list->elem_type]);
     }
     ListElement *elem = (ListElement *)memory_get(sizeof(ListElement));
     elem->node = val;
@@ -81,7 +81,7 @@ void list_set(List *list, int index, Value val)
     unsigned int u_index = (unsigned int)index;
     if (u_index > 0 && u_index >= list->count)
     {
-        general_error("Cannot set at %d index for a list of size %d", index, list->count);
+        general_message(FATAL, "Cannot set at %d index for a list of size %d", index, list->count);
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
     ListElement *current = list->head;

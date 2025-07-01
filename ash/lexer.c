@@ -47,7 +47,7 @@ Token read_identifier(const char *cmd, unsigned int start)
         {
             if (count == 0 && isdigit(cmd[index]))
             {
-                general_error("Lexer error: Identifier cannot start by a number.\n");
+                general_message(FATAL, "Lexer error: Identifier cannot start by a number.\n");
             }
             count += 1;
         }

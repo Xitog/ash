@@ -35,7 +35,7 @@ Token token_list_get(TokenList *list, uint32_t index)
 {
     if (index >= list->count)
     {
-        general_error("Index %d out of boundaries [0, %d]", index, list->count);
+        general_message(FATAL, "Index %d out of boundaries [0, %d]", index, list->count);
     }
     // On divise par deux la taille pour savoir si commence par le début ou la fin
     TokenListElement *current = list->head;
@@ -67,7 +67,7 @@ Token token_list_pop(TokenList *list)
 {
     if (list->count <= 0)
     {
-        general_error("Empty list");
+        general_message(FATAL, "Empty list");
     }
     Token tok;
     TokenListElement *last = list->tail;

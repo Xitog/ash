@@ -86,11 +86,11 @@ bool parser_get_debug()
 
 AST *parse(TokenList *list)
 {
-    if (root_scope != NULL)
+    if (root_scope == NULL)
     {
-        dict_free(root_scope);
+        root_scope = dict_init(TYPE_CSTRING, TYPE_TYPE);
+        // dict_free(root_scope);
     }
-    root_scope = dict_init(TYPE_CSTRING, TYPE_TYPE);
     parser_index = 0;
     parser_level = 0;
     if (parser_debug)
@@ -101,7 +101,7 @@ AST *parse(TokenList *list)
     t->root = parse_block(list);
     if (parser_index != token_list_size(list))
     {
-        general_error("Tokens not parsed at the end of the token list (>= %d).", parser_index);
+        general_message(FATAL, "Tokens not parsed at the end of the token list (>= %d).", parser_index);
     }
     if (parser_debug)
     {
@@ -195,7 +195,7 @@ Node *parse_if(TokenList *list)
     node->extra = parse_expression(list);
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
     {
-        general_error("if not followed by then.");
+        general_message(FATAL, "if not followed by then.");
     }
     if (parser_debug)
     {
@@ -220,7 +220,7 @@ Node *parse_if(TokenList *list)
         elsif->extra = parse_expression(list);
         if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
         {
-            general_error("elsif not followed by then.");
+            general_message(FATAL, "elsif not followed by then.");
         }
         parser_index += 1; // pass keyword then
         elsif->left = parse_block(list);
@@ -240,7 +240,7 @@ Node *parse_if(TokenList *list)
     }
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "end"))
     {
-        general_error("if not terminated by end.");
+        general_message(FATAL, "if not terminated by end.");
     }
     if (parser_debug)
     {
@@ -269,7 +269,7 @@ Node *parse_while(TokenList *list)
     node->extra = parse_expression(list);
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "do"))
     {
-        general_error("while not followed by do.");
+        general_message(FATAL, "while not followed by do.");
     }
     if (parser_debug)
     {
@@ -281,7 +281,7 @@ Node *parse_while(TokenList *list)
     node->right = NULL;
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "loop"))
     {
-        general_error("while not terminated by loop.");
+        general_message(FATAL, "while not terminated by loop.");
     }
     if (parser_debug)
     {
@@ -378,10 +378,16 @@ Node *parse_affectation(TokenList *list)
             printf("> operator = found at %d!\n", parser_index);
         }
         // Affectation
-        Node *left = parse_identifier_left_aff(list);
+        unsigned int where_it_begins = parser_index;
+        parser_index += 1;
         Token t = token_list_get(list, parser_index); // to get the '='
         parser_index += 1; // to remove the '='
-        Node *right = parse_interval(list);
+        Node *right = parse_affectation(list);
+        unsigned int where_it_ends = parser_index;
+        parser_index = where_it_begins;
+        printf("Right value type = %s\n", TYPE_REPR_STRING[right->value_type]);
+        Node *left = parse_identifier_left_aff(list, right->value_type);
+        parser_index = where_it_ends;
         node = (Node *)memory_get(sizeof(Node));
         node->token = t;
         node->left = left;
@@ -649,7 +655,7 @@ Node *parse_addition_soustraction(TokenList *list)
         }
         else
         {
-            general_error("Parser : impossible to resolve type between left=%s and right=%s for addition soustraction.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+            general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for addition soustraction.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
         }
     }
     parser_level--;
@@ -704,7 +710,7 @@ Node *parse_multiplication_division_modulo(TokenList *list)
             }
             else
             {
-                general_error("Parser : impossible to resolve type between left=%s and right=%s for multiplication.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+                general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for multiplication.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
             }
         }
         else if (token_cmp(node->token, "/"))
@@ -797,7 +803,7 @@ Node *parse_call(TokenList *list)
         parser_index += 1; // opening (
         if (!check_token_value(list, parser_index, TOKEN_SEPARATOR, ")"))
         {
-            general_error("arguments not supported yet.");
+            general_message(FATAL, "arguments not supported yet.");
         }
         parser_index += 1; // closing )
         Node *right = NULL;
@@ -812,25 +818,42 @@ Node *parse_call(TokenList *list)
     return node;
 }
 
-Node *parse_identifier_left_aff(TokenList *list)
+Node *parse_identifier_left_aff(TokenList *list, Type type_to_set)
 {
     Node *node = NULL;
     parser_level++;
     if (!check_token_type(list, parser_index, TOKEN_IDENTIFIER))
     {
-        general_error("This function is only for left part of affectation.\n");
+        general_message(FATAL, "This function is only for left part of affectation.\n");
     }
     node = (Node *)memory_get(sizeof(Node));
     node->token = token_list_get(list, parser_index);
     node->left = NULL;
     node->right = NULL;
     node->type = NODE_IDENTIFIER;
-    node->value_type = TYPE_ANY;
+    node->value_type = type_to_set;
     parser_index += 1;
-    // Registering variable
+    // Registering or checking variable
     char * tval = token_value(node->token);
-    Value key = cstring_init(tval);
-    dict_set(root_scope, key, type_init(TYPE_ANY));
+    Value var_name = cstring_init(tval);
+    Value value_type_to_set = type_init(type_to_set);
+    value_print_message("Searching for key %v in root_scope.\n", var_name);
+    dict_print(root_scope);
+    if (dict_key_exists(root_scope, var_name))
+    {
+        printf("Variable found in root_scope!\n");
+        Value value_type_registered = dict_get(root_scope, var_name);
+        if (!equality(value_type_to_set, value_type_registered) && (value_type_registered.value.as_int != TYPE_FLOAT || value_type_to_set.value.as_int != TYPE_INTEGER)) // type must be the same except if we try to put an int into a float
+        {
+            general_message(FATAL, "Impossible to put a value of type %s into the variable %s of type %s", TYPE_REPR_STRING[value_type_to_set.value.as_int], tval, TYPE_REPR_STRING[value_type_registered.value.as_int]);
+        }
+    }
+    else
+    {
+        printf("Variable not found in root_scope! Adding:\n");
+        dict_set(root_scope, var_name, value_type_to_set);
+        dict_print(root_scope);
+    }
     return node;
 }
 
@@ -874,7 +897,7 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_FLOAT;
-        node->value_type = TYPE_INTEGER;
+        node->value_type = TYPE_FLOAT;
         parser_index += 1;
     }
     else if (check_token_type(list, parser_index, TOKEN_BOOLEAN))
@@ -929,14 +952,14 @@ Node *parse_litteral(TokenList *list)
         }
         else
         {
-            general_error("Variable %t not found in current scope.", node->token);
+            general_message(FATAL, "Name '%s' is not defined in current scope.", tval); // node->token
         }
         cstring_delete(key);
         parser_index += 1;
     }
     else
     {
-        general_error("Not a literal at %d", parser_index);
+        general_message(FATAL, "Not a literal at %d", parser_index);
     }
     parser_level--;
     return node;
@@ -1117,7 +1140,7 @@ void node_print_level(Node *node, uint32_t level)
     }
     else
     {
-        general_error("Parser: Unknown node type: %d", node->type);
+        general_message(FATAL, "Parser: Unknown node type: %d", node->type);
     }
 }
 

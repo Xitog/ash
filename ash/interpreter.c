@@ -35,12 +35,23 @@ void emit_node(Node *node)
     {
         if (node->left->type != NODE_IDENTIFIER)
         {
-            general_error("Interpreter: left part of affectation operator should be an identifier.");
+            general_message(FATAL, "Interpreter: left part of affectation operator should be an identifier.");
         }
-        emit_node(node->left);
-        emit_string(" = ");
-        emit_node(node->right);
-        emit_string(" ");
+        if (node->right->type == NODE_BINARY_OPERATOR && token_cmp(node->right->token, "="))
+        {
+            emit_node(node->right);
+            emit_string(" ");
+            emit_node(node->left);
+            emit_string(" = ");
+            emit_node(node->right->left);
+        }
+        else
+        {
+            emit_node(node->left);
+            emit_string(" = ");
+            emit_node(node->right);
+            emit_string(" ");
+        }
     }
     else if (node->type == NODE_BINARY_OPERATOR)
     {
@@ -60,7 +71,7 @@ void emit_node(Node *node)
                 }
                 else
                 {
-                    general_error("Interpreter: for boolean, equality operator must be used with boolean.");
+                    general_message(FATAL, "Interpreter: for boolean, equality operator must be used with boolean.");
                 }
             }
             else if (token_cmp(node->token, "and"))
@@ -73,7 +84,7 @@ void emit_node(Node *node)
                 }
                 else
                 {
-                    general_error("Interpreter: for boolean, and operator must be used with boolean.");
+                    general_message(FATAL, "Interpreter: for boolean, and operator must be used with boolean.");
                 }
             }
             else if (token_cmp(node->token, "or"))
@@ -86,12 +97,12 @@ void emit_node(Node *node)
                 }
                 else
                 {
-                    general_error("Interpreter: for boolean, and operator must be used with boolean.");
+                    general_message(FATAL, "Interpreter: for boolean, and operator must be used with boolean.");
                 }
             }
             else
             {
-                general_error("Interpreter: unknown operator for boolean: %t.", node->token);
+                general_message(FATAL, "Interpreter: unknown operator for boolean: %t.", node->token);
             }
         }
         else if (node->left->type == NODE_STRING)
@@ -106,7 +117,7 @@ void emit_node(Node *node)
                 }
                 else
                 {
-                    general_error("Interpreter: incompatible operand type for string operator +");
+                    general_message(FATAL, "Interpreter: incompatible operand type for string operator +");
                 }
             }
             else if (token_cmp(node->token, "*"))
@@ -121,12 +132,12 @@ void emit_node(Node *node)
                 }
                 else
                 {
-                    general_error("Interpreter: incompatible operand type for string operator *");
+                    general_message(FATAL, "Interpreter: incompatible operand type for string operator *");
                 }
             }
             else
             {
-                general_error("Interpreter: unknown operator for string.");
+                general_message(FATAL, "Interpreter: unknown operator for string.");
             }
         }
         else if (token_cmp(node->token, "=="))
@@ -145,7 +156,7 @@ void emit_node(Node *node)
         }
         else
         {
-            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">") || token_cmp(node->token, "="))
+            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">"))
             {
                 emit_node(node->left);
                 emit_token(node->token);
@@ -174,7 +185,7 @@ void emit_node(Node *node)
         NodeType nt = node_compute_type(node->extra);
         if (nt != NODE_BOOLEAN)
         {
-            general_error("Interpreter: WHILE condition should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
+            general_message(FATAL, "Interpreter: WHILE condition should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
         }
         emit_node(node->extra);
         emit_string(" do ");
@@ -187,7 +198,7 @@ void emit_node(Node *node)
         NodeType nt = node_compute_type(node->extra);
         if (nt != NODE_BOOLEAN)
         {
-            general_error("Interpreter: IF condission should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
+            general_message(FATAL, "Interpreter: IF condission should be of boolean type not %s.", NODE_TYPE_REPR_STRING[nt]);
         }
         emit_node(node->extra);
         emit_string(" then ");
@@ -227,12 +238,12 @@ void emit_node(Node *node)
         }
         else
         {
-            general_error("Interpreter: unknown function: %t.", node->left->token);
+            general_message(FATAL, "Interpreter: unknown function: %t.", node->left->token);
         }
     }
     else
     {
-        general_error("Interpreter: Node type unknown.");
+        general_message(FATAL, "Interpreter: Node type unknown.");
     }
 }
 
@@ -321,7 +332,7 @@ const char *execute(AST *ast)
             }
             else
             {
-                general_error("Interpreter: result is not a boolean.\n");
+                general_message(FATAL, "Interpreter: result is not a boolean.\n");
             }
         }
         else if (lua_isnil(L, top))
