@@ -15,7 +15,7 @@ const char *NODE_TYPE_REPR_STRING[] = {
     "NODE_BLOCK"};
 
 uint8_t DEBUG_MODE = DEBUG_MODE_FULL; // DEBUG_MODE_CLEVER;
-Dict * root_scope = NULL;
+Dict *root_scope = NULL;
 
 unsigned int parser_index = 0;
 unsigned int parser_level = 0;
@@ -381,7 +381,7 @@ Node *parse_affectation(TokenList *list)
         unsigned int where_it_begins = parser_index;
         parser_index += 1;
         Token t = token_list_get(list, parser_index); // to get the '='
-        parser_index += 1; // to remove the '='
+        parser_index += 1;                            // to remove the '='
         Node *right = parse_affectation(list);
         unsigned int where_it_ends = parser_index;
         parser_index = where_it_begins;
@@ -394,7 +394,7 @@ Node *parse_affectation(TokenList *list)
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
         node->value_type = node->right->value_type;
-        char * tval = token_value(node->left->token);
+        char *tval = token_value(node->left->token);
         memory_free(tval);
     }
     else
@@ -703,8 +703,7 @@ Node *parse_multiplication_division_modulo(TokenList *list)
                 node->value_type = TYPE_FLOAT;
             }
             else if ((node->left->value_type == TYPE_STRING && node->right->value_type == TYPE_INTEGER) ||
-                     (node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_STRING)
-                    )
+                     (node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_STRING))
             {
                 node->value_type = TYPE_STRING;
             }
@@ -790,7 +789,8 @@ Node *parse_call(TokenList *list)
             printf("? parse_call at %d\n", parser_index);
         }
     }
-    Node *node = parse_litteral(list);
+    // :TODO: Warning : unhandled case if I do (expr)() !
+    Node *node = parse_parenthesis_expr(list);
     if (check_token_value(list, parser_index, TOKEN_SEPARATOR, "("))
     {
         if (parser_debug)
@@ -834,7 +834,7 @@ Node *parse_identifier_left_aff(TokenList *list, Type type_to_set)
     node->value_type = type_to_set;
     parser_index += 1;
     // Registering or checking variable
-    char * tval = token_value(node->token);
+    char *tval = token_value(node->token);
     Value var_name = cstring_init(tval);
     Value value_type_to_set = type_init(type_to_set);
     value_print_message("Searching for key %v in root_scope.\n", var_name);
@@ -854,6 +854,44 @@ Node *parse_identifier_left_aff(TokenList *list, Type type_to_set)
         dict_set(root_scope, var_name, value_type_to_set);
         dict_print(root_scope);
     }
+    return node;
+}
+
+Node *parse_parenthesis_expr(TokenList *list)
+{
+    Node *node = NULL;
+    parser_level++;
+    if (parser_debug)
+    {
+        if (DEBUG_MODE == DEBUG_MODE_FULL)
+        {
+            tab();
+            printf("? parse_parenthesis_expr at %d\n", parser_index);
+        }
+    }
+    if (check_token_value(list, parser_index, TOKEN_SEPARATOR, "("))
+    {
+        if (parser_debug)
+        {
+            if (DEBUG_MODE == DEBUG_MODE_FULL)
+            {
+                tab();
+                printf("! parse_parenthesis_expr at %d\n", parser_index);
+            }
+        }
+        parser_index += 1; // skip '('
+        node = parse_expression(list);
+        if (!check_token_value(list, parser_index, TOKEN_SEPARATOR, ")"))
+        {
+            general_message(FATAL, "Unclosed parenthsis");
+        }
+        parser_index += 1; // skip ')'
+    }
+    else
+    {
+        node = parse_litteral(list);
+    }
+    parser_level--;
     return node;
 }
 
@@ -943,7 +981,7 @@ Node *parse_litteral(TokenList *list)
         node->right = NULL;
         node->type = NODE_IDENTIFIER;
         // List of var with their type
-        char * tval = token_value(node->token);
+        char *tval = token_value(node->token);
         Value key = cstring_init(tval);
         if (dict_key_exists(root_scope, key))
         {

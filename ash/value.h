@@ -65,6 +65,7 @@ const extern char *TYPE_REPR_STRING[];
 
 bool is_nil(Value v);
 bool is_primitive(Value v);
+bool type_is_number(Type t);
 bool strict_equality(Value v1, Value v2);
 bool equality(Value v1, Value v2);
 Value integer_init(long i);

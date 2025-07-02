@@ -26,10 +26,10 @@ void emit_string(char *s)
 
 void emit_node(Node *node)
 {
+    bool direct_emit = false;
     if (node == NULL)
     {
-        printf("INTERPRETER ERROR");
-        return;
+        general_message(FATAL, "Interpreter : null node.");
     }
     if (node->type == NODE_BINARY_OPERATOR && token_cmp(node->token, "="))
     {
@@ -55,112 +55,101 @@ void emit_node(Node *node)
     }
     else if (node->type == NODE_BINARY_OPERATOR)
     {
-        if (node->left->type == NODE_BINARY_OPERATOR)
+        // == work for all types nil, integer, float, boolean, string, list, array, dict
+        if (token_cmp(node->token, "=="))
         {
-            // todo
-        }
-        else if (node->left->type == NODE_BOOLEAN)
-        {
-            if (token_cmp(node->token, "=="))
-            {
-                if (node->right->type == NODE_BOOLEAN)
-                {
-                    emit_node(node->left);
-                    emit_string(" == ");
-                    emit_node(node->right);
-                }
-                else
-                {
-                    general_message(FATAL, "Interpreter: for boolean, equality operator must be used with boolean.");
-                }
-            }
-            else if (token_cmp(node->token, "and"))
-            {
-                if (node->right->type == NODE_BOOLEAN)
-                {
-                    emit_node(node->left);
-                    emit_string(" and ");
-                    emit_node(node->right);
-                }
-                else
-                {
-                    general_message(FATAL, "Interpreter: for boolean, and operator must be used with boolean.");
-                }
-            }
-            else if (token_cmp(node->token, "or"))
-            {
-                if (node->right->type == NODE_BOOLEAN)
-                {
-                    emit_node(node->left);
-                    emit_string(" or ");
-                    emit_node(node->right);
-                }
-                else
-                {
-                    general_message(FATAL, "Interpreter: for boolean, and operator must be used with boolean.");
-                }
-            }
-            else
-            {
-                general_message(FATAL, "Interpreter: unknown operator for boolean: %t.", node->token);
-            }
-        }
-        else if (node->left->type == NODE_STRING)
-        {
-            if (token_cmp(node->token, "+"))
-            {
-                if (node->right->type == NODE_STRING)
-                {
-                    emit_node(node->left);
-                    emit_string("..");
-                    emit_node(node->right);
-                }
-                else
-                {
-                    general_message(FATAL, "Interpreter: incompatible operand type for string operator +");
-                }
-            }
-            else if (token_cmp(node->token, "*"))
-            {
-                if (node->right->type == NODE_INTEGER)
-                {
-                    emit_string("string.rep(");
-                    emit_node(node->left);
-                    emit_string(",");
-                    emit_node(node->right);
-                    emit_string(")");
-                }
-                else
-                {
-                    general_message(FATAL, "Interpreter: incompatible operand type for string operator *");
-                }
-            }
-            else
-            {
-                general_message(FATAL, "Interpreter: unknown operator for string.");
-            }
-        }
-        else if (token_cmp(node->token, "=="))
-        {
-            // Il faudra vérifier les types aussi
             emit_node(node->left);
-            emit_token(node->token);
+            emit_string(" == ");
             emit_node(node->right);
+        }
+        else if (token_cmp(node->token, "and")) // only for booleans
+        {
+            if (node->left->value_type != TYPE_BOOLEAN || node->right->value_type != TYPE_BOOLEAN)
+            {
+                general_message(FATAL, "Interpreter: and operator must be used with boolean.");
+            }
+            emit_node(node->left);
+            emit_string(" and ");
+            emit_node(node->right);
+        }
+        else if (token_cmp(node->token, "or")) // only for booleans
+        {
+            if (node->left->value_type != TYPE_BOOLEAN || node->right->value_type != TYPE_BOOLEAN)
+            {
+                general_message(FATAL, "Interpreter: or operator must be used with boolean.");
+            }
+            emit_node(node->left);
+            emit_string(" or ");
+            emit_node(node->right);
+        }
+        else if (token_cmp(node->token, "*"))
+        {
+            if (node->right->value_type == TYPE_INTEGER && node->left->value_type == TYPE_STRING)
+            {
+                emit_string("string.rep(");
+                emit_node(node->left);
+                emit_string(",");
+                emit_node(node->right);
+                emit_string(")");
+            }
+            else if (node->right->value_type == TYPE_STRING && node->left->value_type == TYPE_INTEGER)
+            {
+                emit_string("string.rep(");
+                emit_node(node->right);
+                emit_string(",");
+                emit_node(node->left);
+                emit_string(")");
+            }
+            else if (type_is_number(node->left->value_type) && type_is_number(node->right->value_type))
+            {
+                direct_emit = true;
+            }
+            else
+            {
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator *", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+            }
+        }
+        else if (token_cmp(node->token, "+"))
+        {
+            if (node->right->value_type == TYPE_STRING && node->left->value_type == TYPE_STRING)
+            {
+                emit_node(node->left);
+                emit_string("..");
+                emit_node(node->right);
+            }
+            else if (type_is_number(node->left->value_type) && type_is_number(node->right->value_type))
+            {
+                direct_emit = true;
+            }
+            else
+            {
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator +", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+            }
         }
         else if (token_cmp(node->token, "!="))
         {
-            // Il faudra vérifier les types aussi
             emit_node(node->left);
             emit_string("~=");
             emit_node(node->right);
         }
-        else
+        else if (
+            token_cmp(node->token, "-") ||
+            token_cmp(node->token, "/") ||
+            token_cmp(node->token, "//") ||
+            token_cmp(node->token, "**") ||
+            token_cmp(node->token, "%") ||
+            token_cmp(node->token, "<") ||
+            token_cmp(node->token, "<=") ||
+            token_cmp(node->token, ">") ||
+            token_cmp(node->token, ">="))
         {
-            if (token_cmp(node->token, "+") || token_cmp(node->token, "-") || token_cmp(node->token, "*") || token_cmp(node->token, "/") || token_cmp(node->token, "%") || token_cmp(node->token, "//") || token_cmp(node->token, "<") || token_cmp(node->token, ">"))
+            if (type_is_number(node->left->value_type) && type_is_number(node->right->value_type))
             {
-                emit_node(node->left);
-                emit_token(node->token);
-                emit_node(node->right);
+                direct_emit = true;
+            }
+            else
+            {
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator %s", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type], token_value(node->token));
             }
         }
     }
@@ -244,6 +233,15 @@ void emit_node(Node *node)
     else
     {
         general_message(FATAL, "Interpreter: Node type unknown.");
+    }
+
+    if (direct_emit)
+    {
+        emit_string("(");
+        emit_node(node->left);
+        emit_token(node->token);
+        emit_node(node->right);
+        emit_string(")");
     }
 }
 

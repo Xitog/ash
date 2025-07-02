@@ -35,6 +35,11 @@ bool is_primitive(Value v)
     return v.type == TYPE_BOOLEAN || v.type == TYPE_FLOAT || v.type == TYPE_INTEGER || v.type == TYPE_NIL || v.type == TYPE_TYPE;
 }
 
+bool type_is_number(Type t)
+{
+    return t == TYPE_INTEGER || t == TYPE_FLOAT;
+}
+
 bool strict_equality(Value v1, Value v2)
 {
     if (v1.type != v2.type)
