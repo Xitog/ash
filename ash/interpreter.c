@@ -64,7 +64,7 @@ void emit_node(Node *node)
         }
         else if (token_cmp(node->token, "and")) // only for booleans
         {
-            if (node->left->value_type != TYPE_BOOLEAN || node->right->value_type != TYPE_BOOLEAN)
+            if (node->left->value_type != VALUE_BOOLEAN || node->right->value_type != VALUE_BOOLEAN)
             {
                 general_message(FATAL, "Interpreter: and operator must be used with boolean.");
             }
@@ -74,7 +74,7 @@ void emit_node(Node *node)
         }
         else if (token_cmp(node->token, "or")) // only for booleans
         {
-            if (node->left->value_type != TYPE_BOOLEAN || node->right->value_type != TYPE_BOOLEAN)
+            if (node->left->value_type != VALUE_BOOLEAN || node->right->value_type != VALUE_BOOLEAN)
             {
                 general_message(FATAL, "Interpreter: or operator must be used with boolean.");
             }
@@ -84,7 +84,7 @@ void emit_node(Node *node)
         }
         else if (token_cmp(node->token, "*"))
         {
-            if (node->right->value_type == TYPE_INTEGER && node->left->value_type == TYPE_STRING)
+            if (node->right->value_type == VALUE_INTEGER && node->left->value_type == VALUE_STRING)
             {
                 emit_string("string.rep(");
                 emit_node(node->left);
@@ -92,7 +92,7 @@ void emit_node(Node *node)
                 emit_node(node->right);
                 emit_string(")");
             }
-            else if (node->right->value_type == TYPE_STRING && node->left->value_type == TYPE_INTEGER)
+            else if (node->right->value_type == VALUE_STRING && node->left->value_type == VALUE_INTEGER)
             {
                 emit_string("string.rep(");
                 emit_node(node->right);
@@ -106,12 +106,12 @@ void emit_node(Node *node)
             }
             else
             {
-                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator *", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator *", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type]);
             }
         }
         else if (token_cmp(node->token, "+"))
         {
-            if (node->right->value_type == TYPE_STRING && node->left->value_type == TYPE_STRING)
+            if (node->right->value_type == VALUE_STRING && node->left->value_type == VALUE_STRING)
             {
                 emit_node(node->left);
                 emit_string("..");
@@ -123,7 +123,7 @@ void emit_node(Node *node)
             }
             else
             {
-                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator +", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator +", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type]);
             }
         }
         else if (token_cmp(node->token, "!="))
@@ -149,7 +149,7 @@ void emit_node(Node *node)
             }
             else
             {
-                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator %s", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type], token_value(node->token));
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator %s", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type], token_value(node->token));
             }
         }
     }

@@ -33,11 +33,9 @@ typedef enum _TokenType
     TOKEN_STRING = 12,
     TOKEN_NIL = 13,
     TOKEN_COMMENT = 14,
-    WRONG_TOKEN_LONELY_OPERATOR = 15,
-    WRONG_TOKEN_NUMBER_AND_LETTER = 16
+    TOKEN_ERROR_LONELY_OPERATOR = 15,
+    TOKEN_ERROR_NUMBER_WITH_LETTER = 16
 } TokenType;
-
-#define NB_TOKEN_TYPES 16
 
 typedef struct _Token
 {
@@ -45,13 +43,16 @@ typedef struct _Token
     TokenType type;
     uint32_t start;
     uint32_t count;
+    uint32_t line;
 } Token;
 
 //-----------------------------------------------------------------------------
 // Constantes
 //-----------------------------------------------------------------------------
 
-const extern char *TOKEN_TYPE_REPR_STRING[];
+const extern char *TOKEN_TYPE_TO_STRING[];
+const extern uint8_t TOKEN_TYPE_TO_STRING_MAX_LENGTH;
+
 const extern char *OPERATOR_ELEMENTS;
 const extern char *HEXADECIMAL_ELEMENTS;
 const extern char *SEPARATOR_ELEMENTS;

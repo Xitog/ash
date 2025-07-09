@@ -4,7 +4,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *TOKEN_TYPE_REPR_STRING[] = {
+const char *TOKEN_TYPE_TO_STRING[] = {
     "NONE",
     "INTEGER",
     "HEXADECIMAL",
@@ -20,9 +20,9 @@ const char *TOKEN_TYPE_REPR_STRING[] = {
     "STRING",
     "NIL",
     "COMMENT",
-    "WRONG_LONELY_OPERATOR",
-    "WRONG_NUMBER_WITH_LETTER"};
-
+    "ERROR_LONELY_OPERATOR",
+    "ERROR_NUMBER_WITH_LETTER"};
+const uint8_t TOKEN_TYPE_TO_STRING_MAX_LENGTH = 24;
 const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
 const char *OPERATOR_ELEMENTS = "+-*/%<>=!.~?&|^";
 const char *SEPARATOR_ELEMENTS = "([{}]),;:\t";
@@ -69,7 +69,7 @@ char *token_value(Token tok)
 
 void token_print(Token tok)
 {
-    printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_REPR_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
+    printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
 }
 
 void token_print_value(Token tok)

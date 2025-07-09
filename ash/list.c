@@ -1,6 +1,6 @@
 #include "list.h"
 
-List *list_init(Type elem_type)
+List *list_init(ValueType elem_type)
 {
     List *list = (List *)memory_get(sizeof(List));
     list->head = NULL;
@@ -14,13 +14,13 @@ unsigned int list_append(List *list, Value val)
 {
     if (val.type != list->elem_type)
     {
-        general_message(FATAL, "Impossible to add type %s to list of %s", TYPE_REPR_STRING[val.type], TYPE_REPR_STRING[list->elem_type]);
+        general_message(FATAL, "Impossible to add type %s to list of %s", VALUE_TYPE_STRING[val.type], VALUE_TYPE_STRING[list->elem_type]);
     }
     ListElement *elem = (ListElement *)memory_get(sizeof(ListElement));
     elem->node = val;
     if (!is_primitive(val))
     {
-        val.value.as_string->refcount += 1;
+        val.as.string->refcount += 1;
     }
     elem->next = NULL;
     elem->prev = NULL;
@@ -113,7 +113,7 @@ void list_set(List *list, int index, Value val)
     current->node = val;
     if (!is_primitive(current->node))
     {
-        current->node.value.as_string->refcount += 1;
+        current->node.as.string->refcount += 1;
     }
 }
 
@@ -167,7 +167,7 @@ void list_reverse(List *list)
 void list_print(List *list)
 {
     size_t size = list_size(list);
-    printf("List <%s> [#%d] :\n", TYPE_REPR_STRING[list->elem_type], size);
+    printf("List <%s> [#%d] :\n", VALUE_TYPE_STRING[list->elem_type], size);
     Iterator it = iterator_init(list);
     Value current = iterator_next(&it);
     unsigned int count = 0;

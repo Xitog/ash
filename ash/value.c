@@ -4,9 +4,9 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const Value NIL = {.type = TYPE_NIL, .value.as_any = NULL};
+const Value NIL = {.type = VALUE_NIL, .as.any = NULL};
 
-const char *TYPE_REPR_STRING[] = {
+const char *VALUE_TYPE_STRING[] = {
     "NIL",
     "INTEGER",
     "FLOAT",
@@ -27,17 +27,17 @@ const char *TYPE_REPR_STRING[] = {
 
 bool is_nil(Value v)
 {
-    return v.type == TYPE_NIL;
+    return v.type == VALUE_NIL;
 }
 
 bool is_primitive(Value v)
 {
-    return v.type == TYPE_BOOLEAN || v.type == TYPE_FLOAT || v.type == TYPE_INTEGER || v.type == TYPE_NIL || v.type == TYPE_TYPE;
+    return v.type == VALUE_BOOLEAN || v.type == VALUE_FLOAT || v.type == VALUE_INTEGER || v.type == VALUE_NIL || v.type == VALUE_TYPE;
 }
 
-bool type_is_number(Type t)
+bool type_is_number(ValueType t)
 {
-    return t == TYPE_INTEGER || t == TYPE_FLOAT;
+    return t == VALUE_INTEGER || t == VALUE_FLOAT;
 }
 
 bool strict_equality(Value v1, Value v2)
@@ -46,26 +46,26 @@ bool strict_equality(Value v1, Value v2)
     {
         return false;
     }
-    if (v1.type == TYPE_INTEGER || v1.type == TYPE_TYPE)
+    if (v1.type == VALUE_INTEGER || v1.type == VALUE_TYPE)
     {
-        return v1.value.as_int == v2.value.as_int;
+        return v1.as.integer == v2.as.integer;
     }
-    else if (v1.type == TYPE_FLOAT)
+    else if (v1.type == VALUE_FLOAT)
     {
-        return v1.value.as_float == v2.value.as_float;
+        return v1.as.real == v2.as.real;
     }
-    else if (v1.type == TYPE_BOOLEAN)
+    else if (v1.type == VALUE_BOOLEAN)
     {
-        return v1.value.as_bool == v2.value.as_bool;
+        return v1.as.boolean == v2.as.boolean;
     }
-    else if (v1.type == TYPE_CSTRING)
+    else if (v1.type == VALUE_CSTRING)
     {
-        return strcmp(v1.value.as_cstring, v2.value.as_cstring) == 0;
+        return strcmp(v1.as.cstring, v2.as.cstring) == 0;
     }
-    else if (v1.type == TYPE_STRING)
+    else if (v1.type == VALUE_STRING)
     {
-        //printf("strict_equality :: %s vs %s = %d\n", v1.value.as_string->content, v2.value.as_string->content, strcmp(v1.value.as_string->content, v2.value.as_string->content));
-        return strcmp(v1.value.as_string->content, v2.value.as_string->content) == 0;
+        //printf("strict_equality :: %s vs %s = %d\n", v1.as.string->content, v2.as.string->content, strcmp(v1.as.string->content, v2.as.string->content));
+        return strcmp(v1.as.string->content, v2.as.string->content) == 0;
     }
     general_message(FATAL, "Type unknown for strict_equality");
     return false;
@@ -73,13 +73,13 @@ bool strict_equality(Value v1, Value v2)
 
 bool equality(Value v1, Value v2)
 {
-    if (v1.type == TYPE_INTEGER && v2.type == TYPE_FLOAT)
+    if (v1.type == VALUE_INTEGER && v2.type == VALUE_FLOAT)
     {
-        return (float)v1.value.as_int == v2.value.as_float;
+        return (float)v1.as.integer == v2.as.real;
     }
-    else if (v2.type == TYPE_INTEGER && v1.type == TYPE_FLOAT)
+    else if (v2.type == VALUE_INTEGER && v1.type == VALUE_FLOAT)
     {
-        return (float)v2.value.as_int == v1.value.as_float;
+        return (float)v2.as.integer == v1.as.real;
     }
     else
     {
@@ -90,46 +90,46 @@ bool equality(Value v1, Value v2)
 Value integer_init(long i)
 {
     Value v;
-    v.type = TYPE_INTEGER;
-    v.value.as_int = i;
+    v.type = VALUE_INTEGER;
+    v.as.integer = i;
     return v;
 }
 
-Value type_init(Type t)
+Value type_init(ValueType t)
 {
     Value v;
-    v.type = TYPE_TYPE;
-    v.value.as_int = t;
+    v.type = VALUE_TYPE;
+    v.as.integer = t;
     return v;
 }
 
 Value float_init(float f)
 {
     Value v;
-    v.type = TYPE_FLOAT;
-    v.value.as_float = f;
+    v.type = VALUE_FLOAT;
+    v.as.real = f;
     return v;
 }
 
 Value boolean_init(bool b)
 {
     Value v;
-    v.type = TYPE_BOOLEAN;
-    v.value.as_bool = b;
+    v.type = VALUE_BOOLEAN;
+    v.as.boolean = b;
     return v;
 }
 
 Value cstring_init(char *s)
 {
     Value v;
-    v.type = TYPE_CSTRING;
-    v.value.as_cstring = s;
+    v.type = VALUE_CSTRING;
+    v.as.cstring = s;
     return v;
 }
 
 void cstring_delete(Value v)
 {
-    memory_free(v.value.as_cstring);
+    memory_free(v.as.cstring);
 }
 
 Value string_init(char *s)
@@ -139,8 +139,8 @@ Value string_init(char *s)
     str->content = memory_get(sizeof(char) * (str->size + 1));
     str->refcount = 1;
     Value v;
-    v.type = TYPE_STRING;
-    v.value.as_string = str;
+    v.type = VALUE_STRING;
+    v.as.string = str;
     for (int i = 0; i < str->size + 1; i++)
     {
         str->content[i] = s[i];
@@ -150,11 +150,11 @@ Value string_init(char *s)
 
 void string_delete(Value v)
 {
-    v.value.as_string->refcount -= 1;
-    if (v.value.as_string->refcount == 0)
+    v.as.string->refcount -= 1;
+    if (v.as.string->refcount == 0)
     {
-        memory_free(v.value.as_string->content);
-        memory_free(v.value.as_string);
+        memory_free(v.as.string->content);
+        memory_free(v.as.string);
     }
 }
 
@@ -162,16 +162,16 @@ void value_print(Value v)
 {
     switch (v.type)
     {
-    case TYPE_INTEGER:
-        long i = v.value.as_int;
+    case VALUE_INTEGER:
+        long i = v.as.integer;
         printf("%d", i);
         break;
-    case TYPE_FLOAT:
-        float f = v.value.as_float;
+    case VALUE_FLOAT:
+        float f = v.as.real;
         printf("%f", f);
         break;
-    case TYPE_BOOLEAN:
-        bool b = v.value.as_bool;
+    case VALUE_BOOLEAN:
+        bool b = v.as.boolean;
         if (b == true)
         {
             printf("true");
@@ -181,17 +181,17 @@ void value_print(Value v)
             printf("false");
         }
         break;
-    case TYPE_CSTRING:
-        printf("%s (#%d)", v.value.as_cstring, strlen(v.value.as_cstring));
+    case VALUE_CSTRING:
+        printf("%s (#%d)", v.as.cstring, strlen(v.as.cstring));
         break;
-    case TYPE_STRING:
-        XString *s = v.value.as_string;
+    case VALUE_STRING:
+        XString *s = v.as.string;
         printf("%s (#%d) (ref=%d)", s->content, s->size, s->refcount);
         break;
-    case TYPE_TYPE:
-        printf("%s", TYPE_REPR_STRING[v.value.as_int]);
+    case VALUE_TYPE:
+        printf("%s (%d)", VALUE_TYPE_STRING[v.as.integer], v.as.integer);
         break;
-    case TYPE_NIL:
+    case VALUE_NIL:
         printf("nil");
         break;
     default:

@@ -14,15 +14,15 @@
 typedef struct _Dict {
     List * keys;
     List * values;
-    Type key_type;
-    Type value_type;
+    ValueType key_type;
+    ValueType value_type;
 } Dict;
 
 //-----------------------------------------------------------------------------
 // Fonctions
 //-----------------------------------------------------------------------------
 
-Dict * dict_init(Type key_type, Type value_type);
+Dict * dict_init(ValueType key_type, ValueType value_type);
 void dict_free(Dict * dict);
 void dict_set(Dict * dict, Value key, Value value);
 Value dict_get(Dict * dict, Value key);

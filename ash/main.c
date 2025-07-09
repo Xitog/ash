@@ -26,7 +26,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.65";
+const char *VERSION = "0.0.66";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -343,14 +343,7 @@ int main(int argc, char *argv[])
                 if (output_json)
                 {
                     printf("- Outputting to JSON ---\n");
-                    unsigned int max_length = 0;
-                    for (int i = 0; i < NB_TOKEN_TYPES; i++)
-                    {
-                        if (max_length < strlen(TOKEN_TYPE_REPR_STRING[i]))
-                        {
-                            max_length = strlen(TOKEN_TYPE_REPR_STRING[i]);
-                        }
-                    }
+                    unsigned int max_length = TOKEN_TYPE_TO_STRING_MAX_LENGTH;
                     //char *buffer = NULL;
                     FILE *file;
                     errno_t err = fopen_s(&file, OUTPUT_JSON_FILENAME, "w");
@@ -376,8 +369,8 @@ int main(int argc, char *argv[])
                         fprintf(file, "    {");
                         fprintf(file, "        \"start\": %3d,", tok.start);
                         fprintf(file, "        \"count\": %3d,", tok.count);
-                        fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_REPR_STRING[tok.type]);
-                        for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_REPR_STRING[tok.type]); j++)
+                        fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_TO_STRING[tok.type]);
+                        for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_TO_STRING[tok.type]); j++)
                         {
                             fprintf(file, " ");
                         }

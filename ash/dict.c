@@ -1,6 +1,6 @@
 #include "dict.h"
 
-Dict * dict_init(Type key_type, Type value_type) {
+Dict * dict_init(ValueType key_type, ValueType value_type) {
     Dict * d = (Dict *) memory_get(sizeof(Dict));
     d->keys = list_init(key_type);
     d->values = list_init(value_type);
@@ -20,7 +20,7 @@ void dict_set(Dict * dict, Value key, Value value)
 {
     if (key.type != dict->key_type)
     {
-        general_message(FATAL, "Impossible to set with a key of type %s into a dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to set with a key of type %s into a dict with keys of type %s", VALUE_TYPE_STRING[key.type], VALUE_TYPE_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     unsigned int count = 0;
@@ -51,7 +51,7 @@ Value dict_get(Dict * dict, Value key)
 {
     if (key.type != dict->key_type)
     {
-        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", VALUE_TYPE_STRING[key.type], VALUE_TYPE_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     unsigned int count = 0;
@@ -77,7 +77,7 @@ bool dict_key_exists(Dict * dict, Value key)
 {
     if (key.type != dict->key_type)
     {
-        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", TYPE_REPR_STRING[key.type], TYPE_REPR_STRING[dict->key_type]);
+        general_message(FATAL, "Impossible to search key of type %s into dict with keys of type %s", VALUE_TYPE_STRING[key.type], VALUE_TYPE_STRING[dict->key_type]);
     }
     Iterator it = iterator_init(dict->keys);
     bool found = false;
@@ -102,7 +102,7 @@ bool dict_is_empty(Dict * dict)
 void dict_print(Dict * dict)
 {
     size_t size = list_size(dict->keys);
-    printf("Dict <%s => %s> [#%d] :\n", TYPE_REPR_STRING[dict->key_type], TYPE_REPR_STRING[dict->value_type], size);
+    printf("Dict <%s => %s> [#%d] :\n", VALUE_TYPE_STRING[dict->key_type], VALUE_TYPE_STRING[dict->value_type], size);
     for (unsigned int i = 0; i < size; i++)
     {
         Value key = list_get(dict->keys, i);

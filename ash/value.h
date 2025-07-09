@@ -13,20 +13,20 @@
 
 typedef enum
 {
-    TYPE_NIL     = 0,
-    TYPE_INTEGER = 1,
-    TYPE_FLOAT   = 2,
-    TYPE_BOOLEAN = 3,
-    TYPE_STRING  = 4,
-    TYPE_CSTRING = 5,
-    TYPE_ARRAY   = 6,
-    TYPE_LIST    = 7,
-    TYPE_TABLE   = 8,
-    TYPE_RECORD  = 9,
-    TYPE_CDATA   = 10,
-    TYPE_TYPE    = 11, // autoref
-    TYPE_ANY     = 12
-} Type;
+    VALUE_NIL     = 0,
+    VALUE_INTEGER = 1,
+    VALUE_FLOAT   = 2,
+    VALUE_BOOLEAN = 3,
+    VALUE_STRING  = 4,
+    VALUE_CSTRING = 5,
+    VALUE_ARRAY   = 6,
+    VALUE_LIST    = 7,
+    VALUE_TABLE   = 8,
+    VALUE_RECORD  = 9,
+    VALUE_CDATA   = 10,
+    VALUE_TYPE    = 11, // autoref
+    VALUE_ANY     = 12
+} ValueType;
 
 typedef struct _String
 {
@@ -38,18 +38,18 @@ typedef struct _String
 
 typedef union _Data
 {
-    int32_t as_int;
-    float as_float; // 32
-    bool as_bool;
-    char * as_cstring;
-    XString * as_string;
-    void * as_any;
+    int32_t integer;
+    float real; // 32
+    bool boolean;
+    char * cstring;
+    XString * string;
+    void * any;
 } Data;
 
 typedef struct _Value
 {
-    Type type;
-    Data value;
+    ValueType type;
+    Data as;
 } Value;
 
 //-----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ typedef struct _Value
 //-----------------------------------------------------------------------------
 
 extern const Value NIL;
-const extern char *TYPE_REPR_STRING[];
+const extern char *VALUE_TYPE_STRING[];
 
 //-----------------------------------------------------------------------------
 // Fonctions
@@ -65,11 +65,11 @@ const extern char *TYPE_REPR_STRING[];
 
 bool is_nil(Value v);
 bool is_primitive(Value v);
-bool type_is_number(Type t);
+bool type_is_number(ValueType t);
 bool strict_equality(Value v1, Value v2);
 bool equality(Value v1, Value v2);
 Value integer_init(long i);
-Value type_init(Type t);
+Value type_init(ValueType t);
 Value float_init(float f);
 Value boolean_init(bool b);
 Value cstring_init(char *s);

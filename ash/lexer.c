@@ -204,7 +204,7 @@ Token read_number(const char *cmd, unsigned int start)
     }
     if (t.start + t.count < strlen(cmd) && isalpha(cmd[t.start + t.count]))
     {
-        t.type = WRONG_TOKEN_NUMBER_AND_LETTER;
+        t.type = TOKEN_ERROR_NUMBER_WITH_LETTER;
     }
     return t;
 }
@@ -328,7 +328,7 @@ Token read_operator(const char *cmd, unsigned int start)
     else
     {
         t.count = 1;
-        t.type = WRONG_TOKEN_LONELY_OPERATOR;
+        t.type = TOKEN_ERROR_LONELY_OPERATOR;
     }
     t.text = cmd;
     t.start = start;

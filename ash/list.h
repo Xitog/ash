@@ -21,7 +21,7 @@ typedef struct _List {
     ListElement * head;
     ListElement * tail;
     unsigned int count;
-    Type elem_type;
+    ValueType elem_type;
 } List;
 
 typedef struct _Iterator {
@@ -33,7 +33,7 @@ typedef struct _Iterator {
 // Fonctions
 //-----------------------------------------------------------------------------
 
-List * list_init(Type t);
+List * list_init(ValueType t);
 unsigned int list_append(List * list, Value val);
 Value list_get(List * list, int index);
 void list_set(List * list, int index, Value val);

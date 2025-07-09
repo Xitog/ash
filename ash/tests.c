@@ -26,7 +26,7 @@ void test_list()
     Value a = integer_init(5);
     Value b = integer_init(10);
     Value c = integer_init(32);
-    List *list = list_init(TYPE_INTEGER);
+    List *list = list_init(VALUE_INTEGER);
     memory_summary();
     printf("Its size is : %d / 0\n", list_size(list));
     value_print_message("Adding first element %v\n", a);
@@ -57,7 +57,7 @@ void test_list_str()
     Value a = string_init("bonjour");
     Value b = string_init("le");
     Value c = string_init("monde");
-    List *list = list_init(TYPE_STRING);
+    List *list = list_init(VALUE_STRING);
     memory_summary();
     printf("Its size is : %d / 0\n", list_size(list));
     value_print_message("Adding first element %v\n", a);
@@ -96,7 +96,7 @@ void test_dict()
     Value v2 = boolean_init(false);
     Value k3 = integer_init(32);
     Value v3 = boolean_init(true);
-    Dict * dict = dict_init(TYPE_INTEGER, TYPE_BOOLEAN);
+    Dict * dict = dict_init(VALUE_INTEGER, VALUE_BOOLEAN);
     memory_summary();
     printf("Its size is : %d / 0\n", dict_size(dict));
     printf("Adding first element\n");
@@ -130,7 +130,7 @@ void test_dict_str()
     Value v1 = integer_init(10);
     Value v2 = integer_init(50);
     Value v3 = integer_init(100);
-    Dict * dict = dict_init(TYPE_STRING, TYPE_INTEGER);
+    Dict * dict = dict_init(VALUE_STRING, VALUE_INTEGER);
     memory_summary();
     printf("Its size is : %d / 0\n", dict_size(dict));
     printf("Adding first element\n");

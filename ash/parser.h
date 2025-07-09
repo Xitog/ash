@@ -40,7 +40,7 @@ typedef struct _Node
     struct _Node *extra; // for if condition
     Token token;
     NodeType type;
-    Type value_type;
+    ValueType value_type;
 } Node;
 
 typedef struct
@@ -86,7 +86,7 @@ Node *parse_pow(TokenList *list);
 Node *parse_unary_complement(TokenList *list);
 // [] .
 Node *parse_call(TokenList *list);
-Node *parse_identifier_left_aff(TokenList *list, Type type_to_set);
+Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set);
 Node *parse_parenthesis_expr(TokenList *list);
 Node *parse_litteral(TokenList *list);
 

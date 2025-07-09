@@ -88,7 +88,7 @@ AST *parse(TokenList *list)
 {
     if (root_scope == NULL)
     {
-        root_scope = dict_init(TYPE_CSTRING, TYPE_TYPE);
+        root_scope = dict_init(VALUE_CSTRING, VALUE_TYPE);
         // dict_free(root_scope);
     }
     parser_index = 0;
@@ -154,7 +154,7 @@ Node *parse_block(TokenList *list)
             {
                 Node *block = (Node *)memory_get(sizeof(Node));
                 block->type = NODE_BLOCK;
-                block->value_type = TYPE_NIL;
+                block->value_type = VALUE_NIL;
                 block->token = node->right->token;
                 block->left = node->right;
                 block->right = next;
@@ -165,7 +165,7 @@ Node *parse_block(TokenList *list)
             {
                 Node *block = (Node *)memory_get(sizeof(Node));
                 block->type = NODE_BLOCK;
-                block->value_type = TYPE_NIL;
+                block->value_type = VALUE_NIL;
                 block->token = node->token;
                 block->left = node;
                 block->right = next;
@@ -188,7 +188,7 @@ Node *parse_if(TokenList *list)
     }
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_IF;
-    node->value_type = TYPE_NIL;
+    node->value_type = VALUE_NIL;
     Token t = token_list_get(list, parser_index);
     node->token = t;   // keyword if
     parser_index += 1; // pass keyword if
@@ -215,7 +215,7 @@ Node *parse_if(TokenList *list)
         }
         Node *elsif = (Node *)memory_get(sizeof(Node));
         elsif->type = NODE_IF;
-        elsif->value_type = TYPE_NIL;
+        elsif->value_type = VALUE_NIL;
         parser_index += 1; // pass keyword elsif
         elsif->extra = parse_expression(list);
         if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
@@ -262,7 +262,7 @@ Node *parse_while(TokenList *list)
     }
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_WHILE;
-    node->value_type = TYPE_NIL;
+    node->value_type = VALUE_NIL;
     Token t = token_list_get(list, parser_index);
     node->token = t;   // keyword while
     parser_index += 1; // pass keyword while
@@ -385,7 +385,7 @@ Node *parse_affectation(TokenList *list)
         Node *right = parse_affectation(list);
         unsigned int where_it_ends = parser_index;
         parser_index = where_it_begins;
-        printf("Right value type = %s\n", TYPE_REPR_STRING[right->value_type]);
+        printf("Right value type = %s\n", VALUE_TYPE_STRING[right->value_type]);
         Node *left = parse_identifier_left_aff(list, right->value_type);
         parser_index = where_it_ends;
         node = (Node *)memory_get(sizeof(Node));
@@ -394,8 +394,6 @@ Node *parse_affectation(TokenList *list)
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
         node->value_type = node->right->value_type;
-        char *tval = token_value(node->left->token);
-        memory_free(tval);
     }
     else
     {
@@ -455,7 +453,7 @@ Node *parse_logical_or(TokenList *list)
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
-        node->value_type = TYPE_BOOLEAN;
+        node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
     return node;
@@ -489,7 +487,7 @@ Node *parse_logical_and(TokenList *list)
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
-        node->value_type = TYPE_BOOLEAN;
+        node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
     return node;
@@ -523,7 +521,7 @@ Node *parse_equality(TokenList *list)
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
-        node->value_type = TYPE_BOOLEAN;
+        node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
     return node;
@@ -557,7 +555,7 @@ Node *parse_comparison(TokenList *list)
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
-        node->value_type = TYPE_BOOLEAN;
+        node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
     return node;
@@ -639,23 +637,23 @@ Node *parse_addition_soustraction(TokenList *list)
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
-        if (node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_INTEGER)
+        if (node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_INTEGER)
         {
-            node->value_type = TYPE_INTEGER;
+            node->value_type = VALUE_INTEGER;
         }
-        else if ((node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_FLOAT) ||
-                 (node->left->value_type == TYPE_FLOAT && node->right->value_type == TYPE_INTEGER) ||
-                 (node->left->value_type == TYPE_FLOAT && node->right->value_type == TYPE_FLOAT))
+        else if ((node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_FLOAT) ||
+                 (node->left->value_type == VALUE_FLOAT && node->right->value_type == VALUE_INTEGER) ||
+                 (node->left->value_type == VALUE_FLOAT && node->right->value_type == VALUE_FLOAT))
         {
-            node->value_type = TYPE_FLOAT;
+            node->value_type = VALUE_FLOAT;
         }
-        else if (node->left->value_type == TYPE_STRING && node->right->value_type == TYPE_STRING)
+        else if (node->left->value_type == VALUE_STRING && node->right->value_type == VALUE_STRING)
         {
-            node->value_type = TYPE_STRING;
+            node->value_type = VALUE_STRING;
         }
         else
         {
-            general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for addition soustraction.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+            general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for addition soustraction.", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type]);
         }
     }
     parser_level--;
@@ -692,24 +690,24 @@ Node *parse_multiplication_division_modulo(TokenList *list)
         node->type = NODE_BINARY_OPERATOR;
         if (token_cmp(node->token, "*"))
         {
-            if (node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_INTEGER)
+            if (node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_INTEGER)
             {
-                node->value_type = TYPE_INTEGER;
+                node->value_type = VALUE_INTEGER;
             }
-            else if ((node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_FLOAT) ||
-                     (node->left->value_type == TYPE_FLOAT && node->right->value_type == TYPE_INTEGER) ||
-                     (node->left->value_type == TYPE_FLOAT && node->right->value_type == TYPE_FLOAT))
+            else if ((node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_FLOAT) ||
+                     (node->left->value_type == VALUE_FLOAT && node->right->value_type == VALUE_INTEGER) ||
+                     (node->left->value_type == VALUE_FLOAT && node->right->value_type == VALUE_FLOAT))
             {
-                node->value_type = TYPE_FLOAT;
+                node->value_type = VALUE_FLOAT;
             }
-            else if ((node->left->value_type == TYPE_STRING && node->right->value_type == TYPE_INTEGER) ||
-                     (node->left->value_type == TYPE_INTEGER && node->right->value_type == TYPE_STRING))
+            else if ((node->left->value_type == VALUE_STRING && node->right->value_type == VALUE_INTEGER) ||
+                     (node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_STRING))
             {
-                node->value_type = TYPE_STRING;
+                node->value_type = VALUE_STRING;
             }
             else
             {
-                general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for multiplication.", TYPE_REPR_STRING[node->left->value_type], TYPE_REPR_STRING[node->right->value_type]);
+                general_message(FATAL, "Parser : impossible to resolve type between left=%s and right=%s for multiplication.", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type]);
             }
         }
         else if (token_cmp(node->token, "/"))
@@ -818,7 +816,7 @@ Node *parse_call(TokenList *list)
     return node;
 }
 
-Node *parse_identifier_left_aff(TokenList *list, Type type_to_set)
+Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set)
 {
     Node *node = NULL;
     parser_level++;
@@ -843,9 +841,9 @@ Node *parse_identifier_left_aff(TokenList *list, Type type_to_set)
     {
         printf("Variable found in root_scope!\n");
         Value value_type_registered = dict_get(root_scope, var_name);
-        if (!equality(value_type_to_set, value_type_registered) && (value_type_registered.value.as_int != TYPE_FLOAT || value_type_to_set.value.as_int != TYPE_INTEGER)) // type must be the same except if we try to put an int into a float
+        if (!equality(value_type_to_set, value_type_registered) && (value_type_registered.as.integer != VALUE_FLOAT || value_type_to_set.as.integer != VALUE_INTEGER)) // type must be the same except if we try to put an int into a float
         {
-            general_message(FATAL, "Impossible to put a value of type %s into the variable %s of type %s", TYPE_REPR_STRING[value_type_to_set.value.as_int], tval, TYPE_REPR_STRING[value_type_registered.value.as_int]);
+            general_message(FATAL, "Impossible to put a value of type %s into the variable %s of type %s", VALUE_TYPE_STRING[value_type_to_set.as.integer], tval, VALUE_TYPE_STRING[value_type_registered.as.integer]);
         }
     }
     else
@@ -920,7 +918,7 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_INTEGER;
-        node->value_type = TYPE_INTEGER;
+        node->value_type = VALUE_INTEGER;
         parser_index += 1;
     }
     else if (check_token_type(list, parser_index, TOKEN_FLOAT))
@@ -935,7 +933,7 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_FLOAT;
-        node->value_type = TYPE_FLOAT;
+        node->value_type = VALUE_FLOAT;
         parser_index += 1;
     }
     else if (check_token_type(list, parser_index, TOKEN_BOOLEAN))
@@ -950,7 +948,7 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_BOOLEAN;
-        node->value_type = TYPE_BOOLEAN;
+        node->value_type = VALUE_BOOLEAN;
         parser_index += 1;
     }
     else if (check_token_type(list, parser_index, TOKEN_STRING))
@@ -965,7 +963,7 @@ Node *parse_litteral(TokenList *list)
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_STRING;
-        node->value_type = TYPE_STRING;
+        node->value_type = VALUE_STRING;
         parser_index += 1;
     }
     else if (check_token_type(list, parser_index, TOKEN_IDENTIFIER))
@@ -985,8 +983,9 @@ Node *parse_litteral(TokenList *list)
         Value key = cstring_init(tval);
         if (dict_key_exists(root_scope, key))
         {
+            dict_print(root_scope);
             Value value = dict_get(root_scope, key);
-            node->value_type = value.type;
+            node->value_type = value.as.integer;
         }
         else
         {
@@ -1109,7 +1108,7 @@ void node_print_level(Node *node, uint32_t level)
     spaces(level);
     if (node->type == NODE_BINARY_OPERATOR)
     {
-        printf("BINARY OPERATOR [%s] %.*s\n", TYPE_REPR_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
+        printf("BINARY OPERATOR [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
         node_print_level(node->left, level + 1);
         node_print_level(node->right, level + 1);
     }
@@ -1132,11 +1131,11 @@ void node_print_level(Node *node, uint32_t level)
     }
     else if (node->type == NODE_IDENTIFIER)
     {
-        printf("IDENTIFIER [%s] %.*s\n", TYPE_REPR_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
+        printf("IDENTIFIER [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
     }
     else if (node->type == NODE_FUNCTION_CALL)
     {
-        printf("FUNCTION CALL [%s]", TYPE_REPR_STRING[node->value_type]);
+        printf("FUNCTION CALL [%s]", VALUE_TYPE_STRING[node->value_type]);
         token_print_value(node->left->token);
         printf("\n");
     }
