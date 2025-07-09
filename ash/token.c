@@ -69,7 +69,7 @@ char *token_value(Token tok)
 
 void token_print(Token tok)
 {
-    printf("{%s @%d #%d |%.*s|}\n", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.count, tok.text + tok.start);
+    printf("{%s @%d #%d L.%03d |%.*s|}\n", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
 }
 
 void token_print_value(Token tok)

@@ -6,6 +6,8 @@
 #include "token.h"
 #include "token_list.h"
 
+extern uint32_t LINE_COUNT;
+
 Token read_space(const char *cmd, unsigned int start);
 Token read_identifier(const char *cmd, unsigned int start);
 Token read_float(const char *cmd, unsigned int start, unsigned int current);

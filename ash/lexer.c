@@ -33,6 +33,7 @@ Token read_space(const char *cmd, unsigned int start)
     t.start = start;
     t.count = count;
     t.type = TOKEN_SPACE;
+    t.line = LINE_COUNT;
     return t;
 }
 
@@ -65,21 +66,26 @@ Token read_identifier(const char *cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = TOKEN_IDENTIFIER;
+    t.line = LINE_COUNT;
     if (token_is_nil(t))
     {
         t.type = TOKEN_NIL;
+        t.line = LINE_COUNT;
     }
     else if (token_is_boolean(t))
     {
         t.type = TOKEN_BOOLEAN;
+        t.line = LINE_COUNT;
     }
     else if (token_is_operator(t))
     {
         t.type = TOKEN_OPERATOR;
+        t.line = LINE_COUNT;
     }
     else if (token_is_keyword(t))
     {
         t.type = TOKEN_KEYWORD;
+        t.line = LINE_COUNT;
     }
     return t;
 }
@@ -106,6 +112,7 @@ Token read_float(const char *cmd, unsigned int start, unsigned int current)
     t.count = count;
     t.start = start;
     t.type = TOKEN_FLOAT;
+    t.line = LINE_COUNT;
     return t;
 }
 
@@ -131,6 +138,7 @@ Token read_hexa(const char *cmd, unsigned int start, unsigned int current)
     t.count = count;
     t.start = start;
     t.type = TOKEN_HEXADECIMAL;
+    t.line = LINE_COUNT;
     return t;
 }
 
@@ -156,12 +164,13 @@ Token read_binary(const char *cmd, unsigned int start, unsigned int current)
     t.count = count;
     t.start = start;
     t.type = TOKEN_BINARY;
+    t.line = LINE_COUNT;
     return t;
 }
 
 Token read_number(const char *cmd, unsigned int start)
 {
-    Token t = {.text = cmd, .type = TOKEN_NONE, .start = 0, .count = 0};
+    Token t = {.text = cmd, .type = TOKEN_NONE, .start = 0, .count = 0, .line = LINE_COUNT};
     unsigned int index = start;
     unsigned int count = 0;
     if (index < strlen(cmd) && cmd[index] == '0' && index + 1 < strlen(cmd) && cmd[index + 1] == 'x')
@@ -232,6 +241,7 @@ Token read_string(const char *cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = TOKEN_STRING;
+    t.line = LINE_COUNT;
     return t;
 }
 
@@ -258,6 +268,7 @@ Token read_comment(const char *cmd, unsigned int start)
     t.count = count;
     t.start = start;
     t.type = TOKEN_COMMENT;
+    t.line = LINE_COUNT;
     return t;
 }
 
@@ -332,11 +343,15 @@ Token read_operator(const char *cmd, unsigned int start)
     }
     t.text = cmd;
     t.start = start;
+    t.line = LINE_COUNT;
     return t;
 }
 
+uint32_t LINE_COUNT;
+
 TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
 {
+    LINE_COUNT = 1;
     if (debug)
     {
         printf("Starting Lexing\n");
@@ -374,6 +389,8 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
             t.count = 1;
             t.start = index;
             t.type = TOKEN_NEWLINE;
+            t.line = LINE_COUNT;
+            LINE_COUNT += 1;
         }
         else if (cmd[index] == '-' && index + 1 < strlen(cmd) && cmd[index + 1] == '-')
         {
@@ -384,16 +401,18 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
             t.count = 1;
             t.start = index;
             t.type = TOKEN_SEPARATOR;
+            t.line = LINE_COUNT;
         }
         else if (char_is(cmd[index], OPERATOR_ELEMENTS))
         {
             t = read_operator(cmd, index);
         }
-        else if (cmd[index] == '\r')
+        else if (cmd[index] == '\r') // :TODO: Dangerous ?
         {
             t.count = 1;
             t.start = index;
             t.type = TOKEN_NEWLINE;
+            t.line = LINE_COUNT;
             discard = true;
         }
         else if (cmd[index] == '"')
