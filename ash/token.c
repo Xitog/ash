@@ -6,7 +6,7 @@
 
 const char *TOKEN_TYPE_TO_STRING[] = {
     "NONE",
-    "INTEGER",
+    "DECIMAL",
     "HEXADECIMAL",
     "BINARY",
     "FLOAT",
@@ -69,7 +69,7 @@ char *token_value(Token tok)
 
 void token_print(Token tok)
 {
-    printf("{%s @%d #%d L.%03d |%.*s|}\n", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
+    printf("{%s @%d #%d L.%03d |%.*s|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
 }
 
 void token_print_value(Token tok)
@@ -124,4 +124,9 @@ bool token_is_keyword(Token t)
         }
     }
     return false;
+}
+
+bool token_eq(Token t1, Token t2)
+{
+    return t1.count == t2.count && t1.line == t2.line && t1.start == t2.start && t1.text == t2.text && t1.type == t2.type;
 }

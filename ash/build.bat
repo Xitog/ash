@@ -6,7 +6,7 @@ if ["%~1"]==[""] (
 )
 if ["%~1"]==["tests"] (
     echo --- Building tests ---
-    cl /W4 .\tests.c .\general.c .\token.c .\value.c .\list.c .\dict.c /Fe:tests.exe
+    cl /W4 .\tests.c .\general.c .\token.c .\value.c .\list.c .\dict.c .\token_list.c .\lexer.c /Fe:tests.exe
 )
 
 :end

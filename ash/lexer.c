@@ -19,7 +19,7 @@ Token read_space(const char *cmd, unsigned int start)
     unsigned int count = 0;
     while (index < strlen(cmd))
     {
-        if (cmd[index] == ' ')
+        if (cmd[index] == ' ' || cmd[index] == '\t' || cmd[index] == '\r')
         {
             count += 1;
         }
@@ -376,7 +376,7 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
         {
             t = read_identifier(cmd, index);
         }
-        else if (cmd[index] == ' ' || cmd[index] == '\t')
+        else if (cmd[index] == ' ' || cmd[index] == '\t' || cmd[index] == '\r')
         {
             t = read_space(cmd, index);
         }
@@ -436,6 +436,7 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
             if (debug)
             {
                 token_print(t);
+                printf("\n");
             }
             Token nt = t;
             token_list_append(list, nt);

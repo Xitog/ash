@@ -13,6 +13,7 @@
 
 #include "token.h"
 #include "token_list.h"
+#include "lexer.h"
 
 //-----------------------------------------------------------------------------
 // Main function
@@ -69,7 +70,7 @@ void test_list_str()
     printf("Its size is : %d / 3\n", list_size(list));
     list_print(list);
     printf("Replacing value at 1\n");
-    Value d = string_init("du");;
+    Value d = string_init("du");
     list_set(list, 1, d);
     list_print(list);
     printf("Replaced value is:\n");
@@ -96,7 +97,7 @@ void test_dict()
     Value v2 = boolean_init(false);
     Value k3 = integer_init(32);
     Value v3 = boolean_init(true);
-    Dict * dict = dict_init(VALUE_INTEGER, VALUE_BOOLEAN);
+    Dict *dict = dict_init(VALUE_INTEGER, VALUE_BOOLEAN);
     memory_summary();
     printf("Its size is : %d / 0\n", dict_size(dict));
     printf("Adding first element\n");
@@ -130,7 +131,7 @@ void test_dict_str()
     Value v1 = integer_init(10);
     Value v2 = integer_init(50);
     Value v3 = integer_init(100);
-    Dict * dict = dict_init(VALUE_STRING, VALUE_INTEGER);
+    Dict *dict = dict_init(VALUE_STRING, VALUE_INTEGER);
     memory_summary();
     printf("Its size is : %d / 0\n", dict_size(dict));
     printf("Adding first element\n");
@@ -154,59 +155,112 @@ void test_dict_str()
     printf("End of test_dict()\n");
 }
 
-const int TEST = 1;
+void check_test_tokens(char * text, TokenList * expected)
+{
+    TokenList *result = lex(text, true, true);
+    if (token_list_size(result) != token_list_size(expected))
+    {
+        general_message(FATAL, "number of tokens different from expected number : expected = %d, got = %d\n", token_list_size(expected), token_list_size(result));
+    }
+    for (uint32_t i = 0; i < token_list_size(result); i++)
+    {
+        Token e = token_list_get(expected, i);
+        Token r = token_list_get(result, i);
+        if (!token_eq(e, r))
+        {
+            general_message(FATAL, "tokens different : expected = %t got = %t\n", e, r);
+        }
+        else
+        {
+            printf("    %03u. ", i);
+            token_print(r);
+            printf("\n");
+        }
+    }
+    token_list_free(result);
+
+    /*
+    printf("Test d'une TokenList:\n");
+    TokenList *tkl = token_list_init();
+    token_list_append(tkl, t1);
+    token_list_append(tkl, t2);
+    token_list_append(tkl, t3);
+    token_list_print(tkl);
+
+    while (token_list_size(tkl) > 0)
+    {
+        printf("------------------------\n");
+        printf("Size = %d\n", token_list_size(tkl));
+        Token tx1 = token_list_pop(tkl);
+        printf("Popped token:\n");
+        token_print(tx1);
+        printf("Rest:\n");
+        token_list_print(tkl);
+    }
+    printf("Size = %d\n", token_list_size(tkl));
+    token_list_free(tkl);
+    */
+}
+
+
+void tests_tokens()
+{
+    printf("01 Test de token:\n");
+    char *text1 = "a + 5";
+    TokenList *expected1 = token_list_init();
+    Token t11 = {.start = 0, .count = 1, .text = text1, .line = 1, .type = TOKEN_IDENTIFIER};
+    Token t12 = {.start = 2, .count = 1, .text = text1, .line = 1, .type = TOKEN_OPERATOR};
+    Token t13 = {.start = 4, .count = 1, .text = text1, .line = 1, .type = TOKEN_DECIMAL};
+    token_list_append(expected1, t11);
+    token_list_append(expected1, t12);
+    token_list_append(expected1, t13);
+    check_test_tokens(text1, expected1);
+    token_list_free(expected1);
+
+    printf("02 Test de token:\n");
+    char *text2 = "if a == 5 then hello() end";
+    TokenList *expected2 = token_list_init();
+    Token t21 = {.start = 0, .count = 2, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
+    Token t22 = {.start = 3, .count = 1, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};
+    Token t23 = {.start = 5, .count = 2, .text = text2, .line = 1, .type = TOKEN_OPERATOR};
+    Token t24 = {.start = 8, .count = 1, .text = text2, .line = 1, .type = TOKEN_DECIMAL};
+    Token t25 = {.start = 10, .count = 4, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
+    Token t26 = {.start = 15, .count = 5, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};
+    Token t27 = {.start = 20, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};
+    Token t28 = {.start = 21, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};
+    Token t29 = {.start = 23, .count = 3, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
+    token_list_append(expected2, t21);
+    token_list_append(expected2, t22);
+    token_list_append(expected2, t23);
+    token_list_append(expected2, t24);
+    token_list_append(expected2, t25);
+    token_list_append(expected2, t26);
+    token_list_append(expected2, t27);
+    token_list_append(expected2, t28);
+    token_list_append(expected2, t29);
+    check_test_tokens(text2, expected2);
+    token_list_free(expected2);
+
+    memory_summary();
+}
 
 int main(int argc, char *argv[])
 {
-    printf("Running with %d parameters\n", argc);
-    for (int i = 0; i < argc; i++)
+    if (argc != 2)
     {
-        printf("%d. %s\n", i, argv[i]);
+        general_message(FATAL, "Must be run with a parameter: tokens");
     }
-
-    if (TEST == 1)
+    if (strcmp(argv[1], "tokens") == 0)
     {
-        //test_list();
+        tests_tokens();
+    }
+    else if (strcmp(argv[1], "lists") == 0)
+    {
+        // test_list();
         test_list_str();
-        //test_dict();
+        // test_dict();
         test_dict_str();
     }
-    else if (TEST == 2)
-    {
-        /*
-        printf("Test de Token:\n");
-        char *text = "a + 5";
-        Token t1 = {.start = 0, .count = 1, .text = text, .type = TOKEN_IDENTIFIER};
-        Token t2 = {.start = 2, .count = 1, .text = text, .type = TOKEN_OPERATOR};
-        Token t3 = {.start = 4, .count = 1, .text = text, .type = TOKEN_DECIMAL};
-        token_print(t1);
-        token_print(t2);
-        token_print(t3);
-
-        printf("Test d'une TokenList:\n");
-        TokenList *tkl = token_list_init();
-        token_list_append(tkl, t1);
-        token_list_append(tkl, t2);
-        token_list_append(tkl, t3);
-        token_list_print(tkl);
-
-        while (token_list_size(tkl) > 0)
-        {
-            printf("------------------------\n");
-            printf("Size = %d\n", token_list_size(tkl));
-            Token tx1 = token_list_pop(tkl);
-            printf("Popped token:\n");
-            token_print(tx1);
-            printf("Rest:\n");
-            token_list_print(tkl);
-        }
-        printf("Size = %d\n", token_list_size(tkl));
-
-        token_list_free(tkl);
-        memory_summary();
-        */
-    }
-
     return EXIT_SUCCESS;
 
     /*

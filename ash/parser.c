@@ -50,9 +50,6 @@ bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type,
         return false;
     }
     Token t = token_list_get(list, index);
-    // printf("%d vs expected: %d\n", t.type, expected_type);
-    // printf("expected: %s\n", expected_value);
-    // token_print(t);
     return t.type == expected_type && token_cmp(t, expected_value);
 }
 

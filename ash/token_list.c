@@ -119,10 +119,12 @@ void token_list_reverse(TokenList *list)
 void token_list_print(TokenList *list)
 {
     TokenListElement *start = list->head;
-    unsigned int count = 0;
+    uint32_t count = 0;
     while (start != NULL)
     {
+        printf("%u. ", count);
         token_print(start->token);
+        printf("\n");
         start = start->next;
         count++;
     }

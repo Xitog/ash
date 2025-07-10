@@ -104,5 +104,6 @@ bool token_is_nil(Token t);
 bool token_is_boolean(Token t);
 bool token_is_operator(Token t);
 bool token_is_keyword(Token t);
+bool token_eq(Token t1, Token t2);
 
 #endif

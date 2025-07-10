@@ -212,6 +212,7 @@ int main(int argc, char *argv[])
                         count += 1;
                         Token tok = current->token;
                         token_print(tok);
+                        printf("\n");
                         current = current->next;
                     }
                     printf("- Parsing ----------------------------------\n");
@@ -336,6 +337,7 @@ int main(int argc, char *argv[])
                         Token tok = current->token;
                         printf("%03d. %p : ", count, &current->token);
                         token_print(tok);
+                        printf("\n");
                         current = current->next;
                         count += 1;
                     }
