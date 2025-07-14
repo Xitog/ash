@@ -46,6 +46,13 @@ typedef struct _Token
     uint32_t line;
 } Token;
 
+typedef struct _TokenDynArray
+{
+    Token * data;
+    uint32_t count;
+    uint32_t capacity;
+} TokenDynArray;
+
 //-----------------------------------------------------------------------------
 // Constantes
 //-----------------------------------------------------------------------------
@@ -105,5 +112,10 @@ bool token_is_boolean(Token t);
 bool token_is_operator(Token t);
 bool token_is_keyword(Token t);
 bool token_eq(Token t1, Token t2);
+
+TokenDynArray token_dyn_array_init();
+uint32_t token_dyn_array_add(TokenDynArray * tda, Token t);
+Token token_dyn_array_get(TokenDynArray tda, int32_t index);
+void token_dyn_array_info(TokenDynArray tda);
 
 #endif

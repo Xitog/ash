@@ -53,7 +53,7 @@ const char *KEYWORDS[] = {
     "nil"};
 
 //-----------------------------------------------------------------------------
-// Functions
+// Token Functions
 //-----------------------------------------------------------------------------
 
 char *token_value(Token tok)
@@ -129,4 +129,50 @@ bool token_is_keyword(Token t)
 bool token_eq(Token t1, Token t2)
 {
     return t1.count == t2.count && t1.line == t2.line && t1.start == t2.start && t1.text == t2.text && t1.type == t2.type;
+}
+
+//-----------------------------------------------------------------------------
+// TokenDynArray Functions
+//-----------------------------------------------------------------------------
+
+TokenDynArray token_dyn_array_init()
+{
+    TokenDynArray tda;
+    tda.capacity = 8;
+    tda.count = 0;
+    tda.data = malloc(sizeof(Token) * tda.capacity);
+    return tda;
+}
+
+uint32_t token_dyn_array_add(TokenDynArray * tda, Token t)
+{
+    if (tda->count + 1 == tda->capacity)
+    {
+        tda->capacity = tda->capacity * 2;
+        tda->data = realloc(tda->data, tda->capacity);
+        if (tda->data == NULL)
+        {
+            general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
+        }
+    }
+    tda->data[tda->count] = t;
+    tda->count += 1;
+    return tda->capacity - tda->count;
+}
+
+Token token_dyn_array_get(TokenDynArray tda, int32_t index)
+{
+    if (index >= 0)
+    {
+        return tda.data[index];
+    }
+    else
+    {
+        return tda.data[tda.count + index];
+    }
+}
+
+void token_dyn_array_info(TokenDynArray tda)
+{
+    printf("TokenDynArray @%p %u/%u\n", tda.data, tda.count, tda.capacity);
 }

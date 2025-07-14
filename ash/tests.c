@@ -241,6 +241,21 @@ void tests_tokens()
     check_test_tokens(text2, expected2);
     token_list_free(expected2);
 
+    printf("03 Test de TokenDynArray\n");
+    TokenDynArray tda = token_dyn_array_init();
+    printf("    ");
+    token_dyn_array_info(tda);
+    token_dyn_array_add(&tda, t21);
+    token_dyn_array_add(&tda, t22);
+    token_dyn_array_add(&tda, t23);
+    token_dyn_array_add(&tda, t24);
+    token_dyn_array_add(&tda, t25);
+    token_dyn_array_add(&tda, t26);
+    token_dyn_array_add(&tda, t27);
+    token_dyn_array_add(&tda, t28);
+    printf("    ");
+    token_dyn_array_info(tda);
+    token_dyn_array_add(&tda, t29);
     memory_summary();
 }
 
