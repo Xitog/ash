@@ -113,9 +113,11 @@ bool token_is_operator(Token t);
 bool token_is_keyword(Token t);
 bool token_eq(Token t1, Token t2);
 
-TokenDynArray token_dyn_array_init();
+TokenDynArray token_dyn_array_init(void);
+void token_dyn_array_free(TokenDynArray * tda);
 uint32_t token_dyn_array_add(TokenDynArray * tda, Token t);
 Token token_dyn_array_get(TokenDynArray tda, int32_t index);
 void token_dyn_array_info(TokenDynArray tda);
+uint32_t token_dyn_array_size(TokenDynArray tda);
 
 #endif

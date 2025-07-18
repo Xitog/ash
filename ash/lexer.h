@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include "general.h"
 #include "token.h"
-#include "token_list.h"
 
 extern uint32_t LINE_COUNT;
 
@@ -17,6 +16,6 @@ Token read_number(const char *cmd, unsigned int start);
 Token read_string(const char *cmd, unsigned int start);
 Token read_comment(const char *cmd, unsigned int start);
 Token read_operator(const char *cmd, unsigned int start);
-TokenList *lex(const char *cmd, bool skip_spaces, bool debug);
+TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug);
 
 #endif

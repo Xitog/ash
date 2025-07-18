@@ -349,7 +349,7 @@ Token read_operator(const char *cmd, unsigned int start)
 
 uint32_t LINE_COUNT;
 
-TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
+TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
 {
     LINE_COUNT = 1;
     if (debug)
@@ -365,7 +365,7 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
     Token t;
     t.text = cmd;
     bool discard = false;
-    TokenList *list = token_list_init();
+    TokenDynArray list = token_dyn_array_init();
     unsigned int count = 0;
     while (index < strlen(cmd))
     {
@@ -439,7 +439,7 @@ TokenList *lex(const char *cmd, bool skip_spaces, bool debug)
                 printf("\n");
             }
             Token nt = t;
-            token_list_append(list, nt);
+            token_dyn_array_add(&list, nt);
         }
     }
     return list;

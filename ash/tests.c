@@ -155,17 +155,19 @@ void test_dict_str()
     printf("End of test_dict()\n");
 }
 
-void check_test_tokens(char * text, TokenList * expected)
+void check_test_tokens(char * text, TokenDynArray expected)
 {
-    TokenList *result = lex(text, true, true);
-    if (token_list_size(result) != token_list_size(expected))
+    printf(">>> Start of lexing >>>\n");
+    TokenDynArray result = lex(text, true, true);
+    printf("<<< End of lexing <<<\n");
+    if (token_dyn_array_size(result) != token_dyn_array_size(expected))
     {
-        general_message(FATAL, "number of tokens different from expected number : expected = %d, got = %d\n", token_list_size(expected), token_list_size(result));
+        general_message(FATAL, "number of tokens different from expected number : expected = %d, got = %d\n", token_dyn_array_size(expected), token_dyn_array_size(result));
     }
-    for (uint32_t i = 0; i < token_list_size(result); i++)
+    for (uint32_t i = 0; i < token_dyn_array_size(result); i++)
     {
-        Token e = token_list_get(expected, i);
-        Token r = token_list_get(result, i);
+        Token e = token_dyn_array_get(expected, i);
+        Token r = token_dyn_array_get(result, i);
         if (!token_eq(e, r))
         {
             general_message(FATAL, "tokens different : expected = %t got = %t\n", e, r);
@@ -177,29 +179,7 @@ void check_test_tokens(char * text, TokenList * expected)
             printf("\n");
         }
     }
-    token_list_free(result);
-
-    /*
-    printf("Test d'une TokenList:\n");
-    TokenList *tkl = token_list_init();
-    token_list_append(tkl, t1);
-    token_list_append(tkl, t2);
-    token_list_append(tkl, t3);
-    token_list_print(tkl);
-
-    while (token_list_size(tkl) > 0)
-    {
-        printf("------------------------\n");
-        printf("Size = %d\n", token_list_size(tkl));
-        Token tx1 = token_list_pop(tkl);
-        printf("Popped token:\n");
-        token_print(tx1);
-        printf("Rest:\n");
-        token_list_print(tkl);
-    }
-    printf("Size = %d\n", token_list_size(tkl));
-    token_list_free(tkl);
-    */
+    token_dyn_array_free(&result);
 }
 
 
@@ -207,39 +187,41 @@ void tests_tokens()
 {
     printf("01 Test de token:\n");
     char *text1 = "a + 5";
-    TokenList *expected1 = token_list_init();
+    TokenDynArray expected1 = token_dyn_array_init();
     Token t11 = {.start = 0, .count = 1, .text = text1, .line = 1, .type = TOKEN_IDENTIFIER};
     Token t12 = {.start = 2, .count = 1, .text = text1, .line = 1, .type = TOKEN_OPERATOR};
     Token t13 = {.start = 4, .count = 1, .text = text1, .line = 1, .type = TOKEN_DECIMAL};
-    token_list_append(expected1, t11);
-    token_list_append(expected1, t12);
-    token_list_append(expected1, t13);
+    token_dyn_array_add(&expected1, t11);
+    token_dyn_array_add(&expected1, t12);
+    token_dyn_array_add(&expected1, t13);
+    token_dyn_array_info(expected1);
     check_test_tokens(text1, expected1);
-    token_list_free(expected1);
+    token_dyn_array_free(&expected1);
 
     printf("02 Test de token:\n");
     char *text2 = "if a == 5 then hello() end";
-    TokenList *expected2 = token_list_init();
-    Token t21 = {.start = 0, .count = 2, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
-    Token t22 = {.start = 3, .count = 1, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};
-    Token t23 = {.start = 5, .count = 2, .text = text2, .line = 1, .type = TOKEN_OPERATOR};
-    Token t24 = {.start = 8, .count = 1, .text = text2, .line = 1, .type = TOKEN_DECIMAL};
-    Token t25 = {.start = 10, .count = 4, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
-    Token t26 = {.start = 15, .count = 5, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};
-    Token t27 = {.start = 20, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};
-    Token t28 = {.start = 21, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};
-    Token t29 = {.start = 23, .count = 3, .text = text2, .line = 1, .type = TOKEN_KEYWORD};
-    token_list_append(expected2, t21);
-    token_list_append(expected2, t22);
-    token_list_append(expected2, t23);
-    token_list_append(expected2, t24);
-    token_list_append(expected2, t25);
-    token_list_append(expected2, t26);
-    token_list_append(expected2, t27);
-    token_list_append(expected2, t28);
-    token_list_append(expected2, t29);
+    TokenDynArray expected2 = token_dyn_array_init();
+    Token t21 = {.start = 0, .count = 2, .text = text2, .line = 1, .type = TOKEN_KEYWORD};      // if
+    Token t22 = {.start = 3, .count = 1, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};   // a
+    Token t23 = {.start = 5, .count = 2, .text = text2, .line = 1, .type = TOKEN_OPERATOR};     // ==
+    Token t24 = {.start = 8, .count = 1, .text = text2, .line = 1, .type = TOKEN_DECIMAL};      // 5
+    Token t25 = {.start = 10, .count = 4, .text = text2, .line = 1, .type = TOKEN_KEYWORD};     // then
+    Token t26 = {.start = 15, .count = 5, .text = text2, .line = 1, .type = TOKEN_IDENTIFIER};  // hello
+    Token t27 = {.start = 20, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};   // (
+    Token t28 = {.start = 21, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};   // )
+    Token t29 = {.start = 23, .count = 3, .text = text2, .line = 1, .type = TOKEN_KEYWORD};     // end
+    token_dyn_array_add(&expected2, t21);
+    token_dyn_array_add(&expected2, t22);
+    token_dyn_array_add(&expected2, t23);
+    token_dyn_array_add(&expected2, t24);
+    token_dyn_array_add(&expected2, t25);
+    token_dyn_array_add(&expected2, t26);
+    token_dyn_array_add(&expected2, t27);
+    token_dyn_array_add(&expected2, t28);
+    token_dyn_array_add(&expected2, t29);
+    token_dyn_array_info(expected2);
     check_test_tokens(text2, expected2);
-    token_list_free(expected2);
+    token_dyn_array_free(&expected2);
 
     printf("03 Test de TokenDynArray\n");
     TokenDynArray tda = token_dyn_array_init();
@@ -256,6 +238,8 @@ void tests_tokens()
     printf("    ");
     token_dyn_array_info(tda);
     token_dyn_array_add(&tda, t29);
+    token_dyn_array_free(&tda);
+
     memory_summary();
 }
 

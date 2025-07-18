@@ -135,7 +135,7 @@ bool token_eq(Token t1, Token t2)
 // TokenDynArray Functions
 //-----------------------------------------------------------------------------
 
-TokenDynArray token_dyn_array_init()
+TokenDynArray token_dyn_array_init(void)
 {
     TokenDynArray tda;
     tda.capacity = 8;
@@ -144,12 +144,19 @@ TokenDynArray token_dyn_array_init()
     return tda;
 }
 
+void token_dyn_array_free(TokenDynArray * tda)
+{
+    tda->count = 0;
+    tda->capacity = 0;
+    free(tda->data);
+}
+
 uint32_t token_dyn_array_add(TokenDynArray * tda, Token t)
 {
     if (tda->count + 1 == tda->capacity)
     {
         tda->capacity = tda->capacity * 2;
-        tda->data = realloc(tda->data, tda->capacity);
+        tda->data = realloc(tda->data, sizeof(Token) * tda->capacity);
         if (tda->data == NULL)
         {
             general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
@@ -174,5 +181,17 @@ Token token_dyn_array_get(TokenDynArray tda, int32_t index)
 
 void token_dyn_array_info(TokenDynArray tda)
 {
-    printf("TokenDynArray @%p %u/%u\n", tda.data, tda.count, tda.capacity);
+    printf("TokenDynArray @%p data@%p data#%u %u/%u (size of Token = %u)\n", &tda, tda.data, _msize(tda.data), tda.count, tda.capacity, sizeof(Token));
+    uint32_t size = token_dyn_array_size(tda);
+    for (uint32_t i = 0; i < size; i++)
+    {
+        printf("    %03d.", i);
+        token_print(token_dyn_array_get(tda, i));
+        printf("\n");
+    }
+}
+
+uint32_t token_dyn_array_size(TokenDynArray tda)
+{
+    return tda.count;
 }
