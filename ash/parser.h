@@ -2,7 +2,6 @@
 // Directives
 //-----------------------------------------------------------------------------
 
-#define DEBUG
 #define DEBUG_MODE_FULL 2
 #define DEBUG_MODE_CLEVER 1
 
@@ -11,7 +10,6 @@
 
 #include <stdint.h>
 #include "token.h"
-#include "token_list.h"
 #include "value.h"
 #include "dict.h"
 
@@ -55,40 +53,40 @@ void node_print_level(Node *node, uint32_t level);
 extern unsigned int parser_index;
 const extern char *NODE_TYPE_REPR_STRING[];
 
-bool check_token_type(TokenList *list, uint32_t index, TokenType expected);
-bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value);
+bool check_token_type(TokenDynArray list, uint32_t index, TokenType expected);
+bool check_token_value(TokenDynArray list, uint32_t index, TokenType expected_type, const char *expected_value);
 
 bool parser_set_debug(bool debug);
 bool parser_get_debug();
 
-AST *parse(TokenList *list);
+AST *parse(TokenDynArray list);
 
-Node *parse_block(TokenList *list);
-Node *parse_if(TokenList *list);
-Node *parse_while(TokenList *list);
-Node *parse_expression(TokenList *list);
-Node *parse_combined_affectation_binary(TokenList *list);
-Node *parse_combined_affectation_shift(TokenList *list);
-Node *parse_combined_affectation(TokenList *list);
-Node *parse_affectation(TokenList *list);
-Node *parse_interval(TokenList *list);
-Node *parse_logical_or(TokenList *list);
-Node *parse_logical_and(TokenList *list);
-Node *parse_equality(TokenList *list);
-Node *parse_comparison(TokenList *list);
-Node *parse_binary_or_xor(TokenList *list);
-Node *parse_binary_and(TokenList *list);
-Node *parse_shift(TokenList *list);
-Node *parse_addition_soustraction(TokenList *list);
-Node *parse_multiplication_division_modulo(TokenList *list);
-Node *parse_unary_minus(TokenList *list);
-Node *parse_pow(TokenList *list);
-Node *parse_unary_complement(TokenList *list);
+Node *parse_block(TokenDynArray list);
+Node *parse_if(TokenDynArray list);
+Node *parse_while(TokenDynArray list);
+Node *parse_expression(TokenDynArray list);
+Node *parse_combined_affectation_binary(TokenDynArray list);
+Node *parse_combined_affectation_shift(TokenDynArray list);
+Node *parse_combined_affectation(TokenDynArray list);
+Node *parse_affectation(TokenDynArray list);
+Node *parse_interval(TokenDynArray list);
+Node *parse_logical_or(TokenDynArray list);
+Node *parse_logical_and(TokenDynArray list);
+Node *parse_equality(TokenDynArray list);
+Node *parse_comparison(TokenDynArray list);
+Node *parse_binary_or_xor(TokenDynArray list);
+Node *parse_binary_and(TokenDynArray list);
+Node *parse_shift(TokenDynArray list);
+Node *parse_addition_soustraction(TokenDynArray list);
+Node *parse_multiplication_division_modulo(TokenDynArray list);
+Node *parse_unary_minus(TokenDynArray list);
+Node *parse_pow(TokenDynArray list);
+Node *parse_unary_complement(TokenDynArray list);
 // [] .
-Node *parse_call(TokenList *list);
-Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set);
-Node *parse_parenthesis_expr(TokenList *list);
-Node *parse_litteral(TokenList *list);
+Node *parse_call(TokenDynArray list);
+Node *parse_identifier_left_aff(TokenDynArray list, ValueType type_to_set);
+Node *parse_parenthesis_expr(TokenDynArray list);
+Node *parse_litteral(TokenDynArray list);
 
 NodeType node_compute_type(Node *node);
 

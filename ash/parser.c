@@ -25,31 +25,23 @@ bool node_is_type(Node *node, NodeType type)
     return node->type == type;
 }
 
-bool check_token_type(TokenList *list, uint32_t index, TokenType expected)
+bool check_token_type(TokenDynArray list, uint32_t index, TokenType expected)
 {
-    if (list == NULL)
+    if (index >= token_dyn_array_size(list))
     {
         return false;
     }
-    else if (index >= token_list_size(list))
-    {
-        return false;
-    }
-    Token t = token_list_get(list, index);
+    Token t = token_dyn_array_get(list, index);
     return t.type == expected;
 }
 
-bool check_token_value(TokenList *list, uint32_t index, TokenType expected_type, const char *expected_value)
+bool check_token_value(TokenDynArray list, uint32_t index, TokenType expected_type, const char *expected_value)
 {
-    if (list == NULL)
+    if (index >= token_dyn_array_size(list))
     {
         return false;
     }
-    else if (index >= token_list_size(list))
-    {
-        return false;
-    }
-    Token t = token_list_get(list, index);
+    Token t = token_dyn_array_get(list, index);
     return t.type == expected_type && token_cmp(t, expected_value);
 }
 
@@ -81,11 +73,12 @@ bool parser_get_debug()
     return parser_debug;
 }
 
-AST *parse(TokenList *list)
+AST *parse(TokenDynArray list)
 {
     if (root_scope == NULL)
     {
         root_scope = dict_init(VALUE_CSTRING, VALUE_TYPE);
+        dict_set(root_scope, cstring_init("hello"), type_init(VALUE_NIL));
         // dict_free(root_scope);
     }
     parser_index = 0;
@@ -96,18 +89,18 @@ AST *parse(TokenList *list)
     }
     AST *t = (AST *)memory_get(sizeof(AST));
     t->root = parse_block(list);
-    if (parser_index != token_list_size(list))
+    if (parser_index != token_dyn_array_size(list))
     {
         general_message(FATAL, "Tokens not parsed at the end of the token list (>= %d).", parser_index);
     }
     if (parser_debug)
     {
-        printf("end of parsing at %d / %d\n", parser_index, token_list_size(list));
+        printf("end of parsing at %d / %d\n", parser_index, token_dyn_array_size(list));
     }
     return t;
 }
 
-Node *parse_block(TokenList *list)
+Node *parse_block(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -136,7 +129,7 @@ Node *parse_block(TokenList *list)
         {
             break;
         }
-        else if (parser_index < token_list_size(list))
+        else if (parser_index < token_dyn_array_size(list))
         {
             next = parse_expression(list);
         }
@@ -171,11 +164,11 @@ Node *parse_block(TokenList *list)
             }
         }
         next = NULL;
-    } while ((check_token_value(list, parser_index, TOKEN_SEPARATOR, ";") || check_token_value(list, parser_index, TOKEN_NEWLINE, "\n")) && parser_index < token_list_size(list));
+    } while ((check_token_value(list, parser_index, TOKEN_SEPARATOR, ";") || check_token_value(list, parser_index, TOKEN_NEWLINE, "\n")) && parser_index < token_dyn_array_size(list));
     return first;
 }
 
-Node *parse_if(TokenList *list)
+Node *parse_if(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -186,7 +179,7 @@ Node *parse_if(TokenList *list)
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_IF;
     node->value_type = VALUE_NIL;
-    Token t = token_list_get(list, parser_index);
+    Token t = token_dyn_array_get(list, parser_index);
     node->token = t;   // keyword if
     parser_index += 1; // pass keyword if
     node->extra = parse_expression(list);
@@ -249,7 +242,7 @@ Node *parse_if(TokenList *list)
     return first_if;
 }
 
-Node *parse_while(TokenList *list)
+Node *parse_while(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -260,7 +253,7 @@ Node *parse_while(TokenList *list)
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_WHILE;
     node->value_type = VALUE_NIL;
-    Token t = token_list_get(list, parser_index);
+    Token t = token_dyn_array_get(list, parser_index);
     node->token = t;   // keyword while
     parser_index += 1; // pass keyword while
     node->extra = parse_expression(list);
@@ -278,7 +271,7 @@ Node *parse_while(TokenList *list)
     node->right = NULL;
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "loop"))
     {
-        general_message(FATAL, "while not terminated by loop.");
+        general_message(FATAL, "while not terminated by loop instead got %t.", token_dyn_array_get(list, parser_index));
     }
     if (parser_debug)
     {
@@ -290,7 +283,7 @@ Node *parse_while(TokenList *list)
     return node;
 }
 
-Node *parse_expression(TokenList *list)
+Node *parse_expression(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -306,7 +299,7 @@ Node *parse_expression(TokenList *list)
     return n;
 }
 
-Node *parse_combined_affectation_binary(TokenList *list)
+Node *parse_combined_affectation_binary(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -322,7 +315,7 @@ Node *parse_combined_affectation_binary(TokenList *list)
     return n;
 }
 
-Node *parse_combined_affectation_shift(TokenList *list)
+Node *parse_combined_affectation_shift(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -338,7 +331,7 @@ Node *parse_combined_affectation_shift(TokenList *list)
     return n;
 }
 
-Node *parse_combined_affectation(TokenList *list)
+Node *parse_combined_affectation(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -354,7 +347,7 @@ Node *parse_combined_affectation(TokenList *list)
     return n;
 }
 
-Node *parse_affectation(TokenList *list)
+Node *parse_affectation(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -377,7 +370,7 @@ Node *parse_affectation(TokenList *list)
         // Affectation
         unsigned int where_it_begins = parser_index;
         parser_index += 1;
-        Token t = token_list_get(list, parser_index); // to get the '='
+        Token t = token_dyn_array_get(list, parser_index); // to get the '='
         parser_index += 1;                            // to remove the '='
         Node *right = parse_affectation(list);
         unsigned int where_it_ends = parser_index;
@@ -406,7 +399,7 @@ Node *parse_affectation(TokenList *list)
     // }
 }
 
-Node *parse_interval(TokenList *list)
+Node *parse_interval(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -422,7 +415,7 @@ Node *parse_interval(TokenList *list)
     return n;
 }
 
-Node *parse_logical_or(TokenList *list)
+Node *parse_logical_or(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -442,7 +435,7 @@ Node *parse_logical_or(TokenList *list)
             printf("> operator or found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_logical_and(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -456,7 +449,7 @@ Node *parse_logical_or(TokenList *list)
     return node;
 }
 
-Node *parse_logical_and(TokenList *list)
+Node *parse_logical_and(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -476,7 +469,7 @@ Node *parse_logical_and(TokenList *list)
             printf("> operator and found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_equality(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -490,7 +483,7 @@ Node *parse_logical_and(TokenList *list)
     return node;
 }
 
-Node *parse_equality(TokenList *list)
+Node *parse_equality(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -510,7 +503,7 @@ Node *parse_equality(TokenList *list)
             printf("> operator == or != found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -524,7 +517,7 @@ Node *parse_equality(TokenList *list)
     return node;
 }
 
-Node *parse_comparison(TokenList *list)
+Node *parse_comparison(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -544,7 +537,7 @@ Node *parse_comparison(TokenList *list)
             printf("> operator < or > found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -558,7 +551,7 @@ Node *parse_comparison(TokenList *list)
     return node;
 }
 
-Node *parse_binary_or_xor(TokenList *list)
+Node *parse_binary_or_xor(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -574,7 +567,7 @@ Node *parse_binary_or_xor(TokenList *list)
     return n;
 }
 
-Node *parse_binary_and(TokenList *list)
+Node *parse_binary_and(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -590,7 +583,7 @@ Node *parse_binary_and(TokenList *list)
     return n;
 }
 
-Node *parse_shift(TokenList *list)
+Node *parse_shift(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -606,7 +599,7 @@ Node *parse_shift(TokenList *list)
     return n;
 }
 
-Node *parse_addition_soustraction(TokenList *list)
+Node *parse_addition_soustraction(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -626,7 +619,7 @@ Node *parse_addition_soustraction(TokenList *list)
             printf("> operator + found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -657,7 +650,7 @@ Node *parse_addition_soustraction(TokenList *list)
     return node;
 }
 
-Node *parse_multiplication_division_modulo(TokenList *list)
+Node *parse_multiplication_division_modulo(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -677,7 +670,7 @@ Node *parse_multiplication_division_modulo(TokenList *list)
             printf("> operator *, /, %% found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
@@ -724,7 +717,7 @@ Node *parse_multiplication_division_modulo(TokenList *list)
     return node;
 }
 
-Node *parse_unary_minus(TokenList *list)
+Node *parse_unary_minus(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -740,7 +733,7 @@ Node *parse_unary_minus(TokenList *list)
     return n;
 }
 
-Node *parse_pow(TokenList *list)
+Node *parse_pow(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -756,7 +749,7 @@ Node *parse_pow(TokenList *list)
     return n;
 }
 
-Node *parse_unary_complement(TokenList *list)
+Node *parse_unary_complement(TokenDynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -772,7 +765,7 @@ Node *parse_unary_complement(TokenList *list)
     return n;
 }
 
-Node *parse_call(TokenList *list)
+Node *parse_call(TokenDynArray list)
 {
     // left = function id | token = "(" | right = null | extra = null
     parser_level++;
@@ -794,7 +787,7 @@ Node *parse_call(TokenList *list)
             printf("> operator function call( %% found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_list_get(list, parser_index);
+        Token t = token_dyn_array_get(list, parser_index);
         parser_index += 1; // opening (
         if (!check_token_value(list, parser_index, TOKEN_SEPARATOR, ")"))
         {
@@ -813,7 +806,7 @@ Node *parse_call(TokenList *list)
     return node;
 }
 
-Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set)
+Node *parse_identifier_left_aff(TokenDynArray list, ValueType type_to_set)
 {
     Node *node = NULL;
     parser_level++;
@@ -822,7 +815,7 @@ Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set)
         general_message(FATAL, "This function is only for left part of affectation.\n");
     }
     node = (Node *)memory_get(sizeof(Node));
-    node->token = token_list_get(list, parser_index);
+    node->token = token_dyn_array_get(list, parser_index);
     node->left = NULL;
     node->right = NULL;
     node->type = NODE_IDENTIFIER;
@@ -852,7 +845,7 @@ Node *parse_identifier_left_aff(TokenList *list, ValueType type_to_set)
     return node;
 }
 
-Node *parse_parenthesis_expr(TokenList *list)
+Node *parse_parenthesis_expr(TokenDynArray list)
 {
     Node *node = NULL;
     parser_level++;
@@ -890,7 +883,7 @@ Node *parse_parenthesis_expr(TokenList *list)
     return node;
 }
 
-Node *parse_litteral(TokenList *list)
+Node *parse_litteral(TokenDynArray list)
 {
     Node *node = NULL;
     parser_level++;
@@ -910,7 +903,7 @@ Node *parse_litteral(TokenList *list)
             printf("> litteral integer found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_list_get(list, parser_index);
+        node->token = token_dyn_array_get(list, parser_index);
         // printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         node->left = NULL;
         node->right = NULL;
@@ -926,7 +919,7 @@ Node *parse_litteral(TokenList *list)
             printf("> litteral flaot found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_list_get(list, parser_index);
+        node->token = token_dyn_array_get(list, parser_index);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_FLOAT;
@@ -941,7 +934,7 @@ Node *parse_litteral(TokenList *list)
             printf("> litteral boolean found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_list_get(list, parser_index);
+        node->token = token_dyn_array_get(list, parser_index);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_BOOLEAN;
@@ -956,7 +949,7 @@ Node *parse_litteral(TokenList *list)
             printf("> litteral string found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_list_get(list, parser_index);
+        node->token = token_dyn_array_get(list, parser_index);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_STRING;
@@ -971,7 +964,7 @@ Node *parse_litteral(TokenList *list)
             printf("> litteral identifier found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_list_get(list, parser_index);
+        node->token = token_dyn_array_get(list, parser_index);
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_IDENTIFIER;

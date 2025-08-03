@@ -27,6 +27,17 @@ const char *HEXADECIMAL_ELEMENTS = "0123456789abcdefABCDEF";
 const char *OPERATOR_ELEMENTS = "+-*/%<>=!.~?&|^";
 const char *SEPARATOR_ELEMENTS = "([{}]),;:\t";
 
+const char *NIL = "nil";
+
+const char *BOOLEANS[] = {
+    "true",
+    "false"};
+
+const char *OPERATORS[] = {
+    "and",
+    "or",
+    "not"};
+
 const char *KEYWORDS[] = {
     "const",
     "if",
@@ -44,13 +55,7 @@ const char *KEYWORDS[] = {
     "fun",
     "pro",
     "return",
-    "class",
-    "and",
-    "or",
-    "not",
-    "true",
-    "false",
-    "nil"};
+    "class"};
 
 //-----------------------------------------------------------------------------
 // Token Functions
@@ -69,7 +74,15 @@ char *token_value(Token tok)
 
 void token_print(Token tok)
 {
-    printf("{%s @%d #%d L.%03d |%.*s|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
+    // Using TOKEN_TYPE_TO_STRING_MAX_LENGTH value
+    if (tok.type != TOKEN_NEWLINE)
+    {
+        printf("{%-24s @%d #%d L.%03d |%.*s|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
+    }
+    else
+    {
+        printf("{%-24s @%d #%d L.%03d |<NEWLINE>|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line);
+    }
 }
 
 void token_print_value(Token tok)
@@ -77,16 +90,16 @@ void token_print_value(Token tok)
     printf("%.*s", tok.count, tok.text + tok.start);
 }
 
-bool token_cmp(Token t, const char *str)
+bool text_part_cmp(const char *text, uint32_t start, uint32_t length, const char *to)
 {
-    if (strlen(str) != t.count)
+    if (strlen(to) != length)
     {
         return false;
     }
-    unsigned int i = 0;
-    while (i < t.count)
+    uint32_t i = 0;
+    while (i < length)
     {
-        if (t.text[t.start + i] != str[i])
+        if (text[start + i] != to[i])
         {
             return false;
         }
@@ -95,29 +108,14 @@ bool token_cmp(Token t, const char *str)
     return true;
 }
 
-bool token_is_nil(Token t)
+bool text_part_cmps(const char *text, uint32_t start, uint32_t length, const char *array_to[], uint32_t size)
 {
-    return token_cmp(t, "nil");
-}
-
-bool token_is_boolean(Token t)
-{
-    return token_cmp(t, "true") || token_cmp(t, "false");
-}
-
-bool token_is_operator(Token t)
-{
-    return token_cmp(t, "and") || token_cmp(t, "or") || token_cmp(t, "not");
-}
-
-bool token_is_keyword(Token t)
-{
-    // Il faut parcourir les keywords et tester si on reconnaît l'un d'entre eux
-    for (int i = 0; i < NB_KEYWORDS; i++)
+    // Il faut parcourir les chaînes du tableau et tester si on reconnaît l'un d'entre elles
+    for (uint32_t i = 0; i < size; i++)
     {
-        if (strlen(KEYWORDS[i]) == t.count)
+        if (strlen(array_to[i]) == length)
         {
-            if (token_cmp(t, KEYWORDS[i]))
+            if (text_part_cmp(text, start, length, array_to[i]))
             {
                 return true;
             }
@@ -144,14 +142,14 @@ TokenDynArray token_dyn_array_init(void)
     return tda;
 }
 
-void token_dyn_array_free(TokenDynArray * tda)
+void token_dyn_array_free(TokenDynArray *tda)
 {
     tda->count = 0;
     tda->capacity = 0;
     free(tda->data);
 }
 
-uint32_t token_dyn_array_add(TokenDynArray * tda, Token t)
+uint32_t token_dyn_array_add(TokenDynArray *tda, Token t)
 {
     if (tda->count + 1 == tda->capacity)
     {
@@ -171,11 +169,35 @@ Token token_dyn_array_get(TokenDynArray tda, int32_t index)
 {
     if (index >= 0)
     {
+        if (index >= (int64_t) tda.count)
+        {
+            general_message(FATAL, "get : Element at index %d is not defined (count = %d)", index, tda.count);
+        }
         return tda.data[index];
     }
     else
     {
+        if (index < - (int64_t) tda.count)
+        {
+            general_message(FATAL, "get : Element at index %d is not defined (count = %d)", index, tda.count);
+        }
         return tda.data[tda.count + index];
+    }
+}
+
+void token_dyn_array_delete(TokenDynArray * tda, int32_t index)
+{
+    if (index >= 0)
+    {
+        if (index >= (int64_t) tda->count)
+        {
+            general_message(FATAL, "delete : Element at index %d is not defined (count = %d)", index, tda->count);
+        }
+        if (index != ((int64_t) tda->count) - 1)
+        {
+            memmove(&(tda->data[index]), &(tda->data[index + 1]), sizeof(Token) * (tda->count - index + 1));
+        }
+        tda->count -= 1;
     }
 }
 

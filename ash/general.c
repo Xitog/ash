@@ -1,13 +1,19 @@
 #include "general.h"
 
+ErrorLevel display_error_level = LOG;
 unsigned int total_allocated = 0;
 unsigned int total_freed = 0;
 
+void set_display_error(ErrorLevel lvl)
+{
+    display_error_level = lvl;
+}
+
 void *memory_get(unsigned int size)
 {
-#if DEBUG
-    printf("Asked for %d\n", size);
-#endif
+//#if DEBUG
+// printf("Asked for %d\n", size);
+//#endif
     void *ptr = malloc(size);
     if (ptr != NULL)
     {
@@ -52,11 +58,18 @@ void memory_summary()
 
 void general_message(ErrorLevel lvl, char *message, ...)
 {
+    if (lvl < display_error_level)
+    {
+        return; // do not display if it is filtered by set_display_error
+    }
     va_list args;
     va_start(args, message); // enable the variable arguments after message parameter
     uint32_t c = 0;
     size_t length = strlen(message);
-    printf("ERROR: ");
+    if (lvl >= 3)
+    {
+        printf("ERROR: ");
+    }
     while (c < length)
     {
         if (message[c] == '%' && c + 1 < length)

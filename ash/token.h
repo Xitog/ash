@@ -63,6 +63,10 @@ const extern uint8_t TOKEN_TYPE_TO_STRING_MAX_LENGTH;
 const extern char *OPERATOR_ELEMENTS;
 const extern char *HEXADECIMAL_ELEMENTS;
 const extern char *SEPARATOR_ELEMENTS;
+
+const extern char* NIL;
+const extern char *BOOLEANS[];
+const extern char *OPERATORS[];
 const extern char *KEYWORDS[];
 
 // Liste des keywords
@@ -70,13 +74,14 @@ const extern char *KEYWORDS[];
 // Const, var  : const
 // Sélection   : if / then / elsif / else / end
 // Itération   : while / do / loop / for / in / next / break
-// Sous-prog   : fun / pro / end / return
-// Classes     : class end
+// Sous-prog   : fun / pro / return
+// Classes     : class
 // Opérateurs  : and or not
 // Valeurs     : true false nil
-// 23 Mots : const if then elsif else end while do loop for in next break fun pro return class and or not true false nil
 
-#define NB_KEYWORDS 20
+#define NB_BOOLEANS 2
+#define NB_OPERATORS 3
+#define NB_KEYWORDS 17
 
 // Liste des caractères qui composent les opérateurs ou les hexadécimaux
 
@@ -103,20 +108,25 @@ const extern char *KEYWORDS[];
 // Functions
 //-----------------------------------------------------------------------------
 
+// Token functions
+
 char *token_value(Token tok);
 void token_print(Token tok);
 void token_print_value(Token tok);
-bool token_cmp(Token t, const char *s);
-bool token_is_nil(Token t);
-bool token_is_boolean(Token t);
-bool token_is_operator(Token t);
-bool token_is_keyword(Token t);
 bool token_eq(Token t1, Token t2);
+
+// Utility functions for text part (pointer + offset) comparison with string
+
+bool text_part_cmp(const char * text, uint32_t start, uint32_t length, const char * to);
+bool text_part_cmps(const char *text, uint32_t start, uint32_t length, const char *array_to[], uint32_t size);
+
+// Dynamic array of tokens
 
 TokenDynArray token_dyn_array_init(void);
 void token_dyn_array_free(TokenDynArray * tda);
 uint32_t token_dyn_array_add(TokenDynArray * tda, Token t);
 Token token_dyn_array_get(TokenDynArray tda, int32_t index);
+void token_dyn_array_delete(TokenDynArray * tda, int32_t index);
 void token_dyn_array_info(TokenDynArray tda);
 uint32_t token_dyn_array_size(TokenDynArray tda);
 

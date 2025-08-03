@@ -10,15 +10,18 @@
 
 typedef enum _ErrorLevel
 {
-    LOG   = 0,
-    WARN  = 1,
-    ERROR = 2,
-    FATAL = 3
+    EL_DEBUG = 0,
+    LOG   = 1,
+    WARN  = 2,
+    ERROR = 3,
+    FATAL = 4
 } ErrorLevel;
 
+extern ErrorLevel display_error_level;
 extern unsigned int total_allocated;
 extern unsigned int total_freed;
 
+void set_display_error(ErrorLevel lvl);
 void *memory_get(unsigned int size);
 void memory_free(void *ptr);
 unsigned int memory_size(void *ptr);

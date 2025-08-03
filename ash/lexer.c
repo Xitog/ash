@@ -67,22 +67,22 @@ Token read_identifier(const char *cmd, unsigned int start)
     t.start = start;
     t.type = TOKEN_IDENTIFIER;
     t.line = LINE_COUNT;
-    if (token_is_nil(t))
+    if (text_part_cmp(cmd, start, count, NIL))
     {
         t.type = TOKEN_NIL;
         t.line = LINE_COUNT;
     }
-    else if (token_is_boolean(t))
+    else if (text_part_cmps(cmd, start, count, BOOLEANS, NB_BOOLEANS))
     {
         t.type = TOKEN_BOOLEAN;
         t.line = LINE_COUNT;
     }
-    else if (token_is_operator(t))
+    else if (text_part_cmps(cmd, start, count, OPERATORS, NB_OPERATORS))
     {
         t.type = TOKEN_OPERATOR;
         t.line = LINE_COUNT;
     }
-    else if (token_is_keyword(t))
+    else if (text_part_cmps(cmd, start, count, KEYWORDS, NB_KEYWORDS))
     {
         t.type = TOKEN_KEYWORD;
         t.line = LINE_COUNT;
@@ -407,14 +407,6 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
         {
             t = read_operator(cmd, index);
         }
-        else if (cmd[index] == '\r') // :TODO: Dangerous ?
-        {
-            t.count = 1;
-            t.start = index;
-            t.type = TOKEN_NEWLINE;
-            t.line = LINE_COUNT;
-            discard = true;
-        }
         else if (cmd[index] == '"')
         {
             t = read_string(cmd, index);
@@ -424,7 +416,6 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
             printf("Unknown char at %i: %c | %x\n", index, cmd[index], cmd[index]);
             exit(EXIT_FAILURE);
         }
-        count += 1;
         index += t.count;
         // printf("EOL: start=%d index=%d count=%d\n", old, index, count);
         if ((t.type == TOKEN_SPACE && skip_spaces) || t.type == TOKEN_COMMENT)
@@ -433,13 +424,14 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
         }
         if (!discard)
         {
+            count += 1;
             if (debug)
             {
+                printf("%03d. : ", count);
                 token_print(t);
                 printf("\n");
             }
-            Token nt = t;
-            token_dyn_array_add(&list, nt);
+            token_dyn_array_add(&list, t);
         }
     }
     return list;
