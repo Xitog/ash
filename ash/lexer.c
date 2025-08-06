@@ -2,7 +2,7 @@
 
 bool char_is(const char c, const char *set)
 {
-    for (unsigned int i = 0; i < strlen(set); i++)
+    for (uint32_t i = 0; i < strlen(set); i++)
     {
         if (set[i] == c)
         {
@@ -12,11 +12,10 @@ bool char_is(const char c, const char *set)
     return false;
 }
 
-Token read_space(const char *cmd, unsigned int start)
+Token read_space(const char *cmd, uint32_t start)
 {
-    Token t;
-    unsigned int index = start;
-    unsigned int count = 0;
+    uint32_t index = start;
+    uint32_t count = 0;
     while (index < strlen(cmd))
     {
         if (cmd[index] == ' ' || cmd[index] == '\t' || cmd[index] == '\r')
@@ -29,19 +28,15 @@ Token read_space(const char *cmd, unsigned int start)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.start = start;
-    t.count = count;
-    t.type = TOKEN_SPACE;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_SPACE);
     return t;
 }
 
-Token read_identifier(const char *cmd, unsigned int start)
+Token read_identifier(const char *cmd, uint32_t start)
 {
-    Token t;
-    unsigned int index = start;
-    unsigned int count = 0;
+    uint32_t index = start;
+    uint32_t count = 0;
     while (index < strlen(cmd))
     {
         if (isalpha(cmd[index]) || isdigit(cmd[index]))
@@ -62,39 +57,31 @@ Token read_identifier(const char *cmd, unsigned int start)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_IDENTIFIER;
-    t.line = LINE_COUNT;
-    if (text_part_cmp(cmd, start, count, NIL))
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_IDENTIFIER);
+    if (text_part_cmp(tp, NIL))
     {
         t.type = TOKEN_NIL;
-        t.line = LINE_COUNT;
     }
-    else if (text_part_cmps(cmd, start, count, BOOLEANS, NB_BOOLEANS))
+    else if (text_part_cmps(tp, BOOLEANS, NB_BOOLEANS))
     {
         t.type = TOKEN_BOOLEAN;
-        t.line = LINE_COUNT;
     }
-    else if (text_part_cmps(cmd, start, count, OPERATORS, NB_OPERATORS))
+    else if (text_part_cmps(tp, OPERATORS, NB_OPERATORS))
     {
         t.type = TOKEN_OPERATOR;
-        t.line = LINE_COUNT;
     }
-    else if (text_part_cmps(cmd, start, count, KEYWORDS, NB_KEYWORDS))
+    else if (text_part_cmps(tp, KEYWORDS, NB_KEYWORDS))
     {
         t.type = TOKEN_KEYWORD;
-        t.line = LINE_COUNT;
     }
     return t;
 }
 
-Token read_float(const char *cmd, unsigned int start, unsigned int current)
+Token read_float(const char *cmd, uint32_t start, uint32_t current)
 {
-    Token t;
-    unsigned int index = current;
-    unsigned int count = current - start;
+    uint32_t index = current;
+    uint32_t count = current - start;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
@@ -108,19 +95,15 @@ Token read_float(const char *cmd, unsigned int start, unsigned int current)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_FLOAT;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_FLOAT);
     return t;
 }
 
-Token read_hexa(const char *cmd, unsigned int start, unsigned int current)
+Token read_hexa(const char *cmd, uint32_t start, uint32_t current)
 {
-    Token t;
-    unsigned int index = current;
-    unsigned int count = current - start;
+    uint32_t index = current;
+    uint32_t count = current - start;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
@@ -134,19 +117,15 @@ Token read_hexa(const char *cmd, unsigned int start, unsigned int current)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_HEXADECIMAL;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_HEXADECIMAL);
     return t;
 }
 
-Token read_binary(const char *cmd, unsigned int start, unsigned int current)
+Token read_binary(const char *cmd, uint32_t start, uint32_t current)
 {
-    Token t;
-    unsigned int index = current;
-    unsigned int count = current - start;
+    uint32_t index = current;
+    uint32_t count = current - start;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
@@ -160,19 +139,16 @@ Token read_binary(const char *cmd, unsigned int start, unsigned int current)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_BINARY;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_BINARY);
     return t;
 }
 
-Token read_number(const char *cmd, unsigned int start)
+Token read_number(const char *cmd, uint32_t start)
 {
-    Token t = {.text = cmd, .type = TOKEN_NONE, .start = 0, .count = 0, .line = LINE_COUNT};
-    unsigned int index = start;
-    unsigned int count = 0;
+    Token t;
+    uint32_t index = start;
+    uint32_t count = 0;
     if (index < strlen(cmd) && cmd[index] == '0' && index + 1 < strlen(cmd) && cmd[index + 1] == 'x')
     {
         t = read_hexa(cmd, start, index + 2);
@@ -203,26 +179,24 @@ Token read_number(const char *cmd, unsigned int start)
             }
             index += 1;
         }
+        TextPart tp = text_part_init(cmd, start, count);
+        t = token_init(tp, LINE_COUNT, TOKEN_FLOAT);
         if (!is_float)
         {
-            t.text = cmd;
-            t.count = count;
-            t.start = start;
             t.type = TOKEN_DECIMAL;
         }
     }
-    if (t.start + t.count < strlen(cmd) && isalpha(cmd[t.start + t.count]))
+    if (t.text.start + t.text.length < strlen(cmd) && isalpha(cmd[t.text.start + t.text.length]))
     {
         t.type = TOKEN_ERROR_NUMBER_WITH_LETTER;
     }
     return t;
 }
 
-Token read_string(const char *cmd, unsigned int start)
+Token read_string(const char *cmd, uint32_t start)
 {
-    Token t;
-    unsigned int index = start + 1; // On presuppose que le premier c'est "
-    unsigned int count = 1;
+    uint32_t index = start + 1; // On presuppose que le premier c'est "
+    uint32_t count = 1;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
@@ -237,19 +211,15 @@ Token read_string(const char *cmd, unsigned int start)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_STRING;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_STRING);
     return t;
 }
 
-Token read_comment(const char *cmd, unsigned int start)
+Token read_comment(const char *cmd, uint32_t start)
 {
-    Token t;
-    unsigned int index = start + 2; // On presuppose que les deux premiers c'est --
-    unsigned int count = 1;
+    uint32_t index = start + 2; // On presuppose que les deux premiers c'est --
+    uint32_t count = 1;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
@@ -264,17 +234,15 @@ Token read_comment(const char *cmd, unsigned int start)
         }
         index += 1;
     }
-    t.text = cmd;
-    t.count = count;
-    t.start = start;
-    t.type = TOKEN_COMMENT;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, TOKEN_COMMENT);
     return t;
 }
 
-Token read_operator(const char *cmd, unsigned int start)
+Token read_operator(const char *cmd, uint32_t start)
 {
-    Token t;
+    uint32_t count = 1;
+    TokenType type = TOKEN_OPERATOR;
     char c = cmd[start];
     char n = ' ';
     char nn = ' ';
@@ -298,8 +266,7 @@ Token read_operator(const char *cmd, unsigned int start)
         (c == '>' && n == '>' && nn == '=') ||
         (c == '?' && n == '?' && nn == '='))
     {
-        t.count = 3;
-        t.type = TOKEN_OPERATOR;
+        count = 3;
     }
     else if (
         (c == '*' && n == '*') ||
@@ -322,8 +289,7 @@ Token read_operator(const char *cmd, unsigned int start)
         (c == '?' && n == '?') ||
         (c == '.' && n == '.'))
     {
-        t.count = 2;
-        t.type = TOKEN_OPERATOR;
+        count = 2;
     }
     else if (c == '+' || c == '-' ||
              c == '*' || c == '/' ||
@@ -333,17 +299,15 @@ Token read_operator(const char *cmd, unsigned int start)
              c == '&' || c == '|' ||
              c == '^' || c == '~')
     {
-        t.count = 1;
-        t.type = TOKEN_OPERATOR;
+        count = 1;
     }
     else
     {
-        t.count = 1;
-        t.type = TOKEN_ERROR_LONELY_OPERATOR;
+        count = 1;
+        type = TOKEN_ERROR_LONELY_OPERATOR;
     }
-    t.text = cmd;
-    t.start = start;
-    t.line = LINE_COUNT;
+    TextPart tp = text_part_init(cmd, start, count);
+    Token t = token_init(tp, LINE_COUNT, type);
     return t;
 }
 
@@ -355,18 +319,18 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
     if (debug)
     {
         printf("Starting Lexing\n");
-        for (unsigned int i = 0; i < strlen(cmd); i++)
+        for (uint32_t i = 0; i < strlen(cmd); i++)
         {
             printf("    %d. %c\n", i, cmd[i]);
         }
     }
-    unsigned int old = 0;
-    unsigned int index = 0;
+    uint32_t old = 0;
+    uint32_t index = 0;
     Token t;
-    t.text = cmd;
+    t.text.source = cmd;
     bool discard = false;
     TokenDynArray list = token_dyn_array_init();
-    unsigned int count = 0;
+    uint32_t count = 0;
     while (index < strlen(cmd))
     {
         old = index;
@@ -386,8 +350,8 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
         }
         else if (cmd[index] == '\n')
         {
-            t.count = 1;
-            t.start = index;
+            t.text.length = 1;
+            t.text.start = index;
             t.type = TOKEN_NEWLINE;
             t.line = LINE_COUNT;
             LINE_COUNT += 1;
@@ -398,8 +362,8 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
         }
         else if (char_is(cmd[index], SEPARATOR_ELEMENTS))
         {
-            t.count = 1;
-            t.start = index;
+            t.text.length = 1;
+            t.text.start = index;
             t.type = TOKEN_SEPARATOR;
             t.line = LINE_COUNT;
         }
@@ -416,7 +380,7 @@ TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug)
             printf("Unknown char at %i: %c | %x\n", index, cmd[index], cmd[index]);
             exit(EXIT_FAILURE);
         }
-        index += t.count;
+        index += t.text.length;
         // printf("EOL: start=%d index=%d count=%d\n", old, index, count);
         if ((t.type == TOKEN_SPACE && skip_spaces) || t.type == TOKEN_COMMENT)
         {

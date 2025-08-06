@@ -37,12 +37,17 @@ typedef enum _TokenType
     TOKEN_ERROR_NUMBER_WITH_LETTER = 16
 } TokenType;
 
+typedef struct _TextPart
+{
+    const char * source;
+    uint32_t start;
+    uint32_t length;
+} TextPart;
+
 typedef struct _Token
 {
-    const char *text;
+    TextPart text;
     TokenType type;
-    uint32_t start;
-    uint32_t count;
     uint32_t line;
 } Token;
 
@@ -108,17 +113,21 @@ const extern char *KEYWORDS[];
 // Functions
 //-----------------------------------------------------------------------------
 
+// TextPart functions
+
+TextPart text_part_init(const char * const text, uint32_t start, uint32_t length);
+bool text_part_cmp(TextPart text, const char * to);
+bool text_part_cmps(TextPart text, const char *array_to[], uint32_t size);
+void text_part_print(TextPart tp);
+bool text_part_eq(TextPart tp1, TextPart tp2);
+
 // Token functions
 
+Token token_init(TextPart text, uint32_t line, TokenType type);
 char *token_value(Token tok);
 void token_print(Token tok);
-void token_print_value(Token tok);
+void token_print_text(Token tok);
 bool token_eq(Token t1, Token t2);
-
-// Utility functions for text part (pointer + offset) comparison with string
-
-bool text_part_cmp(const char * text, uint32_t start, uint32_t length, const char * to);
-bool text_part_cmps(const char *text, uint32_t start, uint32_t length, const char *array_to[], uint32_t size);
 
 // Dynamic array of tokens
 

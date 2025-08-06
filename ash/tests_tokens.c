@@ -1,7 +1,7 @@
 // Test of Token, TokenDynArray, lex
 
-// Compile with :
-// cl /W4 .\tests_tokens.c .\token.c .\lexer.c .\general.c /Fe:tests_tokens.exe
+// Compile : cl /W4 .\tests_tokens.c .\token.c .\lexer.c .\general.c /Fe:tests_tokens.exe
+// Clean   : del *.obj
 
 #include "token.h"
 #include "lexer.h"

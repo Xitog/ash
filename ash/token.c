@@ -58,16 +58,82 @@ const char *KEYWORDS[] = {
     "class"};
 
 //-----------------------------------------------------------------------------
+// TextPart Functions
+//-----------------------------------------------------------------------------
+
+TextPart text_part_init(const char * text, uint32_t start, uint32_t length)
+{
+    TextPart tp;
+    tp.source = text;
+    tp.start = start;
+    tp.length = length;
+    return tp;
+}
+
+bool text_part_cmp(TextPart tp, const char *to)
+{
+    if (strlen(to) != tp.length)
+    {
+        return false;
+    }
+    uint32_t i = 0;
+    while (i < tp.length)
+    {
+        if (tp.source[tp.start + i] != to[i])
+        {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+bool text_part_cmps(TextPart tp, const char *array_to[], uint32_t size)
+{
+    // Il faut parcourir les chaînes du tableau et tester si on reconnaît l'un d'entre elles
+    for (uint32_t i = 0; i < size; i++)
+    {
+        if (strlen(array_to[i]) == tp.length)
+        {
+            if (text_part_cmp(tp, array_to[i]))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void text_part_print(TextPart tp)
+{
+    printf("%.*s", tp.length, tp.source + tp.start);
+}
+
+bool text_part_eq(TextPart tp1, TextPart tp2)
+{
+    return tp1.source == tp2.source && tp1.start == tp2.start && tp1.length == tp2.length;
+}
+
+//-----------------------------------------------------------------------------
 // Token Functions
 //-----------------------------------------------------------------------------
 
+Token token_init(TextPart text, uint32_t line, TokenType type)
+{
+    Token t;
+    t.text = text;
+    t.line = line;
+    t.type = type;
+    return t;
+}
+
 char *token_value(Token tok)
 {
-    char *s = (char *)memory_get(tok.count + 1);
-    memset(s, '\0', tok.count + 1);
-    for (unsigned int i = 0; i < tok.count; i++)
+    char *s = (char *)memory_get(tok.text.length + 1);
+    memset(s, '\0', tok.text.length + 1);
+    for (unsigned int i = 0; i < tok.text.length; i++)
     {
-        s[i] = tok.text[tok.start + i];
+        s[i] = tok.text.source[tok.text.start + i];
     }
     return s;
 }
@@ -77,56 +143,22 @@ void token_print(Token tok)
     // Using TOKEN_TYPE_TO_STRING_MAX_LENGTH value
     if (tok.type != TOKEN_NEWLINE)
     {
-        printf("{%-24s @%d #%d L.%03d |%.*s|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line, tok.count, tok.text + tok.start);
+        printf("{%-24s @%d #%d L.%03d |%.*s|}", TOKEN_TYPE_TO_STRING[tok.type], tok.text.start, tok.text.length, tok.line, tok.text.length, tok.text.source + tok.text.start);
     }
     else
     {
-        printf("{%-24s @%d #%d L.%03d |<NEWLINE>|}", TOKEN_TYPE_TO_STRING[tok.type], tok.start, tok.count, tok.line);
+        printf("{%-24s @%d #%d L.%03d |<NEWLINE>|}", TOKEN_TYPE_TO_STRING[tok.type], tok.text.start, tok.text.length, tok.line);
     }
 }
 
-void token_print_value(Token tok)
+void token_print_text(Token tok)
 {
-    printf("%.*s", tok.count, tok.text + tok.start);
-}
-
-bool text_part_cmp(const char *text, uint32_t start, uint32_t length, const char *to)
-{
-    if (strlen(to) != length)
-    {
-        return false;
-    }
-    uint32_t i = 0;
-    while (i < length)
-    {
-        if (text[start + i] != to[i])
-        {
-            return false;
-        }
-        i += 1;
-    }
-    return true;
-}
-
-bool text_part_cmps(const char *text, uint32_t start, uint32_t length, const char *array_to[], uint32_t size)
-{
-    // Il faut parcourir les chaînes du tableau et tester si on reconnaît l'un d'entre elles
-    for (uint32_t i = 0; i < size; i++)
-    {
-        if (strlen(array_to[i]) == length)
-        {
-            if (text_part_cmp(text, start, length, array_to[i]))
-            {
-                return true;
-            }
-        }
-    }
-    return false;
+    text_part_print(tok.text);
 }
 
 bool token_eq(Token t1, Token t2)
 {
-    return t1.count == t2.count && t1.line == t2.line && t1.start == t2.start && t1.text == t2.text && t1.type == t2.type;
+    return text_part_eq(t1.text, t2.text) && t1.line == t2.line && t1.type == t2.type;
 }
 
 //-----------------------------------------------------------------------------
