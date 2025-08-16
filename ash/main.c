@@ -348,14 +348,14 @@ int main(int argc, char *argv[])
                         }
                         Token tok = token_dyn_array_get(list, count);
                         fprintf(file, "    {");
-                        fprintf(file, "        \"start\": %3d,", tok.start);
-                        fprintf(file, "        \"count\": %3d,", tok.count);
+                        fprintf(file, "        \"start\": %3d,", tok.text.start);
+                        fprintf(file, "        \"count\": %3d,", tok.text.length);
                         fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_TO_STRING[tok.type]);
                         for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_TO_STRING[tok.type]); j++)
                         {
                             fprintf(file, " ");
                         }
-                        fprintf(file, "        \"value\": \"%.*s\"", tok.count, tok.text + tok.start);
+                        fprintf(file, "        \"value\": \"%.*s\"", tok.text.length, tok.text.source + tok.text.start);
                         fprintf(file, "}");
                     }
                     fprintf(file, "%s", "\n]\n");

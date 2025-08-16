@@ -11,9 +11,9 @@ void set_display_error(ErrorLevel lvl)
 
 void *memory_get(unsigned int size)
 {
-//#if DEBUG
-// printf("Asked for %d\n", size);
-//#endif
+    // #if DEBUG
+    //  printf("Asked for %d\n", size);
+    // #endif
     void *ptr = malloc(size);
     if (ptr != NULL)
     {
@@ -38,11 +38,11 @@ unsigned int memory_size(void *ptr)
 }
 
 // On initialise un objet mémoire à partir d'une char * (probablement non supervisée par notre système)
-void *memory_get_from_str(char * source)
+void *memory_get_from_str(char *source)
 {
     size_t s = strlen(source) + 1; // for \0 char
-    void * p = memory_get(s);
-    memcpy(p, (void *) source, s);
+    void *p = memory_get(s);
+    memcpy(p, (void *)source, s);
     return p;
 }
 
@@ -88,7 +88,7 @@ void general_message(ErrorLevel lvl, char *message, ...)
             }
             else if (message[c + 1] == 's')
             {
-                char * s = va_arg(args, char *);
+                char *s = va_arg(args, char *);
                 printf("%s", s);
                 c++;
             }
@@ -97,7 +97,6 @@ void general_message(ErrorLevel lvl, char *message, ...)
                 Token t = va_arg(args, Token);
                 token_print(t);
                 c++;
-
             }
             else
             {
@@ -125,4 +124,113 @@ char *string_copy(const char *source)
     char *dest = memory_get(size * sizeof(char));
     strncpy_s(dest, size, source, size);
     return dest;
+}
+
+DynArray dyn_array_init(size_t element_size)
+{
+    DynArray da;
+    da.capacity = 8;
+    da.count = 0;
+    da.data = malloc(element_size * da.capacity);
+    da.element_size = element_size;
+    return da;
+}
+
+void dyn_array_free(DynArray *da)
+{
+    da->count = 0;
+    da->capacity = 0;
+    free(da->data);
+}
+
+void dyn_array_add(DynArray *da, void *d)
+{
+    if (da->count + 1 == da->capacity)
+    {
+        da->capacity = da->capacity * 2;
+        da->data = realloc(da->data, da->element_size * da->capacity);
+        if (da->data == NULL)
+        {
+            general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
+        }
+    }
+    memcpy((char *)da->data + da->count * da->element_size, d, da->element_size);
+    da->count += 1;
+}
+
+void dyn_array_add_sorted(DynArray *da, void *element, bool (*is_sup)(void *e1, void *e2))
+{
+    // Enlarging dynamic array if necessary
+    if (da->count + 1 == da->capacity)
+    {
+        da->capacity = da->capacity * 2;
+        da->data = realloc(da->data, da->element_size * da->capacity);
+        if (da->data == NULL)
+        {
+            general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
+        }
+    }
+    // Passing all elements until the element is not superior to the current
+    // todo
+    // Moving the rest
+    // todo
+}
+
+void *dyn_array_get(DynArray da, int32_t index)
+{
+    if (index >= 0)
+    {
+        if (index >= (int64_t)da.count)
+        {
+            general_message(FATAL, "get : Element at index %d is not defined (count = %d)", index, da.count);
+        }
+        return (char *)da.data + index * da.element_size;
+    }
+    else
+    {
+        if (index < -(int64_t)da.count)
+        {
+            general_message(FATAL, "get : Element at index %d is not defined (count = %d)", index, da.count);
+        }
+        return (char *)da.data + (da.count + index) * da.element_size;
+    }
+}
+
+void dyn_array_delete(DynArray *da, int32_t index)
+{
+}
+
+/*
+void token_dyn_array_delete(TokenDynArray * tda, int32_t index)
+{
+    if (index >= 0)
+    {
+        if (index >= (int64_t) tda->count)
+        {
+            general_message(FATAL, "delete : Element at index %d is not defined (count = %d)", index, tda->count);
+        }
+        if (index != ((int64_t) tda->count) - 1)
+        {
+            memmove(&(tda->data[index]), &(tda->data[index + 1]), sizeof(Token) * (tda->count - index + 1));
+        }
+        tda->count -= 1;
+    }
+}
+*/
+
+void dyn_array_info(DynArray da, void (*display)(void *element))
+{
+    printf("DynArray @%p data@%p data#%u %u/%u (element size = %u)\n", &da, da.data, _msize(da.data), da.count, da.capacity, da.element_size);
+    uint32_t size = dyn_array_size(da);
+    for (uint32_t i = 0; i < size; i++)
+    {
+        printf("    %03d.", i);
+        display(dyn_array_get(da, i));
+        printf("\n");
+    }
+}
+
+uint32_t dyn_array_size(DynArray da)
+{
+    return da.count;
 }
