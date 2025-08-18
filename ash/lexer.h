@@ -16,6 +16,6 @@ Token read_number(const char *cmd, unsigned int start);
 Token read_string(const char *cmd, unsigned int start);
 Token read_comment(const char *cmd, unsigned int start);
 Token read_operator(const char *cmd, unsigned int start);
-TokenDynArray lex(const char *cmd, bool skip_spaces, bool debug);
+DynArray lex(const char *cmd, bool skip_spaces, bool debug);
 
 #endif

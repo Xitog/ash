@@ -129,14 +129,4 @@ void token_print(Token tok);
 void token_print_text(Token tok);
 bool token_eq(Token t1, Token t2);
 
-// Dynamic array of tokens
-
-TokenDynArray token_dyn_array_init(void);
-void token_dyn_array_free(TokenDynArray * tda);
-uint32_t token_dyn_array_add(TokenDynArray * tda, Token t);
-Token token_dyn_array_get(TokenDynArray tda, int32_t index);
-void token_dyn_array_delete(TokenDynArray * tda, int32_t index);
-void token_dyn_array_info(TokenDynArray tda);
-uint32_t token_dyn_array_size(TokenDynArray tda);
-
 #endif

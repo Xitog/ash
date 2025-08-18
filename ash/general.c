@@ -143,7 +143,7 @@ void dyn_array_free(DynArray *da)
     free(da->data);
 }
 
-void dyn_array_add(DynArray *da, void *d)
+void dyn_array_append(DynArray *da, void *data)
 {
     if (da->count + 1 == da->capacity)
     {
@@ -154,12 +154,44 @@ void dyn_array_add(DynArray *da, void *d)
             general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
         }
     }
-    memcpy((char *)da->data + da->count * da->element_size, d, da->element_size);
+    memcpy((char *)da->data + da->count * da->element_size, data, da->element_size);
     da->count += 1;
 }
 
-void dyn_array_add_sorted(DynArray *da, void *element, bool (*is_sup)(void *e1, void *e2))
+void dyn_array_append_sorted(DynArray *da, void *data, bool (*is_sup)(void *e1, void *e2))
 {
+    if (da->count == 0)
+    {
+        dyn_array_append(da, data);
+    }
+    else
+    {
+        // Passing all elements until the element is not superior to the current
+        bool inserted = false;
+        uint32_t size = dyn_array_size(*da);
+        for (uint32_t i = 0; i < size; i++)
+        {
+            void *elt_test = dyn_array_get(*da, i);
+            if (is_sup(elt_test, data))
+            {
+                dyn_array_insert(da, data, i);
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted)
+        {
+            dyn_array_append(da, data);
+        }
+    }
+}
+
+void dyn_array_insert(DynArray *da, void *data, uint32_t index)
+{
+    if (index > da->count + 1)
+    {
+        general_message(FATAL, "Index %d out of bound (<=%d)", index, da->count);
+    }
     // Enlarging dynamic array if necessary
     if (da->count + 1 == da->capacity)
     {
@@ -170,10 +202,13 @@ void dyn_array_add_sorted(DynArray *da, void *element, bool (*is_sup)(void *e1, 
             general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
         }
     }
-    // Passing all elements until the element is not superior to the current
-    // todo
-    // Moving the rest
-    // todo
+    // On pousse
+    char * dest = (char *) da->data + index + 1;
+    char * src = (char *) da->data + index;
+    memmove(dest, src, da->element_size * (da->count - index + 1));
+    // On copie
+    memmove(src, data, da->element_size);
+    da->count += 1;
 }
 
 void *dyn_array_get(DynArray da, int32_t index)
@@ -196,27 +231,25 @@ void *dyn_array_get(DynArray da, int32_t index)
     }
 }
 
-void dyn_array_delete(DynArray *da, int32_t index)
-{
-}
-
-/*
-void token_dyn_array_delete(TokenDynArray * tda, int32_t index)
+void dyn_array_delete(DynArray * da, int32_t index)
 {
     if (index >= 0)
     {
-        if (index >= (int64_t) tda->count)
+        if (index >= (int64_t) da->count)
         {
-            general_message(FATAL, "delete : Element at index %d is not defined (count = %d)", index, tda->count);
+            general_message(FATAL, "delete : Element at index %d is not defined (count = %d)", index, da->count);
         }
-        if (index != ((int64_t) tda->count) - 1)
+        if (index != ((int64_t) da->count) - 1)
         {
-            memmove(&(tda->data[index]), &(tda->data[index + 1]), sizeof(Token) * (tda->count - index + 1));
+            char * dest = (char *) da->data + (index * da->element_size);
+            char * src = (char *) da->data + (index + 1) * da->element_size;
+            //printf("Moving from %p to %p\n", src, dest);
+            memmove(dest, src, da->element_size * (da->count - index + 1));
         }
-        tda->count -= 1;
+        // Si on veut supprimer le dernier élément, il suffit d'enlever 1 au compteur
+        da->count -= 1;
     }
 }
-*/
 
 void dyn_array_info(DynArray da, void (*display)(void *element))
 {

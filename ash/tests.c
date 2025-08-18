@@ -191,9 +191,9 @@ void tests_tokens()
     Token t11 = {.start = 0, .count = 1, .text = text1, .line = 1, .type = TOKEN_IDENTIFIER};
     Token t12 = {.start = 2, .count = 1, .text = text1, .line = 1, .type = TOKEN_OPERATOR};
     Token t13 = {.start = 4, .count = 1, .text = text1, .line = 1, .type = TOKEN_DECIMAL};
-    token_dyn_array_add(&expected1, t11);
-    token_dyn_array_add(&expected1, t12);
-    token_dyn_array_add(&expected1, t13);
+    token_dyn_array_append(&expected1, t11);
+    token_dyn_array_append(&expected1, t12);
+    token_dyn_array_append(&expected1, t13);
     token_dyn_array_info(expected1);
     check_test_tokens(text1, expected1);
     token_dyn_array_free(&expected1);
@@ -210,15 +210,15 @@ void tests_tokens()
     Token t27 = {.start = 20, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};   // (
     Token t28 = {.start = 21, .count = 1, .text = text2, .line = 1, .type = TOKEN_SEPARATOR};   // )
     Token t29 = {.start = 23, .count = 3, .text = text2, .line = 1, .type = TOKEN_KEYWORD};     // end
-    token_dyn_array_add(&expected2, t21);
-    token_dyn_array_add(&expected2, t22);
-    token_dyn_array_add(&expected2, t23);
-    token_dyn_array_add(&expected2, t24);
-    token_dyn_array_add(&expected2, t25);
-    token_dyn_array_add(&expected2, t26);
-    token_dyn_array_add(&expected2, t27);
-    token_dyn_array_add(&expected2, t28);
-    token_dyn_array_add(&expected2, t29);
+    token_dyn_array_append(&expected2, t21);
+    token_dyn_array_append(&expected2, t22);
+    token_dyn_array_append(&expected2, t23);
+    token_dyn_array_append(&expected2, t24);
+    token_dyn_array_append(&expected2, t25);
+    token_dyn_array_append(&expected2, t26);
+    token_dyn_array_append(&expected2, t27);
+    token_dyn_array_append(&expected2, t28);
+    token_dyn_array_append(&expected2, t29);
     token_dyn_array_info(expected2);
     check_test_tokens(text2, expected2);
     token_dyn_array_free(&expected2);
@@ -227,17 +227,17 @@ void tests_tokens()
     TokenDynArray tda = token_dyn_array_init();
     printf("    ");
     token_dyn_array_info(tda);
-    token_dyn_array_add(&tda, t21);
-    token_dyn_array_add(&tda, t22);
-    token_dyn_array_add(&tda, t23);
-    token_dyn_array_add(&tda, t24);
-    token_dyn_array_add(&tda, t25);
-    token_dyn_array_add(&tda, t26);
-    token_dyn_array_add(&tda, t27);
-    token_dyn_array_add(&tda, t28);
+    token_dyn_array_append(&tda, t21);
+    token_dyn_array_append(&tda, t22);
+    token_dyn_array_append(&tda, t23);
+    token_dyn_array_append(&tda, t24);
+    token_dyn_array_append(&tda, t25);
+    token_dyn_array_append(&tda, t26);
+    token_dyn_array_append(&tda, t27);
+    token_dyn_array_append(&tda, t28);
     printf("    ");
     token_dyn_array_info(tda);
-    token_dyn_array_add(&tda, t29);
+    token_dyn_array_append(&tda, t29);
     token_dyn_array_free(&tda);
 
     memory_summary();

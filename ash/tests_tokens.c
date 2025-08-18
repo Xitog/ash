@@ -6,6 +6,13 @@
 #include "token.h"
 #include "lexer.h"
 
+void display_token(void *t)
+{
+    Token *pt = t;
+    token_print(*pt);
+    printf(" @%p", pt);
+}
+
 int main(int argc, char *argv[])
 {
     set_display_error(EL_DEBUG);
@@ -20,21 +27,20 @@ int main(int argc, char *argv[])
     }
 
     printf("= Start of test 1 : getting a dyanmic array of tokens from lex()\n");
-    char * text1 = "if a == 5 then\n hello()\n end\n";
+    char *text1 = "if a == 5 then\n hello()\n end\n";
     printf("Lexing :\n%s", text1);
-    TokenDynArray tda1 = lex(text1, true, false);
-    token_dyn_array_info(tda1);
+    DynArray tda1 = lex(text1, true, false);
+    dyn_array_info(tda1, display_token);
     printf("= End of test 1\n");
 
     printf("= Start of test 2 : access and modification of the dynamic array of tokens of test 1\n");
-    //token_dyn_array_get(tda1, 12);
+    // token_dyn_array_get(tda1, 12);
     printf("Getting token at index -12\n");
-    Token t2 = token_dyn_array_get(tda1, -12);
+    Token t2 = *((Token *)dyn_array_get(tda1, -12));
     general_message(EL_DEBUG, "   -12. %t", t2);
-    //t2 = token_dyn_array_get(tda1, -13);
+    // t2 = token_dyn_array_get(tda1, -13);
     printf("Deleting token at index 5\n");
-    token_dyn_array_delete(&tda1, 5);
-    token_dyn_array_info(tda1);
+    dyn_array_delete(&tda1, 5);
+    dyn_array_info(tda1, display_token);
     printf("= End of test 2\n");
-
 }
