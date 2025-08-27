@@ -3,7 +3,7 @@
 // Compile : cl /W4 .\tests_dyn_array.c .\token.c .\general.c /Fe:tests_dyn_array.exe
 // Clean   : del *.obj
 
-#include "general.h"
+#include "..\general.h"
 
 void display_char(void *c)
 {

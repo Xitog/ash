@@ -4,7 +4,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const Value NIL = {.type = VALUE_NIL, .as.any = NULL};
+const Value THE_NIL = {.type = VALUE_NIL, .as.any = NULL};
 
 const char *VALUE_TYPE_STRING[] = {
     "NIL",
@@ -19,6 +19,7 @@ const char *VALUE_TYPE_STRING[] = {
     "RECORD",
     "CDATA",
     "TYPE",
+    "FUNCTION",
     "ANY"};
 
 //-----------------------------------------------------------------------------

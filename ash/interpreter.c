@@ -10,9 +10,9 @@ void emit_node(Node *node);
 
 void emit_token(Token t)
 {
-    for (uint32_t i = t.start; i < t.start + t.count; i++, current++)
+    for (uint32_t i = t.text.start; i < t.text.start + t.text.length; i++, current++)
     {
-        buffer[current] = t.text[i];
+        buffer[current] = t.text.source[i];
     }
 }
 
@@ -149,7 +149,7 @@ void emit_node(Node *node)
             }
             else
             {
-                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator %s", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type], token_value(node->token));
+                general_message(FATAL, "Interpreter: incompatible operand types %s and %s for operator %$", VALUE_TYPE_STRING[node->left->value_type], VALUE_TYPE_STRING[node->right->value_type], node->token.text);
             }
         }
     }

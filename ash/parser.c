@@ -15,34 +15,34 @@ const char *NODE_TYPE_REPR_STRING[] = {
     "NODE_BLOCK"};
 
 uint8_t DEBUG_MODE = DEBUG_MODE_FULL; // DEBUG_MODE_CLEVER;
-Dict *root_scope = NULL;
+DynArray root_scope;
 
-unsigned int parser_index = 0;
-unsigned int parser_level = 0;
+uint32_t parser_index = 0;
+uint32_t parser_level = 0;
 
 bool node_is_type(Node *node, NodeType type)
 {
     return node->type == type;
 }
 
-bool check_token_type(TokenDynArray list, uint32_t index, TokenType expected)
+bool check_token_type(DynArray list, uint32_t index, TokenType expected)
 {
-    if (index >= token_dyn_array_size(list))
+    if (index >= dyn_array_size(list))
     {
         return false;
     }
-    Token t = token_dyn_array_get(list, index);
-    return t.type == expected;
+    Token *t = dyn_array_get(list, index);
+    return t->type == expected;
 }
 
-bool check_token_value(TokenDynArray list, uint32_t index, TokenType expected_type, const char *expected_value)
+bool check_token_value(DynArray list, uint32_t index, TokenType expected_type, const char *expected_value)
 {
-    if (index >= token_dyn_array_size(list))
+    if (index >= dyn_array_size(list))
     {
         return false;
     }
-    Token t = token_dyn_array_get(list, index);
-    return t.type == expected_type && token_cmp(t, expected_value);
+    Token *t = dyn_array_get(list, index);
+    return t->type == expected_type && token_cmp(*t, expected_value);
 }
 
 void tab()
@@ -73,14 +73,47 @@ bool parser_get_debug()
     return parser_debug;
 }
 
-AST *parse(TokenDynArray list)
+int32_t search_var(DynArray da, TextPart needle)
 {
-    if (root_scope == NULL)
+    uint32_t s = dyn_array_size(da);
+    for (uint32_t i = 0; i < s; i++)
     {
-        root_scope = dict_init(VALUE_CSTRING, VALUE_TYPE);
-        dict_set(root_scope, cstring_init("hello"), type_init(VALUE_NIL));
-        // dict_free(root_scope);
+        TextPart * tp = dyn_array_get(da, i);
+        if (text_part_eq(needle, *tp))
+        {
+            return i;
+        }
     }
+    return -1;
+}
+
+bool variable_sup(Variable *v1, Variable *v2)
+{
+    uint32_t s = v1->text.length > v2->text.length ? v2->text.length : v1->text.length;
+    for (uint32_t i = 0; i < s; i++)
+    {
+        if (v1->text.source[v1->text.start + i] == v2->text.source[v2->text.start + i])
+        {
+            continue;
+        }
+        else
+        {
+            return v1->text.source[v1->text.start + i] > v2->text.source[v2->text.start + i];
+        }
+    }
+    return v1->text.length < v2->text.length;
+}
+
+Variable function_hello = {.text = {.source = "hello", .length = 5, .start = 0}, .type = VALUE_FUNCTION};
+
+void parser_init()
+{
+    root_scope = dyn_array_init(sizeof(Variable));
+    dyn_array_append_sorted(&root_scope, &function_hello, variable_sup);
+}
+
+AST *parse(DynArray list)
+{
     parser_index = 0;
     parser_level = 0;
     if (parser_debug)
@@ -89,18 +122,18 @@ AST *parse(TokenDynArray list)
     }
     AST *t = (AST *)memory_get(sizeof(AST));
     t->root = parse_block(list);
-    if (parser_index != token_dyn_array_size(list))
+    if (parser_index != dyn_array_size(list))
     {
         general_message(FATAL, "Tokens not parsed at the end of the token list (>= %d).", parser_index);
     }
     if (parser_debug)
     {
-        printf("end of parsing at %d / %d\n", parser_index, token_dyn_array_size(list));
+        printf("end of parsing at %d / %d\n", parser_index, dyn_array_size(list));
     }
     return t;
 }
 
-Node *parse_block(TokenDynArray list)
+Node *parse_block(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -129,7 +162,7 @@ Node *parse_block(TokenDynArray list)
         {
             break;
         }
-        else if (parser_index < token_dyn_array_size(list))
+        else if (parser_index < dyn_array_size(list))
         {
             next = parse_expression(list);
         }
@@ -164,11 +197,11 @@ Node *parse_block(TokenDynArray list)
             }
         }
         next = NULL;
-    } while ((check_token_value(list, parser_index, TOKEN_SEPARATOR, ";") || check_token_value(list, parser_index, TOKEN_NEWLINE, "\n")) && parser_index < token_dyn_array_size(list));
+    } while ((check_token_value(list, parser_index, TOKEN_SEPARATOR, ";") || check_token_value(list, parser_index, TOKEN_NEWLINE, "\n")) && parser_index < dyn_array_size(list));
     return first;
 }
 
-Node *parse_if(TokenDynArray list)
+Node *parse_if(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -179,8 +212,8 @@ Node *parse_if(TokenDynArray list)
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_IF;
     node->value_type = VALUE_NIL;
-    Token t = token_dyn_array_get(list, parser_index);
-    node->token = t;   // keyword if
+    Token *t = dyn_array_get(list, parser_index);
+    node->token = *t;  // keyword if
     parser_index += 1; // pass keyword if
     node->extra = parse_expression(list);
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "then"))
@@ -242,7 +275,7 @@ Node *parse_if(TokenDynArray list)
     return first_if;
 }
 
-Node *parse_while(TokenDynArray list)
+Node *parse_while(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -253,8 +286,8 @@ Node *parse_while(TokenDynArray list)
     Node *node = node = (Node *)memory_get(sizeof(Node));
     node->type = NODE_WHILE;
     node->value_type = VALUE_NIL;
-    Token t = token_dyn_array_get(list, parser_index);
-    node->token = t;   // keyword while
+    Token *t = dyn_array_get(list, parser_index);
+    node->token = *t;  // keyword while
     parser_index += 1; // pass keyword while
     node->extra = parse_expression(list);
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "do"))
@@ -271,7 +304,7 @@ Node *parse_while(TokenDynArray list)
     node->right = NULL;
     if (!check_token_value(list, parser_index, TOKEN_KEYWORD, "loop"))
     {
-        general_message(FATAL, "while not terminated by loop instead got %t.", token_dyn_array_get(list, parser_index));
+        general_message(FATAL, "while not terminated by loop instead got %t.", dyn_array_get(list, parser_index));
     }
     if (parser_debug)
     {
@@ -283,7 +316,7 @@ Node *parse_while(TokenDynArray list)
     return node;
 }
 
-Node *parse_expression(TokenDynArray list)
+Node *parse_expression(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -299,7 +332,7 @@ Node *parse_expression(TokenDynArray list)
     return n;
 }
 
-Node *parse_combined_affectation_binary(TokenDynArray list)
+Node *parse_combined_affectation_binary(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -315,7 +348,7 @@ Node *parse_combined_affectation_binary(TokenDynArray list)
     return n;
 }
 
-Node *parse_combined_affectation_shift(TokenDynArray list)
+Node *parse_combined_affectation_shift(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -331,7 +364,7 @@ Node *parse_combined_affectation_shift(TokenDynArray list)
     return n;
 }
 
-Node *parse_combined_affectation(TokenDynArray list)
+Node *parse_combined_affectation(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -347,7 +380,7 @@ Node *parse_combined_affectation(TokenDynArray list)
     return n;
 }
 
-Node *parse_affectation(TokenDynArray list)
+Node *parse_affectation(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -370,7 +403,7 @@ Node *parse_affectation(TokenDynArray list)
         // Affectation
         unsigned int where_it_begins = parser_index;
         parser_index += 1;
-        Token t = token_dyn_array_get(list, parser_index); // to get the '='
+        Token *t = dyn_array_get(list, parser_index); // to get the '='
         parser_index += 1;                            // to remove the '='
         Node *right = parse_affectation(list);
         unsigned int where_it_ends = parser_index;
@@ -379,7 +412,7 @@ Node *parse_affectation(TokenDynArray list)
         Node *left = parse_identifier_left_aff(list, right->value_type);
         parser_index = where_it_ends;
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -399,7 +432,7 @@ Node *parse_affectation(TokenDynArray list)
     // }
 }
 
-Node *parse_interval(TokenDynArray list)
+Node *parse_interval(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -415,7 +448,7 @@ Node *parse_interval(TokenDynArray list)
     return n;
 }
 
-Node *parse_logical_or(TokenDynArray list)
+Node *parse_logical_or(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -435,11 +468,11 @@ Node *parse_logical_or(TokenDynArray list)
             printf("> operator or found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_logical_and(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -449,7 +482,7 @@ Node *parse_logical_or(TokenDynArray list)
     return node;
 }
 
-Node *parse_logical_and(TokenDynArray list)
+Node *parse_logical_and(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -469,11 +502,11 @@ Node *parse_logical_and(TokenDynArray list)
             printf("> operator and found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_equality(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -483,7 +516,7 @@ Node *parse_logical_and(TokenDynArray list)
     return node;
 }
 
-Node *parse_equality(TokenDynArray list)
+Node *parse_equality(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -503,11 +536,11 @@ Node *parse_equality(TokenDynArray list)
             printf("> operator == or != found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -517,7 +550,7 @@ Node *parse_equality(TokenDynArray list)
     return node;
 }
 
-Node *parse_comparison(TokenDynArray list)
+Node *parse_comparison(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -537,11 +570,11 @@ Node *parse_comparison(TokenDynArray list)
             printf("> operator < or > found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -551,7 +584,7 @@ Node *parse_comparison(TokenDynArray list)
     return node;
 }
 
-Node *parse_binary_or_xor(TokenDynArray list)
+Node *parse_binary_or_xor(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -567,7 +600,7 @@ Node *parse_binary_or_xor(TokenDynArray list)
     return n;
 }
 
-Node *parse_binary_and(TokenDynArray list)
+Node *parse_binary_and(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -583,7 +616,7 @@ Node *parse_binary_and(TokenDynArray list)
     return n;
 }
 
-Node *parse_shift(TokenDynArray list)
+Node *parse_shift(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -599,7 +632,7 @@ Node *parse_shift(TokenDynArray list)
     return n;
 }
 
-Node *parse_addition_soustraction(TokenDynArray list)
+Node *parse_addition_soustraction(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -619,11 +652,11 @@ Node *parse_addition_soustraction(TokenDynArray list)
             printf("> operator + found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -650,7 +683,7 @@ Node *parse_addition_soustraction(TokenDynArray list)
     return node;
 }
 
-Node *parse_multiplication_division_modulo(TokenDynArray list)
+Node *parse_multiplication_division_modulo(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -670,11 +703,11 @@ Node *parse_multiplication_division_modulo(TokenDynArray list)
             printf("> operator *, /, %% found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_BINARY_OPERATOR;
@@ -717,7 +750,7 @@ Node *parse_multiplication_division_modulo(TokenDynArray list)
     return node;
 }
 
-Node *parse_unary_minus(TokenDynArray list)
+Node *parse_unary_minus(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -733,7 +766,7 @@ Node *parse_unary_minus(TokenDynArray list)
     return n;
 }
 
-Node *parse_pow(TokenDynArray list)
+Node *parse_pow(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -749,7 +782,7 @@ Node *parse_pow(TokenDynArray list)
     return n;
 }
 
-Node *parse_unary_complement(TokenDynArray list)
+Node *parse_unary_complement(DynArray list)
 {
     parser_level++;
     if (parser_debug)
@@ -765,7 +798,7 @@ Node *parse_unary_complement(TokenDynArray list)
     return n;
 }
 
-Node *parse_call(TokenDynArray list)
+Node *parse_call(DynArray list)
 {
     // left = function id | token = "(" | right = null | extra = null
     parser_level++;
@@ -787,7 +820,7 @@ Node *parse_call(TokenDynArray list)
             printf("> operator function call( %% found at %d!\n", parser_index);
         }
         Node *left = node;
-        Token t = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
         parser_index += 1; // opening (
         if (!check_token_value(list, parser_index, TOKEN_SEPARATOR, ")"))
         {
@@ -796,7 +829,7 @@ Node *parse_call(TokenDynArray list)
         parser_index += 1; // closing )
         Node *right = NULL;
         node = (Node *)memory_get(sizeof(Node));
-        node->token = t;
+        node->token = *t;
         node->left = left;
         node->right = right;
         node->type = NODE_FUNCTION_CALL;
@@ -806,7 +839,21 @@ Node *parse_call(TokenDynArray list)
     return node;
 }
 
-Node *parse_identifier_left_aff(TokenDynArray list, ValueType type_to_set)
+void print_root_scope()
+{
+    printf("root_scope information:");
+    printf("adress = %p\n", &root_scope);
+    printf("capacity = %d\n", root_scope.capacity);
+    printf("count = %d\n", root_scope.count);
+    uint32_t s = dyn_array_size(root_scope);
+    for (uint32_t i = 0; i < s; i++)
+    {
+        Variable *v = dyn_array_get(root_scope, i);
+        general_message(EL_DEBUG, "%d. Variable %$ of type %s\n", i, v->text, VALUE_TYPE_STRING[v->type]);
+    }
+}
+
+Node *parse_identifier_left_aff(DynArray list, ValueType type_to_set)
 {
     Node *node = NULL;
     parser_level++;
@@ -815,37 +862,37 @@ Node *parse_identifier_left_aff(TokenDynArray list, ValueType type_to_set)
         general_message(FATAL, "This function is only for left part of affectation.\n");
     }
     node = (Node *)memory_get(sizeof(Node));
-    node->token = token_dyn_array_get(list, parser_index);
+    Token *t = dyn_array_get(list, parser_index);
+    node->token = *t;
     node->left = NULL;
     node->right = NULL;
     node->type = NODE_IDENTIFIER;
     node->value_type = type_to_set;
     parser_index += 1;
     // Registering or checking variable
-    char *tval = token_value(node->token);
-    Value var_name = cstring_init(tval);
-    Value value_type_to_set = type_init(type_to_set);
-    value_print_message("Searching for key %v in root_scope.\n", var_name);
-    dict_print(root_scope);
-    if (dict_key_exists(root_scope, var_name))
+    int32_t index = search_var(root_scope, node->token.text);
+    if (index != -1)
     {
-        printf("Variable found in root_scope!\n");
-        Value value_type_registered = dict_get(root_scope, var_name);
-        if (!equality(value_type_to_set, value_type_registered) && (value_type_registered.as.integer != VALUE_FLOAT || value_type_to_set.as.integer != VALUE_INTEGER)) // type must be the same except if we try to put an int into a float
+        general_message(EL_DEBUG, "Variable %$ found in root_scope!\n", node->token.text);
+        Variable *v = dyn_array_get(root_scope, index);
+        general_message(EL_DEBUG, "Variable of type %s, setting it to a %s\n", VALUE_TYPE_STRING[v->type], VALUE_TYPE_STRING[type_to_set]);
+        if ((type_to_set == VALUE_INTEGER && v->type == VALUE_FLOAT) || type_to_set != v->type) // type must be the same except if we try to put an int into a float
         {
-            general_message(FATAL, "Impossible to put a value of type %s into the variable %s of type %s", VALUE_TYPE_STRING[value_type_to_set.as.integer], tval, VALUE_TYPE_STRING[value_type_registered.as.integer]);
+            general_message(FATAL, "Impossible to put a value of type %s into the variable %$ of type %s", VALUE_TYPE_STRING[type_to_set], v->text, VALUE_TYPE_STRING[v->type]);
         }
     }
     else
     {
-        printf("Variable not found in root_scope! Adding:\n");
-        dict_set(root_scope, var_name, value_type_to_set);
-        dict_print(root_scope);
+        general_message(EL_DEBUG, "Variable %$ not found in root_scope! Adding it.\n", node->token.text);
+        Variable v;
+        v.type = type_to_set;
+        v.text = t->text;
+        dyn_array_append_sorted(&root_scope, &v, variable_sup);
     }
     return node;
 }
 
-Node *parse_parenthesis_expr(TokenDynArray list)
+Node *parse_parenthesis_expr(DynArray list)
 {
     Node *node = NULL;
     parser_level++;
@@ -883,7 +930,7 @@ Node *parse_parenthesis_expr(TokenDynArray list)
     return node;
 }
 
-Node *parse_litteral(TokenDynArray list)
+Node *parse_litteral(DynArray list)
 {
     Node *node = NULL;
     parser_level++;
@@ -903,7 +950,8 @@ Node *parse_litteral(TokenDynArray list)
             printf("> litteral integer found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
+        node->token = *t;
         // printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
         node->left = NULL;
         node->right = NULL;
@@ -919,7 +967,8 @@ Node *parse_litteral(TokenDynArray list)
             printf("> litteral flaot found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
+        node->token = *t;
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_FLOAT;
@@ -934,7 +983,8 @@ Node *parse_litteral(TokenDynArray list)
             printf("> litteral boolean found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
+        node->token = *t;
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_BOOLEAN;
@@ -949,7 +999,8 @@ Node *parse_litteral(TokenDynArray list)
             printf("> litteral string found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
+        node->token = *t;
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_STRING;
@@ -964,24 +1015,29 @@ Node *parse_litteral(TokenDynArray list)
             printf("> litteral identifier found at %d\n", parser_index);
         }
         node = (Node *)memory_get(sizeof(Node));
-        node->token = token_dyn_array_get(list, parser_index);
+        Token *t = dyn_array_get(list, parser_index);
+        node->token = *t;
         node->left = NULL;
         node->right = NULL;
         node->type = NODE_IDENTIFIER;
         // List of var with their type
-        char *tval = token_value(node->token);
-        Value key = cstring_init(tval);
-        if (dict_key_exists(root_scope, key))
+        general_message(EL_DEBUG, "Searching for var %$\n", t->text);
+        uint32_t index = search_var(root_scope, t->text);
+        if (index != -1)
         {
-            dict_print(root_scope);
-            Value value = dict_get(root_scope, key);
-            node->value_type = value.as.integer;
+            Variable * v = dyn_array_get(root_scope, index);
+            node->value_type = v->type;
         }
         else
         {
-            general_message(FATAL, "Name '%s' is not defined in current scope.", tval); // node->token
+            uint32_t s = dyn_array_size(root_scope);
+            for (uint32_t i = 0; i < s; i++)
+            {
+                Variable * v = dyn_array_get(root_scope, i);
+                general_message(EL_DEBUG, "%d. Variable %$ of type %s\n", i, v->text, VALUE_TYPE_STRING[v->type]);
+            }
+            general_message(FATAL, "Variable '%$' is not defined in current scope.", t->text);
         }
-        cstring_delete(key);
         parser_index += 1;
     }
     else
@@ -1011,7 +1067,7 @@ void node_to_dot_sub(Node *node, FILE *f, int father, int num, const char *overl
     fprintf(f, "        n%d ;\n", num);
     if (node->token.type == TOKEN_KEYWORD)
     {
-        fprintf(f, "        n%d [label=\"%.*s\" fontname=\"Helvetica,Arial,sans-serif bold\"]\n", num, node->token.count, node->token.text + node->token.start);
+        fprintf(f, "        n%d [label=\"%.*s\" fontname=\"Helvetica,Arial,sans-serif bold\"]\n", num, node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (overload != NULL)
     {
@@ -1019,7 +1075,7 @@ void node_to_dot_sub(Node *node, FILE *f, int father, int num, const char *overl
     }
     else
     {
-        fprintf(f, "        n%d [label=\"%.*s\"]\n", num, node->token.count, node->token.text + node->token.start);
+        fprintf(f, "        n%d [label=\"%.*s\"]\n", num, node->token.text.length, node->token.text.source + node->token.text.start);
     }
     // Link to the father node
     if (father != 0)
@@ -1098,35 +1154,35 @@ void node_print_level(Node *node, uint32_t level)
     spaces(level);
     if (node->type == NODE_BINARY_OPERATOR)
     {
-        printf("BINARY OPERATOR [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
+        printf("BINARY OPERATOR [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.text.length, node->token.text.source + node->token.text.start);
         node_print_level(node->left, level + 1);
         node_print_level(node->right, level + 1);
     }
     else if (node->type == NODE_INTEGER)
     {
         // printf("@text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
-        printf("INTEGER %.*s\n", node->token.count, node->token.text + node->token.start);
+        printf("INTEGER %.*s\n", node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (node->type == NODE_FLOAT)
     {
-        printf("FLOAT %.*s\n", node->token.count, node->token.text + node->token.start);
+        printf("FLOAT %.*s\n", node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (node->type == NODE_BOOLEAN)
     {
-        printf("BOOLEAN %.*s\n", node->token.count, node->token.text + node->token.start);
+        printf("BOOLEAN %.*s\n", node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (node->type == NODE_STRING)
     {
-        printf("STRING %.*s\n", node->token.count, node->token.text + node->token.start);
+        printf("STRING %.*s\n", node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (node->type == NODE_IDENTIFIER)
     {
-        printf("IDENTIFIER [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.count, node->token.text + node->token.start);
+        printf("IDENTIFIER [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.text.length, node->token.text.source + node->token.text.start);
     }
     else if (node->type == NODE_FUNCTION_CALL)
     {
         printf("FUNCTION CALL [%s]", VALUE_TYPE_STRING[node->value_type]);
-        token_print_value(node->left->token);
+        text_part_print(node->left->token.text);
         printf("\n");
     }
     else if (node->type == NODE_BLOCK)

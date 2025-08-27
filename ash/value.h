@@ -25,7 +25,8 @@ typedef enum
     VALUE_RECORD  = 9,
     VALUE_CDATA   = 10,
     VALUE_TYPE    = 11, // autoref
-    VALUE_ANY     = 12
+    VALUE_FUNCTION = 12,
+    VALUE_ANY     = 13
 } ValueType;
 
 typedef struct _String
@@ -56,7 +57,7 @@ typedef struct _Value
 // Constantes
 //-----------------------------------------------------------------------------
 
-extern const Value NIL;
+extern const Value THE_NIL;
 const extern char *VALUE_TYPE_STRING[];
 
 //-----------------------------------------------------------------------------

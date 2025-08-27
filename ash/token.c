@@ -127,17 +127,6 @@ Token token_init(TextPart text, uint32_t line, TokenType type)
     return t;
 }
 
-char *token_value(Token tok)
-{
-    char *s = (char *)memory_get(tok.text.length + 1);
-    memset(s, '\0', tok.text.length + 1);
-    for (unsigned int i = 0; i < tok.text.length; i++)
-    {
-        s[i] = tok.text.source[tok.text.start + i];
-    }
-    return s;
-}
-
 void token_print(Token tok)
 {
     // Using TOKEN_TYPE_TO_STRING_MAX_LENGTH value
@@ -159,4 +148,9 @@ void token_print_text(Token tok)
 bool token_eq(Token t1, Token t2)
 {
     return text_part_eq(t1.text, t2.text) && t1.line == t2.line && t1.type == t2.type;
+}
+
+bool token_cmp(Token t, const char *to)
+{
+    return text_part_cmp(t.text, to);
 }

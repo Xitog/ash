@@ -39,7 +39,7 @@ typedef enum _TokenType
 
 typedef struct _TextPart
 {
-    const char * source;
+    const char *source;
     uint32_t start;
     uint32_t length;
 } TextPart;
@@ -53,7 +53,7 @@ typedef struct _Token
 
 typedef struct _TokenDynArray
 {
-    Token * data;
+    Token *data;
     uint32_t count;
     uint32_t capacity;
 } TokenDynArray;
@@ -69,7 +69,7 @@ const extern char *OPERATOR_ELEMENTS;
 const extern char *HEXADECIMAL_ELEMENTS;
 const extern char *SEPARATOR_ELEMENTS;
 
-const extern char* NIL;
+const extern char *NIL;
 const extern char *BOOLEANS[];
 const extern char *OPERATORS[];
 const extern char *KEYWORDS[];
@@ -115,8 +115,8 @@ const extern char *KEYWORDS[];
 
 // TextPart functions
 
-TextPart text_part_init(const char * const text, uint32_t start, uint32_t length);
-bool text_part_cmp(TextPart text, const char * to);
+TextPart text_part_init(const char *const text, uint32_t start, uint32_t length);
+bool text_part_cmp(TextPart text, const char *to);
 bool text_part_cmps(TextPart text, const char *array_to[], uint32_t size);
 void text_part_print(TextPart tp);
 bool text_part_eq(TextPart tp1, TextPart tp2);
@@ -124,9 +124,9 @@ bool text_part_eq(TextPart tp1, TextPart tp2);
 // Token functions
 
 Token token_init(TextPart text, uint32_t line, TokenType type);
-char *token_value(Token tok);
 void token_print(Token tok);
 void token_print_text(Token tok);
 bool token_eq(Token t1, Token t2);
+bool token_cmp(Token t, const char *to);
 
 #endif

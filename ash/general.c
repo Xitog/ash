@@ -98,6 +98,12 @@ void general_message(ErrorLevel lvl, char *message, ...)
                 token_print(t);
                 c++;
             }
+            else if (message[c + 1] == '$')
+            {
+                TextPart tp = va_arg(args, TextPart);
+                text_part_print(tp);
+                c++;
+            }
             else
             {
                 printf("%c", message[c]);

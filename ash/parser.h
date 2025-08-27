@@ -11,10 +11,9 @@
 #include <stdint.h>
 #include "token.h"
 #include "value.h"
-#include "dict.h"
 
 extern uint8_t DEBUG_MODE;
-extern Dict * root_scope;
+extern DynArray root_scope;
 
 typedef enum _NodeType
 {
@@ -46,6 +45,12 @@ typedef struct
     Node *root;
 } AST;
 
+typedef struct _Variable
+{
+    TextPart text;
+    ValueType type;
+} Variable;
+
 bool node_is_type(Node * node, NodeType type);
 void node_print(Node *node);
 void node_print_level(Node *node, uint32_t level);
@@ -53,44 +58,47 @@ void node_print_level(Node *node, uint32_t level);
 extern unsigned int parser_index;
 const extern char *NODE_TYPE_REPR_STRING[];
 
-bool check_token_type(TokenDynArray list, uint32_t index, TokenType expected);
-bool check_token_value(TokenDynArray list, uint32_t index, TokenType expected_type, const char *expected_value);
+bool check_token_type(DynArray list, uint32_t index, TokenType expected);
+bool check_token_value(DynArray list, uint32_t index, TokenType expected_type, const char *expected_value);
 
 bool parser_set_debug(bool debug);
 bool parser_get_debug();
 
-AST *parse(TokenDynArray list);
+void parser_init();
+AST *parse(DynArray list);
 
-Node *parse_block(TokenDynArray list);
-Node *parse_if(TokenDynArray list);
-Node *parse_while(TokenDynArray list);
-Node *parse_expression(TokenDynArray list);
-Node *parse_combined_affectation_binary(TokenDynArray list);
-Node *parse_combined_affectation_shift(TokenDynArray list);
-Node *parse_combined_affectation(TokenDynArray list);
-Node *parse_affectation(TokenDynArray list);
-Node *parse_interval(TokenDynArray list);
-Node *parse_logical_or(TokenDynArray list);
-Node *parse_logical_and(TokenDynArray list);
-Node *parse_equality(TokenDynArray list);
-Node *parse_comparison(TokenDynArray list);
-Node *parse_binary_or_xor(TokenDynArray list);
-Node *parse_binary_and(TokenDynArray list);
-Node *parse_shift(TokenDynArray list);
-Node *parse_addition_soustraction(TokenDynArray list);
-Node *parse_multiplication_division_modulo(TokenDynArray list);
-Node *parse_unary_minus(TokenDynArray list);
-Node *parse_pow(TokenDynArray list);
-Node *parse_unary_complement(TokenDynArray list);
+Node *parse_block(DynArray list);
+Node *parse_if(DynArray list);
+Node *parse_while(DynArray list);
+Node *parse_expression(DynArray list);
+Node *parse_combined_affectation_binary(DynArray list);
+Node *parse_combined_affectation_shift(DynArray list);
+Node *parse_combined_affectation(DynArray list);
+Node *parse_affectation(DynArray list);
+Node *parse_interval(DynArray list);
+Node *parse_logical_or(DynArray list);
+Node *parse_logical_and(DynArray list);
+Node *parse_equality(DynArray list);
+Node *parse_comparison(DynArray list);
+Node *parse_binary_or_xor(DynArray list);
+Node *parse_binary_and(DynArray list);
+Node *parse_shift(DynArray list);
+Node *parse_addition_soustraction(DynArray list);
+Node *parse_multiplication_division_modulo(DynArray list);
+Node *parse_unary_minus(DynArray list);
+Node *parse_pow(DynArray list);
+Node *parse_unary_complement(DynArray list);
 // [] .
-Node *parse_call(TokenDynArray list);
-Node *parse_identifier_left_aff(TokenDynArray list, ValueType type_to_set);
-Node *parse_parenthesis_expr(TokenDynArray list);
-Node *parse_litteral(TokenDynArray list);
+Node *parse_call(DynArray list);
+Node *parse_identifier_left_aff(DynArray list, ValueType type_to_set);
+Node *parse_parenthesis_expr(DynArray list);
+Node *parse_litteral(DynArray list);
 
 NodeType node_compute_type(Node *node);
 
 void ast_print(AST *tree);
 void ast_to_dot(AST *tree, const char * res);
+
+void print_root_scope();
 
 #endif

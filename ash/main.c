@@ -15,7 +15,6 @@
 #include "value.h"
 #include "token.h"
 #include "general.h"
-#include "dict.h"
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
@@ -24,7 +23,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.66";
+const char *VERSION = "0.0.67";
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -128,7 +127,7 @@ void read_utf8(char *s)
 bool g_debug = false;
 
 // old code not used anymore
-void log(const char * msg)
+void log(const char *msg)
 {
     if (g_debug)
     {
@@ -145,8 +144,8 @@ int main(int argc, char *argv[])
     bool output_dot = false;
     bool clear_space = true; // only on printing!
     bool do_parsing = true;
-    const char * OUTPUT_JSON_FILENAME = "output.json";
-    const char * OUTPUT_DOT_FILENAME = "output.dot";
+    const char *OUTPUT_JSON_FILENAME = "output.json";
+    const char *OUTPUT_DOT_FILENAME = "output.dot";
     // argv[0] est toujours ash.exe
     if (argc > 1)
     {
@@ -204,21 +203,23 @@ int main(int argc, char *argv[])
                 if (file_and_buffer)
                 {
                     printf("%s", buffer);
-                    TokenDynArray tda = lex(buffer, true, debug); // we clear spaces
-                    for (uint32_t count = 0; count < token_dyn_array_size(tda); count++)
+                    DynArray tda = lex(buffer, true, debug); // we clear spaces
+                    for (uint32_t count = 0; count < dyn_array_size(tda); count++)
                     {
-                        Token tok = token_dyn_array_get(tda, count);
-                        token_print(tok);
+                        Token *tok = dyn_array_get(tda, count);
+                        token_print(*tok);
                         printf("\n");
                     }
                     printf("- Parsing ----------------------------------\n");
+                    set_display_error(EL_DEBUG);
                     parser_set_debug(true);
-                    AST * ast = parse(tda);
+                    parser_init();
+                    AST *ast = parse(tda);
                     printf("- Abstract Syntax Tree ---------------------\n");
                     ast_print(ast);
                     printf("- Interpreting -----------------------------\n");
                     execute(ast); // const char * res =
-                    token_dyn_array_free(&tda);
+                    dyn_array_free(&tda);
                 }
             }
         }
@@ -231,6 +232,7 @@ int main(int argc, char *argv[])
     {
         const size_t line_length = 1024;
         char *line = memory_get(line_length);
+        parser_init();
         do
         {
             memset(line, '\0', line_length);
@@ -288,9 +290,14 @@ int main(int argc, char *argv[])
                 {
                     printf("Clear spaces from lexer output\n");
                 }
-                else{
+                else
+                {
                     printf("Keep spaces from lexer output\n");
                 }
+            }
+            else if (strcmp(line, "vars") == 0)
+            {
+                print_root_scope();
             }
             else if (strcmp(line, "parse") == 0)
             {
@@ -299,7 +306,8 @@ int main(int argc, char *argv[])
                 {
                     printf("Parser is ON\n");
                 }
-                else{
+                else
+                {
                     printf("Parser is OFF\n");
                 }
             }
@@ -312,22 +320,22 @@ int main(int argc, char *argv[])
                     "clear : discard blank tokens\n"
                     "json  : export to %s file the last command\n"
                     "dot   : export to %s file the next command\n"
+                    "vars  : list variables in root scope\n"
                     "parse : activate or desactivate parsing\n"
                     "exit  : exit the REPL\n",
                     OUTPUT_JSON_FILENAME,
-                    OUTPUT_DOT_FILENAME
-                );
+                    OUTPUT_DOT_FILENAME);
             }
             else if (strcmp(line, "exit") != 0)
             {
                 general_message(EL_DEBUG, "Command : |%s| (#%d)", line, count);
                 general_message(EL_DEBUG, "- Token list --------------------------------");
-                TokenDynArray list = lex(line, clear_space, debug);
+                DynArray list = lex(line, clear_space, debug);
                 if (output_json)
                 {
                     printf("- Outputting to JSON ---\n");
                     unsigned int max_length = TOKEN_TYPE_TO_STRING_MAX_LENGTH;
-                    //char *buffer = NULL;
+                    // char *buffer = NULL;
                     FILE *file;
                     errno_t err = fopen_s(&file, OUTPUT_JSON_FILENAME, "w");
                     if (err != 0)
@@ -340,38 +348,38 @@ int main(int argc, char *argv[])
                     }
                     fprintf(file, "%s", "[\n");
                     count = 0;
-                    for (count = 0; count < token_dyn_array_size(list); count++)
+                    for (count = 0; count < dyn_array_size(list); count++)
                     {
                         if (count > 0)
                         {
                             fprintf(file, ",\n");
                         }
-                        Token tok = token_dyn_array_get(list, count);
+                        Token *tok = dyn_array_get(list, count);
                         fprintf(file, "    {");
-                        fprintf(file, "        \"start\": %3d,", tok.text.start);
-                        fprintf(file, "        \"count\": %3d,", tok.text.length);
-                        fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_TO_STRING[tok.type]);
-                        for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_TO_STRING[tok.type]); j++)
+                        fprintf(file, "        \"start\": %3d,", tok->text.start);
+                        fprintf(file, "        \"count\": %3d,", tok->text.length);
+                        fprintf(file, "        \"type\": \"%s\",", TOKEN_TYPE_TO_STRING[tok->type]);
+                        for (unsigned int j = 0; j < max_length - strlen(TOKEN_TYPE_TO_STRING[tok->type]); j++)
                         {
                             fprintf(file, " ");
                         }
-                        fprintf(file, "        \"value\": \"%.*s\"", tok.text.length, tok.text.source + tok.text.start);
+                        fprintf(file, "        \"value\": \"%.*s\"", tok->text.length, tok->text.source + tok->text.start);
                         fprintf(file, "}");
                     }
                     fprintf(file, "%s", "\n]\n");
                     fclose(file);
                 }
-                if (do_parsing && token_dyn_array_size(list) > 0)
+                if (do_parsing && dyn_array_size(list) > 0)
                 {
                     general_message(EL_DEBUG, "- Parsing ----------------------------------");
-                    AST * ast = parse(list);
+                    AST *ast = parse(list);
                     general_message(EL_DEBUG, "- Abstract Syntax Tree ---------------------");
                     if (debug)
                     {
                         ast_print(ast);
                     }
                     general_message(EL_DEBUG, "- Interpreting -----------------------------");
-                    const char * res = execute(ast);
+                    const char *res = execute(ast);
                     if (output_dot)
                     {
                         general_message(EL_DEBUG, "- Writing dot file -------------------------");
@@ -391,7 +399,7 @@ int main(int argc, char *argv[])
                         output_dot = false;
                     }
                 }
-                token_dyn_array_free(&list);
+                dyn_array_free(&list);
             }
         } while (strcmp(line, "exit") != 0);
         fflush(stdout);
