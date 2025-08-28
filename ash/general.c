@@ -1,3 +1,5 @@
+#define DEBUG
+
 #include "general.h"
 
 ErrorLevel display_error_level = LOG;
@@ -134,6 +136,9 @@ char *string_copy(const char *source)
 
 DynArray dyn_array_init(size_t element_size)
 {
+#ifdef DEBUG
+    printf("[dyn_array_init] Creating a new dynamic array with %d element size.\n", element_size);
+#endif
     DynArray da;
     da.capacity = 8;
     da.count = 0;
@@ -168,18 +173,33 @@ void dyn_array_append_sorted(DynArray *da, void *data, bool (*is_sup)(void *e1, 
 {
     if (da->count == 0)
     {
+#ifdef DEBUG
+        printf("[dyn_array_append_sorted] The dynamic array is empty -> append called\n");
+#endif
         dyn_array_append(da, data);
     }
     else
     {
+#ifdef DEBUG
+        printf("[dyn_array_append_sorted] The dynamic array is not empty: %d/%d\n", da->count, da->capacity);
+#endif
         // Passing all elements until the element is not superior to the current
         bool inserted = false;
-        uint32_t size = dyn_array_size(*da);
+        uint32_t size = da->count;
         for (uint32_t i = 0; i < size; i++)
         {
+#ifdef DEBUG
+            printf("[dyn_array_append_sorted] Getting element %d\n", i);
+#endif
             void *elt_test = dyn_array_get(*da, i);
+#ifdef DEBUG
+            printf("[dyn_array_append_sorted] Element %d fetched at %p\n", i, elt_test);
+#endif
             if (is_sup(elt_test, data))
             {
+#ifdef DEBUG
+                printf("[dyn_array_append_sorted] Element fetched is superior to inserted element, insert called at %d\n", i);
+#endif
                 dyn_array_insert(da, data, i);
                 inserted = true;
                 break;
@@ -187,6 +207,9 @@ void dyn_array_append_sorted(DynArray *da, void *data, bool (*is_sup)(void *e1, 
         }
         if (!inserted)
         {
+#ifdef DEBUG
+            printf("[dyn_array_append_sorted] Not superior element found in the dynamic array -> append called\n");
+#endif
             dyn_array_append(da, data);
         }
     }
@@ -208,11 +231,23 @@ void dyn_array_insert(DynArray *da, void *data, uint32_t index)
             general_message(FATAL, "Out of memory when reallocating TokenDynArray.");
         }
     }
+#ifdef DEBUG
+    for (uint32_t i = 0; i < da->count; i++)
+    {
+        printf("%d. %p\n", i, (char *)da->data + i);
+    }
+#endif
     // On pousse
-    char * dest = (char *) da->data + index + 1;
-    char * src = (char *) da->data + index;
+    char *dest = (char *)da->data + (index + 1) * da->element_size;
+    char *src = (char *)da->data + index * da->element_size;
+#ifdef DEBUG
+    printf("[dyn_array_insert] pushing from source : %p to destination : %p\n", src, dest);
+#endif
     memmove(dest, src, da->element_size * (da->count - index + 1));
     // On copie
+#ifdef DEBUG
+    printf("[dyn_array_insert] copying inserted element at %p to destination : %p\n", data, src);
+#endif
     memmove(src, data, da->element_size);
     da->count += 1;
 }
@@ -237,19 +272,19 @@ void *dyn_array_get(DynArray da, int32_t index)
     }
 }
 
-void dyn_array_delete(DynArray * da, int32_t index)
+void dyn_array_delete(DynArray *da, int32_t index)
 {
     if (index >= 0)
     {
-        if (index >= (int64_t) da->count)
+        if (index >= (int64_t)da->count)
         {
             general_message(FATAL, "delete : Element at index %d is not defined (count = %d)", index, da->count);
         }
-        if (index != ((int64_t) da->count) - 1)
+        if (index != ((int64_t)da->count) - 1)
         {
-            char * dest = (char *) da->data + (index * da->element_size);
-            char * src = (char *) da->data + (index + 1) * da->element_size;
-            //printf("Moving from %p to %p\n", src, dest);
+            char *dest = (char *)da->data + (index * da->element_size);
+            char *src = (char *)da->data + (index + 1) * da->element_size;
+            // printf("Moving from %p to %p\n", src, dest);
             memmove(dest, src, da->element_size * (da->count - index + 1));
         }
         // Si on veut supprimer le dernier élément, il suffit d'enlever 1 au compteur
