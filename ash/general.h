@@ -42,6 +42,10 @@ char *string_copy(const char *source);
 
 // Dynamic array
 
+#define CAPACITY_BASE 8
+#define CAPACITY_MULTIPLIER 2
+
+DynArray dyn_array_init_preset(size_t element_size, uint32_t length);
 DynArray dyn_array_init(size_t element_size);
 void dyn_array_free(DynArray *da);
 void dyn_array_append(DynArray *da, void *d);
@@ -51,5 +55,6 @@ void *dyn_array_get(DynArray da, int32_t index);
 void dyn_array_delete(DynArray *da, int32_t index);
 void dyn_array_info(DynArray da, void (*display)(void *element));
 uint32_t dyn_array_size(DynArray da);
+void dyn_array_clear(DynArray *da);
 
 #endif

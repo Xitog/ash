@@ -134,13 +134,26 @@ char *string_copy(const char *source)
     return dest;
 }
 
+DynArray dyn_array_init_preset(size_t element_size, uint32_t length)
+{
+#ifdef DEBUG
+    printf("[dyn_array_init_preset] Creating a new dynamic array with %d element size and %d elements.\n", element_size, length);
+#endif
+    DynArray da;
+    da.capacity = length;
+    da.count = 0;
+    da.data = malloc(element_size * da.capacity);
+    da.element_size = element_size;
+    return da;
+}
+
 DynArray dyn_array_init(size_t element_size)
 {
 #ifdef DEBUG
     printf("[dyn_array_init] Creating a new dynamic array with %d element size.\n", element_size);
 #endif
     DynArray da;
-    da.capacity = 8;
+    da.capacity = CAPACITY_BASE;
     da.count = 0;
     da.data = malloc(element_size * da.capacity);
     da.element_size = element_size;
@@ -158,7 +171,7 @@ void dyn_array_append(DynArray *da, void *data)
 {
     if (da->count + 1 == da->capacity)
     {
-        da->capacity = da->capacity * 2;
+        da->capacity = da->capacity * CAPACITY_MULTIPLIER;
         da->data = realloc(da->data, da->element_size * da->capacity);
         if (da->data == NULL)
         {
@@ -307,4 +320,13 @@ void dyn_array_info(DynArray da, void (*display)(void *element))
 uint32_t dyn_array_size(DynArray da)
 {
     return da.count;
+}
+
+void dyn_array_clear(DynArray *da)
+{
+#ifdef DEBUG
+        printf("[dyn_array_clear] Clearing dynamic array at %p\n", da);
+#endif
+    da->count = 0;
+    memset(da->data, '\0', da->capacity);
 }

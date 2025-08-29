@@ -111,7 +111,19 @@ void text_part_print(TextPart tp)
 
 bool text_part_eq(TextPart tp1, TextPart tp2)
 {
-    return tp1.source == tp2.source && tp1.start == tp2.start && tp1.length == tp2.length;
+    if (tp1.length != tp2.length)
+    {
+        return false;
+    }
+    for (uint32_t i = 0; i < tp1.length; i++)
+    {
+        if (tp1.source[tp1.start + i] != tp2.source[tp2.start + i])
+        {
+            return false;
+        }
+    }
+    return true;
+    //return tp1.source == tp2.source && tp1.start == tp2.start && tp1.length == tp2.length;
 }
 
 //-----------------------------------------------------------------------------

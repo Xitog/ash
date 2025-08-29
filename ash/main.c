@@ -25,6 +25,9 @@
 
 const char *VERSION = "0.0.67";
 
+#define BUFFER_SIZE 4000
+#define COMMAND_SIZE 100
+
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
@@ -230,21 +233,23 @@ int main(int argc, char *argv[])
     }
     else
     {
-        const size_t line_length = 1024;
-        char *line = memory_get(line_length);
+        char *line = memory_get(BUFFER_SIZE);
+        memset(line, '\0', BUFFER_SIZE);
+        uint32_t index = 0;
         parser_init();
         do
         {
-            memset(line, '\0', line_length);
+            index += strlen(line);
             int c;
             uint32_t count = 0;
             printf(">>> ");
-            while ((c = getchar()) != '\n' && c != EOF && count < line_length - 1)
+            while ((c = getchar()) != '\n' && c != EOF && count < COMMAND_SIZE - 1)
             {
-                line[count] = (char)c;
+                line[count + index] = (char)c;
                 count += 1;
             }
-            if (strcmp(line, "debug") == 0)
+            printf("|%s| %d\n", line, index); // stop at \n
+            if (strcmp(line + index, "debug") == 0)
             {
                 debug = !debug;
                 parser_set_debug(debug);
@@ -259,7 +264,7 @@ int main(int argc, char *argv[])
                     general_message(LOG, "debug is OFF");
                 }
             }
-            else if (strcmp(line, "json") == 0)
+            else if (strcmp(line + index, "json") == 0)
             {
                 output_json = !output_json;
                 if (output_json)
@@ -271,7 +276,7 @@ int main(int argc, char *argv[])
                     printf("no producing json\n");
                 }
             }
-            else if (strcmp(line, "dot") == 0)
+            else if (strcmp(line + index, "dot") == 0)
             {
                 output_dot = !output_dot;
                 if (output_dot)
@@ -283,7 +288,7 @@ int main(int argc, char *argv[])
                     printf("DOT output desactivated.\n");
                 }
             }
-            else if (strcmp(line, "clear") == 0)
+            else if (strcmp(line + index, "clear") == 0)
             {
                 clear_space = !clear_space;
                 if (clear_space)
@@ -295,11 +300,11 @@ int main(int argc, char *argv[])
                     printf("Keep spaces from lexer output\n");
                 }
             }
-            else if (strcmp(line, "vars") == 0)
+            else if (strcmp(line + index, "vars") == 0)
             {
                 print_root_scope();
             }
-            else if (strcmp(line, "parse") == 0)
+            else if (strcmp(line + index, "parse") == 0)
             {
                 do_parsing = !do_parsing;
                 if (do_parsing)
@@ -311,7 +316,7 @@ int main(int argc, char *argv[])
                     printf("Parser is OFF\n");
                 }
             }
-            else if (strcmp(line, "help") == 0)
+            else if (strcmp(line + index, "help") == 0)
             {
                 printf("Ash %s available commands:\n", VERSION);
                 printf(
@@ -326,11 +331,11 @@ int main(int argc, char *argv[])
                     OUTPUT_JSON_FILENAME,
                     OUTPUT_DOT_FILENAME);
             }
-            else if (strcmp(line, "exit") != 0)
+            else if (strcmp(line + index, "exit") != 0)
             {
-                general_message(EL_DEBUG, "Command : |%s| (#%d)", line, count);
+                general_message(EL_DEBUG, "Command : |%s| (#%d)", line + index, count);
                 general_message(EL_DEBUG, "- Token list --------------------------------");
-                DynArray list = lex(line, clear_space, debug);
+                DynArray list = lex(line + index, clear_space, debug);
                 if (output_json)
                 {
                     printf("- Outputting to JSON ---\n");
@@ -401,7 +406,7 @@ int main(int argc, char *argv[])
                 }
                 dyn_array_free(&list);
             }
-        } while (strcmp(line, "exit") != 0);
+        } while (strcmp(line + index, "exit") != 0);
         fflush(stdout);
         memory_free(line);
     }
