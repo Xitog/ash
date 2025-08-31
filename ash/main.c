@@ -23,7 +23,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.67";
+const char *VERSION = "0.0.68";
 
 #define BUFFER_SIZE 4000
 #define COMMAND_SIZE 100
@@ -236,19 +236,24 @@ int main(int argc, char *argv[])
         char *line = memory_get(BUFFER_SIZE);
         memset(line, '\0', BUFFER_SIZE);
         uint32_t index = 0;
+        uint32_t count = 0;
         parser_init();
         do
         {
-            index += strlen(line);
+            if (count > 0) // after first command we separate each command by a \n
+            {
+                line[count + index] = '\n';
+                count += 1;
+            }
+            index += count;
+            count = 0;
             int c;
-            uint32_t count = 0;
             printf(">>> ");
             while ((c = getchar()) != '\n' && c != EOF && count < COMMAND_SIZE - 1)
             {
                 line[count + index] = (char)c;
                 count += 1;
             }
-            printf("|%s| %d\n", line, index); // stop at \n
             if (strcmp(line + index, "debug") == 0)
             {
                 debug = !debug;
@@ -304,6 +309,11 @@ int main(int argc, char *argv[])
             {
                 print_root_scope();
             }
+            else if (strcmp(line + index, "hist") == 0)
+            {
+                printf("Command history:\n");
+                printf("%s\n", line);
+            }
             else if (strcmp(line + index, "parse") == 0)
             {
                 do_parsing = !do_parsing;
@@ -326,6 +336,7 @@ int main(int argc, char *argv[])
                     "json  : export to %s file the last command\n"
                     "dot   : export to %s file the next command\n"
                     "vars  : list variables in root scope\n"
+                    "hist  : history of commands\n"
                     "parse : activate or desactivate parsing\n"
                     "exit  : exit the REPL\n",
                     OUTPUT_JSON_FILENAME,

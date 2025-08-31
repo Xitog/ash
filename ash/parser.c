@@ -849,7 +849,7 @@ void print_root_scope()
     for (uint32_t i = 0; i < s; i++)
     {
         Variable *v = dyn_array_get(root_scope, i);
-        general_message(EL_DEBUG, "%d. Variable %$ of type %s", i, v->text, VALUE_TYPE_STRING[v->type]);
+        general_message(LOG, "%d. Variable %$ of type %s", i, v->text, VALUE_TYPE_STRING[v->type]);
     }
 }
 
