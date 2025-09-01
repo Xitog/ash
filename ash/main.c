@@ -126,15 +126,57 @@ void read_utf8(char *s)
 // Main
 //-----------------------------------------------------------------------------
 
-// old code not used anymore
-bool g_debug = false;
-
-// old code not used anymore
-void log(const char *msg)
+void execute_file(char *filepath, bool debug)
 {
-    if (g_debug)
+    printf("Trying to open %s\n", filepath);
+    bool file_and_buffer = false;
+    char *buffer = NULL;
+    FILE *file;
+    errno_t err = fopen_s(&file, filepath, "rb");
+    if (err != 0)
     {
-        printf("%s\n", msg);
+        printf("Something bad happened\n");
+        if (file)
+        {
+            fclose(file);
+        }
+    }
+    else
+    {
+        fseek(file, 0, SEEK_END);
+        long size = ftell(file);
+        buffer = calloc(size + 1, sizeof(char));
+        if (buffer)
+        {
+            fseek(file, 0, SEEK_SET);
+            fread(buffer, 1, size, file);
+            file_and_buffer = true;
+        }
+        if (file != NULL)
+        {
+            fclose(file);
+        }
+        if (file_and_buffer)
+        {
+            printf("%s", buffer);
+            DynArray tda = lex(buffer, true, debug); // we clear spaces
+            for (uint32_t count = 0; count < dyn_array_size(tda); count++)
+            {
+                Token *tok = dyn_array_get(tda, count);
+                token_print(*tok);
+                printf("\n");
+            }
+            printf("- Parsing ----------------------------------\n");
+            set_display_error(EL_DEBUG);
+            parser_set_debug(true);
+            parser_init();
+            AST *ast = parse(tda);
+            printf("- Abstract Syntax Tree ---------------------\n");
+            ast_print(ast);
+            printf("- Interpreting -----------------------------\n");
+            execute(ast); // const char * res =
+            dyn_array_free(&tda);
+        }
     }
 }
 
@@ -175,56 +217,7 @@ int main(int argc, char *argv[])
         }
         else if (file_exists(argv[1]))
         {
-            printf("Trying to open %s\n", argv[1]);
-            bool file_and_buffer = false;
-            char *buffer = NULL;
-            FILE *file;
-            errno_t err = fopen_s(&file, argv[1], "rb");
-            if (err != 0)
-            {
-                printf("Something bad happened\n");
-                if (file)
-                {
-                    fclose(file);
-                }
-            }
-            else
-            {
-                fseek(file, 0, SEEK_END);
-                long size = ftell(file);
-                buffer = calloc(size + 1, sizeof(char));
-                if (buffer)
-                {
-                    fseek(file, 0, SEEK_SET);
-                    fread(buffer, 1, size, file);
-                    file_and_buffer = true;
-                }
-                if (file != NULL)
-                {
-                    fclose(file);
-                }
-                if (file_and_buffer)
-                {
-                    printf("%s", buffer);
-                    DynArray tda = lex(buffer, true, debug); // we clear spaces
-                    for (uint32_t count = 0; count < dyn_array_size(tda); count++)
-                    {
-                        Token *tok = dyn_array_get(tda, count);
-                        token_print(*tok);
-                        printf("\n");
-                    }
-                    printf("- Parsing ----------------------------------\n");
-                    set_display_error(EL_DEBUG);
-                    parser_set_debug(true);
-                    parser_init();
-                    AST *ast = parse(tda);
-                    printf("- Abstract Syntax Tree ---------------------\n");
-                    ast_print(ast);
-                    printf("- Interpreting -----------------------------\n");
-                    execute(ast); // const char * res =
-                    dyn_array_free(&tda);
-                }
-            }
+            execute_file(argv[1], debug);
         }
         else
         {
