@@ -23,7 +23,7 @@
 // Constantes
 //-----------------------------------------------------------------------------
 
-const char *VERSION = "0.0.68";
+const char *VERSION = "0.0.69";
 
 #define BUFFER_SIZE 4000
 #define COMMAND_SIZE 100

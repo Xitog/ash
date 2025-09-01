@@ -32,7 +32,6 @@ typedef enum _NodeType
 typedef struct _Node
 {
     struct _Node *left;
-    //struct _Node *middle;
     struct _Node *right;
     struct _Node *extra; // for if condition
     Token token;
@@ -51,6 +50,7 @@ typedef struct _Variable
     ValueType type;
 } Variable;
 
+Node *node_init(NodeType nt);
 bool node_is_type(Node * node, NodeType type);
 void node_print(Node *node);
 void node_print_level(Node *node, uint32_t level);

@@ -26,7 +26,8 @@ typedef enum
     VALUE_CDATA   = 10,
     VALUE_TYPE    = 11, // autoref
     VALUE_FUNCTION = 12,
-    VALUE_ANY     = 13
+    VALUE_ANY     = 13,
+    VALUE_NO_VALUE = 14
 } ValueType;
 
 typedef struct _String

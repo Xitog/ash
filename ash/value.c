@@ -20,7 +20,8 @@ const char *VALUE_TYPE_STRING[] = {
     "CDATA",
     "TYPE",
     "FUNCTION",
-    "ANY"};
+    "ANY",
+    "NO_VALUE"};
 
 //-----------------------------------------------------------------------------
 // Fonctions

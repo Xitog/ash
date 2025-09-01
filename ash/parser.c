@@ -1,5 +1,6 @@
 #include "parser.h"
 
+#define DEBUG
 #define SPACES 4
 
 const char *NODE_TYPE_REPR_STRING[] = {
@@ -19,6 +20,20 @@ DynArray root_scope;
 
 uint32_t parser_index = 0;
 uint32_t parser_level = 0;
+
+Node *node_init(NodeType nt)
+{
+    Node * n = (Node *)memory_get(sizeof(Node));
+    n->type = nt;
+    n->left = NULL;
+    n->right = NULL;
+    n->extra = NULL;
+    n->value_type = VALUE_ANY;
+#ifdef DEBUG
+    printf("Creation new node of type %s at %p\n", NODE_TYPE_REPR_STRING[n->type], n);
+#endif
+    return n;
+}
 
 bool node_is_type(Node *node, NodeType type)
 {
@@ -104,7 +119,7 @@ bool variable_sup(Variable *v1, Variable *v2)
     return v1->text.length < v2->text.length;
 }
 
-Variable function_hello = {.text = {.source = "hello", .length = 5, .start = 0}, .type = VALUE_FUNCTION};
+Variable function_hello = {.text = {.source = "hello", .length = 5, .start = 0}, .type = VALUE_NO_VALUE};
 
 void parser_init()
 {
@@ -175,9 +190,7 @@ Node *parse_block(DynArray list)
         {
             if (node_is_type(node, NODE_BLOCK))
             {
-                Node *block = (Node *)memory_get(sizeof(Node));
-                block->type = NODE_BLOCK;
-                block->value_type = VALUE_NIL;
+                Node *block = node_init(NODE_BLOCK);
                 block->token = node->right->token;
                 block->left = node->right;
                 block->right = next;
@@ -186,8 +199,7 @@ Node *parse_block(DynArray list)
             }
             else
             {
-                Node *block = (Node *)memory_get(sizeof(Node));
-                block->type = NODE_BLOCK;
+                Node *block = node_init(NODE_BLOCK);
                 block->value_type = VALUE_NIL;
                 block->token = node->token;
                 block->left = node;
@@ -209,8 +221,7 @@ Node *parse_if(DynArray list)
         tab();
         printf("> parse_if at %d\n", parser_index);
     }
-    Node *node = node = (Node *)memory_get(sizeof(Node));
-    node->type = NODE_IF;
+    Node *node = node_init(NODE_IF);
     node->value_type = VALUE_NIL;
     Token *t = dyn_array_get(list, parser_index);
     node->token = *t;  // keyword if
@@ -236,8 +247,7 @@ Node *parse_if(DynArray list)
             tab();
             printf("> parse ELSIF\n");
         }
-        Node *elsif = (Node *)memory_get(sizeof(Node));
-        elsif->type = NODE_IF;
+        Node *elsif = node_init(NODE_IF);
         elsif->value_type = VALUE_NIL;
         parser_index += 1; // pass keyword elsif
         elsif->extra = parse_expression(list);
@@ -283,7 +293,7 @@ Node *parse_while(DynArray list)
         tab();
         printf("> parse_while at %d\n", parser_index);
     }
-    Node *node = node = (Node *)memory_get(sizeof(Node));
+    Node *node = node_init(NODE_WHILE);
     node->type = NODE_WHILE;
     node->value_type = VALUE_NIL;
     Token *t = dyn_array_get(list, parser_index);
@@ -411,11 +421,10 @@ Node *parse_affectation(DynArray list)
         printf("Right value type = %s\n", VALUE_TYPE_STRING[right->value_type]);
         Node *left = parse_identifier_left_aff(list, right->value_type);
         parser_index = where_it_ends;
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         node->value_type = node->right->value_type;
     }
     else
@@ -471,11 +480,10 @@ Node *parse_logical_or(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_logical_and(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
@@ -505,11 +513,10 @@ Node *parse_logical_and(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_equality(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
@@ -539,11 +546,10 @@ Node *parse_equality(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
@@ -573,11 +579,10 @@ Node *parse_comparison(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_comparison(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         node->value_type = VALUE_BOOLEAN;
     }
     parser_level--;
@@ -655,11 +660,10 @@ Node *parse_addition_soustraction(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         if (node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_INTEGER)
         {
             node->value_type = VALUE_INTEGER;
@@ -706,11 +710,10 @@ Node *parse_multiplication_division_modulo(DynArray list)
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
         Node *right = parse_multiplication_division_modulo(list);
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_BINARY_OPERATOR;
         if (token_cmp(node->token, "*"))
         {
             if (node->left->value_type == VALUE_INTEGER && node->right->value_type == VALUE_INTEGER)
@@ -828,12 +831,18 @@ Node *parse_call(DynArray list)
         }
         parser_index += 1; // closing )
         Node *right = NULL;
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_FUNCTION_CALL);
         node->token = *t;
         node->left = left;
         node->right = right;
-        node->type = NODE_FUNCTION_CALL;
-        // :TODO: List of function to resolte type
+        // Resolve type. Function must be known before!
+        int32_t i = search_var(root_scope, node->left->token.text);
+        if (i == -1)
+        {
+            general_message(FATAL, "function %$ not found in root scope.", node->token.text);
+        }
+        Variable *v = dyn_array_get(root_scope, i);
+        node->value_type = v->type;
     }
     parser_level--;
     return node;
@@ -861,12 +870,9 @@ Node *parse_identifier_left_aff(DynArray list, ValueType type_to_set)
     {
         general_message(FATAL, "This function is only for left part of affectation.\n");
     }
-    node = (Node *)memory_get(sizeof(Node));
+    node = node_init(NODE_IDENTIFIER);
     Token *t = dyn_array_get(list, parser_index);
     node->token = *t;
-    node->left = NULL;
-    node->right = NULL;
-    node->type = NODE_IDENTIFIER;
     node->value_type = type_to_set;
     parser_index += 1;
     // Registering or checking variable
@@ -949,13 +955,10 @@ Node *parse_litteral(DynArray list)
             tab();
             printf("> litteral integer found at %d\n", parser_index);
         }
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_INTEGER);
         Token *t = dyn_array_get(list, parser_index);
         node->token = *t;
         // printf("parse_litteral check @text = %p, @count = %d, @start = %d\n", node->token.text, node->token.count, node->token.start);
-        node->left = NULL;
-        node->right = NULL;
-        node->type = NODE_INTEGER;
         node->value_type = VALUE_INTEGER;
         parser_index += 1;
     }
@@ -966,12 +969,9 @@ Node *parse_litteral(DynArray list)
             tab();
             printf("> litteral flaot found at %d\n", parser_index);
         }
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_FLOAT);
         Token *t = dyn_array_get(list, parser_index);
         node->token = *t;
-        node->left = NULL;
-        node->right = NULL;
-        node->type = NODE_FLOAT;
         node->value_type = VALUE_FLOAT;
         parser_index += 1;
     }
@@ -982,12 +982,9 @@ Node *parse_litteral(DynArray list)
             tab();
             printf("> litteral boolean found at %d\n", parser_index);
         }
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_BOOLEAN);
         Token *t = dyn_array_get(list, parser_index);
         node->token = *t;
-        node->left = NULL;
-        node->right = NULL;
-        node->type = NODE_BOOLEAN;
         node->value_type = VALUE_BOOLEAN;
         parser_index += 1;
     }
@@ -998,12 +995,9 @@ Node *parse_litteral(DynArray list)
             tab();
             printf("> litteral string found at %d\n", parser_index);
         }
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_STRING);
         Token *t = dyn_array_get(list, parser_index);
         node->token = *t;
-        node->left = NULL;
-        node->right = NULL;
-        node->type = NODE_STRING;
         node->value_type = VALUE_STRING;
         parser_index += 1;
     }
@@ -1014,12 +1008,9 @@ Node *parse_litteral(DynArray list)
             tab();
             printf("> litteral identifier found at %d\n", parser_index);
         }
-        node = (Node *)memory_get(sizeof(Node));
+        node = node_init(NODE_IDENTIFIER);
         Token *t = dyn_array_get(list, parser_index);
         node->token = *t;
-        node->left = NULL;
-        node->right = NULL;
-        node->type = NODE_IDENTIFIER;
         // List of var with their type
         general_message(EL_DEBUG, "Searching for var %$\n", t->text);
         uint32_t index = search_var(root_scope, t->text);
@@ -1181,7 +1172,7 @@ void node_print_level(Node *node, uint32_t level)
     }
     else if (node->type == NODE_FUNCTION_CALL)
     {
-        printf("FUNCTION CALL [%s]", VALUE_TYPE_STRING[node->value_type]);
+        printf("FUNCTION CALL [%s] ", VALUE_TYPE_STRING[node->value_type]);
         text_part_print(node->left->token.text);
         printf("\n");
     }
