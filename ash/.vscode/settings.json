@@ -5,6 +5,7 @@
         "string.h": "c",
         "stdlib.h": "c",
         "stdint.h": "c",
-        "lauxlib.h": "c"
+        "lauxlib.h": "c",
+        "interpreter.h": "c"
     }
 }

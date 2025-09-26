@@ -120,11 +120,13 @@ bool variable_sup(Variable *v1, Variable *v2)
 }
 
 Variable function_hello = {.text = {.source = "hello", .length = 5, .start = 0}, .type = VALUE_NO_VALUE};
+Variable function_read = {.text = {.source="read", .length = 4, .start = 0}, .type = VALUE_STRING};
 
 void parser_init()
 {
     root_scope = dyn_array_init(sizeof(Variable));
     dyn_array_append_sorted(&root_scope, &function_hello, variable_sup);
+    dyn_array_append_sorted(&root_scope, &function_read, variable_sup);
 }
 
 AST *parse(DynArray list)
@@ -704,12 +706,12 @@ Node *parse_multiplication_division_modulo(DynArray list)
         if (parser_debug)
         {
             tab();
-            printf("> operator *, /, %% found at %d!\n", parser_index);
+            printf("> operator *, /, %%, // found at %d!\n", parser_index);
         }
         Node *left = node;
         Token *t = dyn_array_get(list, parser_index);
         parser_index += 1;
-        Node *right = parse_multiplication_division_modulo(list);
+        Node *right = parse_unary_minus(list);
         node = node_init(NODE_BINARY_OPERATOR);
         node->token = *t;
         node->left = left;

@@ -18,6 +18,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
+#include "transpiler_php.h"
 
 //-----------------------------------------------------------------------------
 // Constantes
@@ -126,7 +127,7 @@ void read_utf8(char *s)
 // Main
 //-----------------------------------------------------------------------------
 
-void execute_file(char *filepath, bool debug)
+void execute_file(char *filepath, bool transpile, bool debug)
 {
     printf("Trying to open %s\n", filepath);
     bool file_and_buffer = false;
@@ -174,11 +175,30 @@ void execute_file(char *filepath, bool debug)
             printf("- Abstract Syntax Tree ---------------------\n");
             ast_print(ast);
             printf("- Interpreting -----------------------------\n");
-            execute(ast); // const char * res =
+            if (transpile)
+            {
+                transpile_php(ast, "output.php");
+            }
+            else
+            {
+                execute(ast); // const char * res =
+            }
             dyn_array_free(&tda);
         }
     }
 }
+
+typedef enum
+{
+    ACTION_UNDEFINED = 0,
+    ACTION_TRANSPILE = 1
+} Action;
+
+typedef enum
+{
+    LANG_UNDEFINED = 0,
+    LANG_PHP = 1
+} Lang;
 
 int main(int argc, char *argv[])
 {
@@ -192,7 +212,51 @@ int main(int argc, char *argv[])
     const char *OUTPUT_JSON_FILENAME = "output.json";
     const char *OUTPUT_DOT_FILENAME = "output.dot";
     // argv[0] est toujours ash.exe
-    if (argc > 1)
+    // Nouvelle façon libre de gérer les arguments
+    if (argc == 4)
+    {
+        Lang lang = LANG_UNDEFINED;
+        Action action = ACTION_UNDEFINED;
+        char * target = NULL;
+        for (uint16_t i = 0; i < argc; i++)
+        {
+            if (strcmp(argv[i], "-tr") == 0 || strcmp(argv[i], "--transpile") == 0)
+            {
+                action = ACTION_TRANSPILE;
+            }
+            else if (strcmp(argv[i], "php") == 0)
+            {
+                lang = LANG_PHP;
+            }
+            else if (file_exists(argv[i]))
+            {
+                target = argv[i];
+            }
+        }
+        if (action == ACTION_TRANSPILE)
+        {
+            if (target == NULL || !file_exists(target))
+            {
+                general_message(FATAL, "A valid target to transpile must be provided.");
+            }
+            if (lang == LANG_PHP)
+            {
+                execute_file(target, true, debug);
+                printf("Calling PHP:\n");
+                system("php .\\output.php");
+                printf("\n");
+            }
+            else
+            {
+                general_message(FATAL, "No target language defined.");
+            }
+        }
+        else
+        {
+            general_message(FATAL, "No action defined.");
+        }
+    }
+    else if (argc > 1)
     {
         if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
         {
@@ -217,7 +281,18 @@ int main(int argc, char *argv[])
         }
         else if (file_exists(argv[1]))
         {
-            execute_file(argv[1], debug);
+            bool transpile = false;
+            if (strcmp(argv[2], "-t") == 0 || strcmp(argv[2], "--transpile") == 0)
+            {
+                transpile = true;
+            }
+            execute_file(argv[1], transpile, debug);
+            if (transpile)
+            {
+                printf("Calling PHP:\n");
+                system("php .\\output.php");
+                printf("\n");
+            }
         }
         else
         {
