@@ -4,6 +4,7 @@
 #define SPACES 4
 
 const char *NODE_TYPE_REPR_STRING[] = {
+    "NODE_COMMENT",
     "NODE_INTEGER",
     "NODE_FLOAT",
     "NODE_BOOLEAN",
@@ -23,7 +24,7 @@ uint32_t parser_level = 0;
 
 Node *node_init(NodeType nt)
 {
-    Node * n = (Node *)memory_get(sizeof(Node));
+    Node *n = (Node *)memory_get(sizeof(Node));
     n->type = nt;
     n->left = NULL;
     n->right = NULL;
@@ -93,7 +94,7 @@ int32_t search_var(DynArray da, TextPart needle)
     uint32_t s = dyn_array_size(da);
     for (uint32_t i = 0; i < s; i++)
     {
-        TextPart * tp = dyn_array_get(da, i);
+        TextPart *tp = dyn_array_get(da, i);
         if (text_part_eq(needle, *tp))
         {
             return i;
@@ -120,7 +121,7 @@ bool variable_sup(Variable *v1, Variable *v2)
 }
 
 Variable function_hello = {.text = {.source = "hello", .length = 5, .start = 0}, .type = VALUE_NO_VALUE};
-Variable function_read = {.text = {.source="read", .length = 4, .start = 0}, .type = VALUE_STRING};
+Variable function_read = {.text = {.source = "read", .length = 4, .start = 0}, .type = VALUE_STRING};
 
 void parser_init()
 {
@@ -139,6 +140,15 @@ AST *parse(DynArray list)
     }
     AST *t = (AST *)memory_get(sizeof(AST));
     t->root = parse_block(list);
+    // Always a block
+    if (!node_is_type(t->root, NODE_BLOCK))
+    {
+        Node *block = node_init(NODE_BLOCK);
+        block->token = t->root->right->token;
+        block->left = t->root;
+        block->right = NULL;
+        t->root = block;
+    }
     if (parser_index != dyn_array_size(list))
     {
         general_message(FATAL, "Tokens not parsed at the end of the token list (>= %d).", parser_index);
@@ -167,7 +177,15 @@ Node *parse_block(DynArray list)
         {
             parser_index += 1;
         }
-        if (check_token_value(list, parser_index, TOKEN_KEYWORD, "if"))
+        if (check_token_type(list, parser_index, TOKEN_COMMENT))
+        {
+            next = node_init(NODE_COMMENT);
+            Token *t = dyn_array_get(list, parser_index);
+            next->token = *t;
+            next->value_type = VALUE_NO_VALUE;
+            parser_index += 1; // pass keyword comment
+        }
+        else if (check_token_value(list, parser_index, TOKEN_KEYWORD, "if"))
         {
             next = parse_if(list);
         }
@@ -1018,7 +1036,7 @@ Node *parse_litteral(DynArray list)
         uint32_t index = search_var(root_scope, t->text);
         if (index != -1)
         {
-            Variable * v = dyn_array_get(root_scope, index);
+            Variable *v = dyn_array_get(root_scope, index);
             node->value_type = v->type;
         }
         else
@@ -1026,7 +1044,7 @@ Node *parse_litteral(DynArray list)
             uint32_t s = dyn_array_size(root_scope);
             for (uint32_t i = 0; i < s; i++)
             {
-                Variable * v = dyn_array_get(root_scope, i);
+                Variable *v = dyn_array_get(root_scope, i);
                 general_message(EL_DEBUG, "%d. Variable %$ of type %s", i, v->text, VALUE_TYPE_STRING[v->type]);
             }
             general_message(FATAL, "Variable '%$' is not defined in current scope.", t->text);
@@ -1058,7 +1076,11 @@ const char *ELSE = "else";
 void node_to_dot_sub(Node *node, FILE *f, int father, int num, const char *overload)
 {
     fprintf(f, "        n%d ;\n", num);
-    if (node->token.type == TOKEN_KEYWORD)
+    if (node->type == NODE_BLOCK)
+    {
+        fprintf(f, "        n%d [label=\"block\" fontname=\"Helvetica,Arial,sans-serif bold\"]\n", num);
+    }
+    else if (node->token.type == TOKEN_KEYWORD)
     {
         fprintf(f, "        n%d [label=\"%.*s\" fontname=\"Helvetica,Arial,sans-serif bold\"]\n", num, node->token.text.length, node->token.text.source + node->token.text.start);
     }
@@ -1184,9 +1206,12 @@ void node_print_level(Node *node, uint32_t level)
         spaces(level + 1);
         printf("LEFT\n");
         node_print_level(node->left, level + 2);
-        spaces(level + 1);
-        printf("RIGHT\n"); // Never null !
-        node_print_level(node->right, level + 2);
+        if (node->right != NULL)
+        {
+            spaces(level + 1);
+            printf("RIGHT\n");
+            node_print_level(node->right, level + 2);
+        }
     }
     else if (node->type == NODE_IF)
     {
@@ -1214,9 +1239,13 @@ void node_print_level(Node *node, uint32_t level)
         printf("ACTION\n");
         node_print_level(node->left, level + 2);
     }
+    else if (node->type == NODE_COMMENT)
+    {
+        printf("COMMENT [%s] %.*s\n", VALUE_TYPE_STRING[node->value_type], node->token.text.length, node->token.text.source + node->token.text.start);
+    }
     else
     {
-        general_message(FATAL, "Parser: Unknown node type: %d", node->type);
+        general_message(FATAL, "Parser: Unknown node type: %s (%d)", NODE_TYPE_REPR_STRING[node->type], node->type);
     }
 }
 

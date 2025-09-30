@@ -127,7 +127,25 @@ void read_utf8(char *s)
 // Main
 //-----------------------------------------------------------------------------
 
-void execute_file(char *filepath, bool transpile, bool debug)
+void generate_dot(AST *ast, const char * res, const char * output_dot_filename)
+{
+    general_message(EL_DEBUG, "- Writing dot file -------------------------");
+    ast_to_dot(ast, res);
+    const size_t command_length = 1024;
+    char *command = memory_get(command_length);
+    memset(command, '\0', command_length);
+    general_message(EL_DEBUG, "DOT file written.\n");
+    sprintf_s(command, 1024, "dot -Tpng %s > output.png", output_dot_filename);
+    int err = system(command);
+    memory_free(command);
+    if (err != EXIT_SUCCESS)
+    {
+        printf("Unable to generate dot and png files.\n");
+    }
+    general_message(EL_DEBUG, "PNG file written.\n");
+}
+
+void execute_file(char *filepath, bool transpile, bool debug, bool dotfile, const char * output_dot_filename)
 {
     printf("Trying to open %s\n", filepath);
     bool file_and_buffer = false;
@@ -178,6 +196,10 @@ void execute_file(char *filepath, bool transpile, bool debug)
             if (transpile)
             {
                 transpile_php(ast, "output.php");
+                if (dotfile)
+                {
+                    generate_dot(ast, "", output_dot_filename);
+                }
             }
             else
             {
@@ -191,7 +213,11 @@ void execute_file(char *filepath, bool transpile, bool debug)
 typedef enum
 {
     ACTION_UNDEFINED = 0,
-    ACTION_TRANSPILE = 1
+    ACTION_TRANSPILE = 1,
+    ACTION_DISPLAY_HELP = 2,
+    ACTION_DISPLAY_VERSION = 3,
+    ACTION_EVAL = 4,
+    ACTION_REPL = 5
 } Action;
 
 typedef enum
@@ -200,9 +226,13 @@ typedef enum
     LANG_PHP = 1
 } Lang;
 
+void token_print_ptr(Token *tok)
+{
+    token_print(*tok);
+}
+
 int main(int argc, char *argv[])
 {
-    printf("Ash %s\n", VERSION);
     bool debug = false;
     parser_set_debug(debug);
     bool output_json = false;
@@ -211,95 +241,120 @@ int main(int argc, char *argv[])
     bool do_parsing = true;
     const char *OUTPUT_JSON_FILENAME = "output.json";
     const char *OUTPUT_DOT_FILENAME = "output.dot";
-    // argv[0] est toujours ash.exe
     // Nouvelle façon libre de gérer les arguments
-    if (argc == 4)
+    Lang lang = LANG_UNDEFINED;
+    Action action = ACTION_REPL;
+    char *target = NULL;
+    bool ignore_next = false;
+    uint16_t start_of_eval = 0;
+    // argv[0] is always ash.exe
+    for (uint16_t i = 1; i < argc; i++)
     {
-        Lang lang = LANG_UNDEFINED;
-        Action action = ACTION_UNDEFINED;
-        char * target = NULL;
-        for (uint16_t i = 0; i < argc; i++)
+        // Skip the argument of the option -t php
+        if (ignore_next)
         {
-            if (strcmp(argv[i], "-tr") == 0 || strcmp(argv[i], "--transpile") == 0)
+            ignore_next = false;
+            continue;
+        }
+        if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--transpile") == 0)
+        {
+            printf("Transpilation\n");
+            if (i + 1 >= argc)
             {
-                action = ACTION_TRANSPILE;
+                general_message(FATAL, "Option -t / --transpile requires a target language.");
             }
-            else if (strcmp(argv[i], "php") == 0)
+            action = ACTION_TRANSPILE;
+            ignore_next = true;
+            if (strcmp(argv[i + 1], "php") == 0)
             {
                 lang = LANG_PHP;
             }
-            else if (file_exists(argv[i]))
-            {
-                target = argv[i];
-            }
-        }
-        if (action == ACTION_TRANSPILE)
-        {
-            if (target == NULL || !file_exists(target))
-            {
-                general_message(FATAL, "A valid target to transpile must be provided.");
-            }
-            if (lang == LANG_PHP)
-            {
-                execute_file(target, true, debug);
-                printf("Calling PHP:\n");
-                system("php .\\output.php");
-                printf("\n");
-            }
             else
             {
-                general_message(FATAL, "No target language defined.");
+                general_message(FATAL, "Target language for transpilation not recognized.");
             }
+        }
+        else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
+        {
+            printf("Help\n");
+            action = ACTION_DISPLAY_HELP;
+        }
+        else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0)
+        {
+            printf("Version\n");
+            action = ACTION_DISPLAY_VERSION;
+        }
+        else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--eval") == 0)
+        {
+            printf("Evaluation\n");
+            action = ACTION_EVAL;
+            if (i + 1 >= argc)
+            {
+                general_message(FATAL, "Nothing to eval.");
+            }
+            start_of_eval = i + 1;
+        }
+        else if (strcmp(argv[i], "--dot") == 0)
+        {
+            printf("Dot output\n");
+            output_dot = true;
+        }
+        else if (file_exists(argv[i]))
+        {
+            printf("File argument\n");
+            target = argv[i];
         }
         else
         {
-            general_message(FATAL, "No action defined.");
+            general_message(FATAL, "Option not handled: %s", argv[i]);
         }
     }
-    else if (argc > 1)
+    // Actions
+    if (action == ACTION_TRANSPILE)
     {
-        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
+        if (target == NULL || !file_exists(target))
         {
-            printf("Ash help menu:\n");
-            printf("-h --help: display this help\n");
-            printf("-t --test: run the tests\n");
-            printf("-e --eval: tokenize a string\n");
-            printf("If no option is provided and one argument is provided, lex the provided file");
-            printf("If no option and no argument is provided, start a REPL loop\n");
-            printf("Type help in the REPL loop to get the available commands\n");
+            general_message(FATAL, "A valid target to transpile must be provided.");
         }
-        else if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--test") == 0)
+        if (lang == LANG_PHP)
         {
-            read_utf8("data.txt");
-        }
-        else if (strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "--eval") == 0)
-        {
-            for (int i = 2; i < argc; i++)
-            { // skip ash.exe and -e/--eval
-                lex(argv[i], false, debug);
-            }
-        }
-        else if (file_exists(argv[1]))
-        {
-            bool transpile = false;
-            if (strcmp(argv[2], "-t") == 0 || strcmp(argv[2], "--transpile") == 0)
-            {
-                transpile = true;
-            }
-            execute_file(argv[1], transpile, debug);
-            if (transpile)
-            {
-                printf("Calling PHP:\n");
-                system("php .\\output.php");
-                printf("\n");
-            }
+            execute_file(target, true, debug, output_dot, OUTPUT_DOT_FILENAME);
+            printf("Calling PHP:\n");
+            system("php .\\output.php");
+            printf("\n");
         }
         else
         {
-            printf("Unknown command or impossible to open file %s\n", argv[1]);
+            general_message(FATAL, "No target language defined.");
         }
     }
-    else
+    else if (action == ACTION_DISPLAY_HELP)
+    {
+        printf("Ash %s help menu:\n", VERSION);
+        printf("-h --help: display this help\n");
+        // printf("-t --test: run the tests\n");
+        printf("-t --transpile lang: transpile to target language\n");
+        printf("-e --eval: tokenize a string\n");
+        printf("-v --version: display version number\n");
+        printf("If no option is provided and one argument is provided, lex the provided file");
+        printf("If no option and no argument is provided, start a REPL loop\n");
+        printf("Type help in the REPL loop to get the available commands\n");
+    }
+    else if (action == ACTION_DISPLAY_VERSION)
+    {
+        printf("Ash %s\n", VERSION);
+    }
+    else if (action == ACTION_EVAL)
+    {
+        for (int i = start_of_eval; i < argc; i++)
+        {
+            printf("Lexing %s:\n", argv[i]);
+            DynArray da = lex(argv[i], false, debug);
+            printf("Result:\n");
+            dyn_array_info(da, token_print_ptr);
+        }
+    }
+    else if (action == ACTION_REPL)
     {
         char *line = memory_get(BUFFER_SIZE);
         memset(line, '\0', BUFFER_SIZE);
@@ -466,20 +521,7 @@ int main(int argc, char *argv[])
                     const char *res = execute(ast);
                     if (output_dot)
                     {
-                        general_message(EL_DEBUG, "- Writing dot file -------------------------");
-                        ast_to_dot(ast, res);
-                        const size_t command_length = 1024;
-                        char *command = memory_get(command_length);
-                        memset(command, '\0', command_length);
-                        general_message(EL_DEBUG, "DOT file written.\n");
-                        sprintf_s(command, 1024, "dot -Tpng %s > output.png", OUTPUT_DOT_FILENAME);
-                        int err = system(command);
-                        memory_free(command);
-                        if (err != EXIT_SUCCESS)
-                        {
-                            printf("Unable to generate dot and png files.\n");
-                        }
-                        general_message(EL_DEBUG, "PNG file written.\n");
+                        generate_dot(ast, res, OUTPUT_DOT_FILENAME);
                         output_dot = false;
                     }
                 }
@@ -489,6 +531,12 @@ int main(int argc, char *argv[])
         fflush(stdout);
         memory_free(line);
     }
+    else
+    {
+        general_message(FATAL, "No action defined.");
+    }
+    // read_utf8("data.txt");
+    // printf("Unknown command or impossible to open file %s\n", argv[1]);
     memory_summary();
     printf("End of program Ash v%s.\n", VERSION);
     return EXIT_SUCCESS;

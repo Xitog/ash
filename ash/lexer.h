@@ -13,7 +13,7 @@ Token read_float(const char *cmd, unsigned int start, unsigned int current);
 Token read_binary(const char *cmd, unsigned int start, unsigned int current);
 Token read_hexa(const char *cmd, unsigned int start, unsigned int current);
 Token read_number(const char *cmd, unsigned int start);
-Token read_string(const char *cmd, unsigned int start);
+Token read_string(const char *cmd, unsigned int start, char delimiter);
 Token read_comment(const char *cmd, unsigned int start);
 Token read_operator(const char *cmd, unsigned int start);
 DynArray lex(const char *cmd, bool skip_spaces, bool debug);

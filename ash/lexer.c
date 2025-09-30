@@ -193,14 +193,14 @@ Token read_number(const char *cmd, uint32_t start)
     return t;
 }
 
-Token read_string(const char *cmd, uint32_t start)
+Token read_string(const char *cmd, uint32_t start, char delimiter)
 {
     uint32_t index = start + 1; // On presuppose que le premier c'est "
     uint32_t count = 1;
     while (index < strlen(cmd))
     {
         char c = cmd[index];
-        if (c != '"')
+        if (c != delimiter)
         {
             count += 1;
         }
@@ -219,19 +219,10 @@ Token read_string(const char *cmd, uint32_t start)
 Token read_comment(const char *cmd, uint32_t start)
 {
     uint32_t index = start + 2; // On presuppose que les deux premiers c'est --
-    uint32_t count = 1;
-    while (index < strlen(cmd))
+    uint32_t count = 2;
+    while (index < strlen(cmd) && cmd[index] != '\n')
     {
-        char c = cmd[index];
-        if (c != '\n')
-        {
-            count += 1;
-        }
-        else
-        {
-            count += 1;
-            break;
-        }
+        count += 1;
         index += 1;
     }
     TextPart tp = text_part_init(cmd, start, count);
@@ -371,9 +362,9 @@ DynArray lex(const char *cmd, bool skip_spaces, bool debug)
         {
             t = read_operator(cmd, index);
         }
-        else if (cmd[index] == '"')
+        else if (cmd[index] == '"' || cmd[index] == '\'')
         {
-            t = read_string(cmd, index);
+            t = read_string(cmd, index, cmd[index]);
         }
         else
         {
@@ -382,7 +373,7 @@ DynArray lex(const char *cmd, bool skip_spaces, bool debug)
         }
         index += t.text.length;
         // printf("EOL: start=%d index=%d count=%d\n", old, index, count);
-        if ((t.type == TOKEN_SPACE && skip_spaces) || t.type == TOKEN_COMMENT)
+        if ((t.type == TOKEN_SPACE && skip_spaces)) // || t.type == TOKEN_COMMENT)
         {
             discard = true;
         }

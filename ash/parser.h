@@ -17,16 +17,17 @@ extern DynArray root_scope;
 
 typedef enum _NodeType
 {
-    NODE_INTEGER = 0,
-    NODE_FLOAT = 1,
-    NODE_BOOLEAN = 2,
-    NODE_STRING = 3,
-    NODE_IDENTIFIER = 4,
-    NODE_BINARY_OPERATOR = 5,
-    NODE_IF = 6,
-    NODE_WHILE = 7,
-    NODE_FUNCTION_CALL = 8,
-    NODE_BLOCK = 9
+    NODE_COMMENT = 0,
+    NODE_INTEGER = 1,
+    NODE_FLOAT = 2,
+    NODE_BOOLEAN = 3,
+    NODE_STRING = 4,
+    NODE_IDENTIFIER = 5,
+    NODE_BINARY_OPERATOR = 6,
+    NODE_IF = 7,
+    NODE_WHILE = 8,
+    NODE_FUNCTION_CALL = 9,
+    NODE_BLOCK = 10
 } NodeType;
 
 typedef struct _Node

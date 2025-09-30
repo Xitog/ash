@@ -7,4 +7,4 @@ while a < 3 do
     a = a + 1
 loop
 
-b = read()
+-- b = read()

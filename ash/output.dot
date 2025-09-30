@@ -2,31 +2,79 @@ graph "Output parser"
 {
     fontname="Helvetica,Arial,sans-serif"
     node [fontname="Helvetica,Arial,sans-serif"]
-    label = "Abstract syntax tree (Result = (null))"
+    label = "Abstract syntax tree (Result = )"
     subgraph s1
     {
         n1 ;
-        n1 [label="if" fontname="Helvetica,Arial,sans-serif bold"]
+        n1 [label="block" fontname="Helvetica,Arial,sans-serif bold"]
         n2 ;
-        n2 [label="=="]
+        n2 [label="//"]
         n1 -- n2 ;
         n3 ;
-        n3 [label="a"]
+        n3 [label="*"]
         n2 -- n3 ;
         n4 ;
-        n4 [label="6"]
-        n2 -- n4 ;
+        n4 [label="5"]
+        n3 -- n4 ;
         n5 ;
-        n5 [label="then" fontname="Helvetica,Arial,sans-serif bold"]
-        n1 -- n5 ;
+        n5 [label="2"]
+        n3 -- n5 ;
         n6 ;
-        n6 [label="print"]
-        n5 -- n6 ;
+        n6 [label="3"]
+        n2 -- n6 ;
         n7 ;
-        n7 [label="else" fontname="Helvetica,Arial,sans-serif bold"]
+        n7 [label="block" fontname="Helvetica,Arial,sans-serif bold"]
         n1 -- n7 ;
         n8 ;
-        n8 [label="hello"]
+        n8 [label="="]
         n7 -- n8 ;
+        n9 ;
+        n9 [label="a"]
+        n8 -- n9 ;
+        n10 ;
+        n10 [label="1"]
+        n8 -- n10 ;
+        n11 ;
+        n11 [label="block" fontname="Helvetica,Arial,sans-serif bold"]
+        n7 -- n11 ;
+        n12 ;
+        n12 [label="while" fontname="Helvetica,Arial,sans-serif bold"]
+        n11 -- n12 ;
+        n13 ;
+        n13 [label="<"]
+        n12 -- n13 ;
+        n14 ;
+        n14 [label="a"]
+        n13 -- n14 ;
+        n15 ;
+        n15 [label="3"]
+        n13 -- n15 ;
+        n16 ;
+        n16 [label="block" fontname="Helvetica,Arial,sans-serif bold"]
+        n12 -- n16 ;
+        n17 ;
+        n17 [label="("]
+        n16 -- n17 ;
+        n18 ;
+        n18 [label="hello"]
+        n17 -- n18 ;
+        n19 ;
+        n19 [label="="]
+        n16 -- n19 ;
+        n20 ;
+        n20 [label="a"]
+        n19 -- n20 ;
+        n21 ;
+        n21 [label="+"]
+        n19 -- n21 ;
+        n22 ;
+        n22 [label="a"]
+        n21 -- n22 ;
+        n23 ;
+        n23 [label="1"]
+        n21 -- n23 ;
+        n24 ;
+        n24 [label="-- b = read()"]
+        n11 -- n24 ;
     }
 }

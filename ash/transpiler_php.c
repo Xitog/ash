@@ -99,6 +99,15 @@ void transpile_node(Node *node)
             general_message(FATAL, "Interpreter: unknown function: %t.", node->left->token);
         }
     }
+    else if (node->type == NODE_COMMENT)
+    {
+        fprintf(output, "// ");
+        TextPart tp = node->token.text;
+        for (uint32_t i = 2; i < tp.length; i++)
+        {
+            fputc(node->token.text.source[node->token.text.start + i], output);
+        }
+    }
     else if (node->type == NODE_IDENTIFIER)
     {
         fwrite("$", 1, 1, output);
